@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastros</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 100%;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        .titulo {
+            text-align: center;
+            color: #2d3748;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 0;
+        }
+        .btn-voltar {
+            background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255,152,0,0.15);
+            transition: background 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .btn-voltar:hover {
+            background: #fb8c00;
+        }
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+                padding: 30px 20px;
+            }
+            .content {
+                grid-template-columns: 1fr;
+            }
+            .btn-voltar {
+                font-size: 16px;
+                padding: 16px 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="titulo">Área de Cadastros</h1>
+        <div class="content">
+            <a href="/cadastrar-produto" class="btn-voltar">🍕 Produtos</a>
+            <a href="/cadastrar-entregador" class="btn-voltar">🚚 Entregador</a>
+            <a href="/cadastrar-classificacao" class="btn-voltar">📁 Classificação</a>
+            <a href="/cadastrar-taxa" class="btn-voltar">💰 Taxas de Entrega</a>
+            <a href="#" class="btn-voltar" onclick="abrirModalFormaPagamento(); return false;">💳 Forma de Pagamento</a>
+            <a href="/dados-loja" class="btn-voltar">🏪 Dados da Loja</a>
+        </div>
+        <a href="/" class="btn-voltar" style="margin-top:32px;">Voltar</a>
+    </div>
+
+    <!-- Modal de Forma de Pagamento -->
+    <div id="modalFormaPagamento" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); width: 90%; max-width: 500px;">
+            <h2 style="margin-top: 0; color: #333;">Formas de Pagamento</h2>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Nova Forma de Pagamento:</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="inputFormaPagamento" placeholder="Ex: Dinheiro, Cartão, PIX" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                    <button onclick="adicionarFormaPagamento()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Adicionar</button>
+                </div>
+            </div>
+            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 10px;">
+                <div id="listaFormaPagamento" style="min-height: 50px;">
+                    <p style="color: #999; text-align: center;">Carregando...</p>
+                </div>
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button onclick="fecharModalFormaPagamento()" style="padding: 10px 20px; background: #999; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Fechar</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        function abrirModalFormaPagamento() {
+            document.getElementById('modalFormaPagamento').style.display = 'flex';
+            carregarFormasPagamento();
+        }
+        function fecharModalFormaPagamento() {
+            document.getElementById('modalFormaPagamento').style.display = 'none';
+        }
+        function carregarFormasPagamento() {
+            fetch('/api/formas-pagamento')
+                .then(response => response.json())
+                .then(data => {
+                    const lista = document.getElementById('listaFormaPagamento');
+                    if (data.sucesso && data.formas) {
+                        if (data.formas.length === 0) {
+                            lista.innerHTML = '<p style="color: #999; text-align: center;">Nenhuma forma de pagamento cadastrada</p>';
+                        } else {
+                            lista.innerHTML = data.formas.map(forma => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee;">
+                                    <span>${forma.forma}</span>
+                                    <button onclick="excluirFormaPagamento(${forma.chave})" style="padding: 5px 10px; background: #f56565; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px;">Excluir</button>
+                                </div>
+                            `).join('');
+                        }
+                    } else {
+                        lista.innerHTML = '<p style="color: #c53030; text-align: center;">Erro ao carregar formas de pagamento</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    lista.innerHTML = '<p style="color: #c53030; text-align: center;">Erro ao carregar formas de pagamento</p>';
+                });
+        }
+        function adicionarFormaPagamento() {
+            const input = document.getElementById('inputFormaPagamento');
+            const forma = input.value.trim();
+            if (!forma) {
+                alert('Por favor, digite uma forma de pagamento');
+                return;
+            }
+            fetch('/api/salvar-forma-pagamento', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ forma: forma })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso) {
+                    input.value = '';
+                    carregarFormasPagamento();
+                } else {
+                    alert('Erro: ' + data.mensagem);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao adicionar forma de pagamento');
+            });
+        }
+        function excluirFormaPagamento(chave) {
+            if (!confirm('Tem certeza que deseja excluir esta forma de pagamento?')) {
+                return;
+            }
+            fetch(`/api/excluir-forma-pagamento/${chave}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso) {
+                    carregarFormasPagamento();
+                } else {
+                    alert('Erro: ' + data.mensagem);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao excluir forma de pagamento');
+            });
+        }
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('modalFormaPagamento');
+            if (event.target === modal) {
+                fecharModalFormaPagamento();
+            }
+        });
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+</body>
+</html>

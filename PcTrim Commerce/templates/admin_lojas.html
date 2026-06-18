@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Lojas | {{ nome_fantasia or 'Plataforma' }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_touch.css') }}">
+  {% include 'partials/topbar_meta_assets.html' %}
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root { --bg:#0f0f14; --surface:#1a1a28; --line:#2a2a40; --text:#e8e8f0; --muted:#888fa0; --purple:#7c3aed; --green:#10b981; --danger:#f87171; }
+    html[data-theme="light"] { --bg:#f1f5f9; --surface:#fff; --line:#c8d0e0; --text:#0f172a; --muted:#64748b; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Outfit, system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 40px; }
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .topbar a { color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; padding: 6px; border-radius: 8px; }
+    .topbar a:hover { color: var(--text); background: rgba(124,58,237,.12); }
+    h1 { margin: 0 0 6px; font-size: 1.35rem; }
+    .sub { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .card { background: var(--surface); border: 0.5px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+    .card h2 { margin: 0 0 12px; font-size: 1rem; }
+    .grid { display: grid; gap: 10px; }
+    @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+    input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 0.5px solid var(--line); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; }
+    input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 2px rgba(124,58,237,.2); }
+    .btn { border: none; border-radius: 10px; padding: 11px 16px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: var(--purple); color: #fff; width: 100%; margin-top: 6px; }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-ghost { background: transparent; border: 0.5px solid var(--line); color: var(--text); }
+    .alert { padding: 12px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; display: none; }
+    .alert.ok { display: block; background: rgba(16,185,129,.12); border: 0.5px solid rgba(16,185,129,.35); color: var(--green); }
+    .alert.err { display: block; background: rgba(248,113,113,.12); border: 0.5px solid rgba(248,113,113,.35); color: var(--danger); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 0.5px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(124,58,237,.15); color: var(--purple); }
+    .empty { color: var(--muted); font-size: 13px; padding: 12px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a href="{{ url_prefix }}/" title="Menu"><i data-lucide="home" width="18" height="18"></i></a>
+      <div style="flex:1;">
+        <h1>Administração — Lojas</h1>
+        <p class="sub">Cadastre novas lojas (tenants). Acesso restrito à equipe técnica (<code>PLATFORM_ADMIN_USERS</code>).</p>
+      </div>
+      <button type="button" class="btn btn-ghost" id="btn-refresh">Atualizar lista</button>
+    </header>
+
+    <div id="alert-box" class="alert" role="status"></div>
+
+    <section class="card" aria-labelledby="form-title">
+      <h2 id="form-title">Nova loja</h2>
+      <form id="form-nova-loja" class="grid grid-2">
+        <div>
+          <label for="id_cliente">ID cliente</label>
+          <input id="id_cliente" name="id_cliente" inputmode="numeric" pattern="[0-9]*" placeholder="Ex.: 2003 (vazio = automático)">
+          <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px;" id="id-cliente-hint">Deixe em branco para gerar automaticamente.</small>
+        </div>
+        <div>
+          <label for="nome">Nome fantasia *</label>
+          <input id="nome" name="nome" required autocomplete="organization" placeholder="Ex.: Pizzaria do Centro">
+        </div>
+        <div>
+          <label for="cidade">Cidade</label>
+          <input id="cidade" name="cidade" autocomplete="address-level2" placeholder="Ex.: Picos">
+        </div>
+        <div>
+          <label for="usuario">Login do gerente *</label>
+          <input id="usuario" name="usuario" required autocomplete="username" placeholder="Ex.: loja_centro">
+        </div>
+        <div>
+          <label for="ddd">DDD</label>
+          <input id="ddd" name="ddd" inputmode="numeric" maxlength="3" placeholder="89">
+        </div>
+        <div>
+          <label for="telefone">Telefone</label>
+          <input id="telefone" name="telefone" inputmode="tel" placeholder="99999-9999">
+        </div>
+        <div>
+          <label for="senha">Senha inicial *</label>
+          <input id="senha" name="senha" type="password" required minlength="4" autocomplete="new-password">
+        </div>
+        <div>
+          <label for="senha2">Confirmar senha *</label>
+          <input id="senha2" name="senha2" type="password" required minlength="4" autocomplete="new-password">
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <button type="submit" class="btn btn-primary" id="btn-submit">Criar loja</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="list-title">
+      <h2 id="list-title">Lojas cadastradas</h2>
+      <div id="lista-lojas">
+        <p class="empty">Carregando…</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const alertBox = document.getElementById("alert-box");
+    const listaHost = document.getElementById("lista-lojas");
+    const form = document.getElementById("form-nova-loja");
+    const btnSubmit = document.getElementById("btn-submit");
+    const idClienteInput = document.getElementById("id_cliente");
+    const idClienteHint = document.getElementById("id-cliente-hint");
+
+    function showAlert(msg, ok) {
+      alertBox.textContent = msg;
+      alertBox.className = "alert " + (ok ? "ok" : "err");
+    }
+    function hideAlert() {
+      alertBox.className = "alert";
+      alertBox.textContent = "";
+    }
+    function esc(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function loadLojas() {
+      listaHost.innerHTML = '<p class="empty">Carregando…</p>';
+      try {
+        const r = await fetch("/api/admin/lojas", { credentials: "same-origin", headers: { Accept: "application/json" } });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || d.sucesso === false) {
+          throw new Error((d && d.erro) || "Falha ao carregar lojas");
+        }
+        const lojas = Array.isArray(d.lojas) ? d.lojas : [];
+        if (d.proximo_id_sugerido && idClienteInput && !idClienteInput.value.trim()) {
+          idClienteInput.placeholder = "Sugerido: " + d.proximo_id_sugerido;
+          if (idClienteHint) {
+            idClienteHint.textContent =
+              "Próximo ID livre sugerido: " + d.proximo_id_sugerido + ". Deixe em branco para gerar automaticamente.";
+          }
+        }
+        if (!lojas.length) {
+          listaHost.innerHTML = '<p class="empty">Nenhuma loja em dadosloja.</p>';
+          return;
+        }
+        let html = '<table><thead><tr><th>ID</th><th>Nome</th><th>Gerente</th><th>Cidade</th><th>Status</th></tr></thead><tbody>';
+        lojas.forEach(function (l) {
+          const st = l.ativo === false ? "Inativo" : "Ativo";
+          html +=
+            "<tr><td><span class=\"pill\">" + esc(l.id_cliente) + "</span></td>" +
+            "<td>" + esc(l.nome) + "</td>" +
+            "<td>" + esc(l.usuario_gerente || "—") + "</td>" +
+            "<td>" + esc(l.cidade || "—") + "</td>" +
+            "<td>" + esc(st) + "</td></tr>";
+        });
+        html += "</tbody></table>";
+        listaHost.innerHTML = html;
+      } catch (e) {
+        listaHost.innerHTML = '<p class="empty">' + esc(e.message || "Erro") + "</p>";
+      }
+    }
+
+    form.addEventListener("submit", async function (ev) {
+      ev.preventDefault();
+      hideAlert();
+      const senha = document.getElementById("senha").value;
+      const senha2 = document.getElementById("senha2").value;
+      if (senha !== senha2) {
+        showAlert("Senha e confirmação não conferem.", false);
+        return;
+      }
+      const idClienteRaw = idClienteInput.value.trim();
+      const payload = {
+        nome: document.getElementById("nome").value.trim(),
+        usuario: document.getElementById("usuario").value.trim(),
+        senha: senha,
+        senha_confirmacao: senha2,
+        ddd: document.getElementById("ddd").value.trim(),
+        telefone: document.getElementById("telefone").value.trim(),
+        cidade: document.getElementById("cidade").value.trim(),
+      };
+      if (idClienteRaw) {
+        payload.id_cliente = parseInt(idClienteRaw, 10);
+        if (!Number.isFinite(payload.id_cliente) || payload.id_cliente <= 0) {
+          showAlert("ID cliente inválido. Use um número inteiro positivo.", false);
+          return;
+        }
+      }
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = "Criando…";
+      try {
+        const r = await fetch("/api/admin/lojas", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || d.sucesso === false) {
+          throw new Error((d && d.erro) || "Falha ao criar loja");
+        }
+        showAlert(
+          (d.mensagem || "Loja criada.") +
+            " Entregue ao cliente: login \"" + esc(d.usuario) + "\" e a senha definida.",
+          true
+        );
+        form.reset();
+        await loadLojas();
+      } catch (e) {
+        showAlert(e.message || "Erro ao criar loja", false);
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = "Criar loja";
+      }
+    });
+
+    document.getElementById("btn-refresh").addEventListener("click", loadLojas);
+    loadLojas();
+  </script>
+</body>
+</html>

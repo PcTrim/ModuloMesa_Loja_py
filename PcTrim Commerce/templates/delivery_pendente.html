@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivery Pendente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='pdv-theme.css') }}">
+</head>
+<body class="pdv-simple-page">
+  <header class="pdv-topbar"><div class="pdv-logo">Delivery Pendente</div><span class="pdv-badge">{{ nome_fantasia }}</span></header>
+  <main class="pdv-simple-main">
+    <div id="lista" class="pdv-card pdv-scroll-y" style="display:grid;gap:8px;max-height:calc(100vh - 120px)"></div>
+  </main>
+  <script>
+    fetch('/delivery-pendente').then(r=>r.json()).then(data=>{
+      const host=document.getElementById('lista'); const rows=(data && data.registros) ? data.registros : [];
+      host.innerHTML=rows.map(c=>`<div class="pdv-card"><strong>${c.nome||c.cliente||'Cliente'}</strong><div style="color:#9ca3b0">${c.endereco||''}</div><div style="color:#10b981">${c.total_preco!=null?`R$ ${Number(c.total_preco).toFixed(2)}`:''}</div></div>`).join('')||'<div>Nenhum delivery pendente.</div>';
+    });
+  </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurações | {{ nome_fantasia or 'Loja' }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+  <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+  {% include 'partials/topbar_meta_assets.html' %}
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+  {% set papel = (session.get('funcao') or 'gerente')|lower %}
+  <div class="cfg-page">
+  <header class="topbar">
+    <a class="home" href="{{ url_for('index') }}" title="Menu"><i data-lucide="home" width="18" height="18"></i></a>
+    <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+    <div class="brand">Configurações</div>
+    <span class="badge">ID {{ id_cliente }}</span>
+    {% include 'partials/topbar_meta.html' %}
+    <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+      <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+      <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+    </button>
+  </header>
+
+  <main class="cfg-content cfg-wrap">
+    <p class="cfg-intro">Cadastros e parâmetros do sistema. O fluxo de pedidos permanece em <strong>/casa</strong> e <strong>/mesa</strong>.</p>
+
+    <section class="cfg-grid" aria-label="Módulos de configuração">
+      <a class="cfg-card" href="{{ url_prefix }}/dados-loja">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="store" width="22" height="22"></i></span>
+        <div>
+          <h2>Dados da loja</h2>
+          <p>Nome fantasia, endereço e identificação.</p>
+        </div>
+      </a>
+      <a class="cfg-card" href="{{ url_prefix }}/formas-pagamento">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="credit-card" width="22" height="22"></i></span>
+        <div>
+          <h2>Forma de pagamento</h2>
+          <p>PIX, cartão, dinheiro e demais formas aceitas.</p>
+        </div>
+      </a>
+      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-produto">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="package" width="22" height="22"></i></span>
+        <div>
+          <h2>Produtos</h2>
+          <p>Cadastro de itens, preços e dados de venda.</p>
+        </div>
+      </a>
+      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-classificacao">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="tags" width="22" height="22"></i></span>
+        <div>
+          <h2>Classificação</h2>
+          <p>Grupos e regras de cobrança por categoria.</p>
+        </div>
+      </a>
+      {% if papel == 'gerente' %}
+      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-entregador">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="truck" width="22" height="22"></i></span>
+        <div>
+          <h2>Entregadores</h2>
+          <p>Motoristas ou responsáveis por entrega.</p>
+        </div>
+      </a>
+      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-taxa">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="map-pin" width="22" height="22"></i></span>
+        <div>
+          <h2>Taxas de entrega</h2>
+          <p>Valores e faixas para entrega.</p>
+        </div>
+      </a>
+      <a class="cfg-card" href="{{ url_prefix }}/configuracoes-dados">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="sliders" width="22" height="22"></i></span>
+        <div>
+          <h2>Tabela configurações</h2>
+          <p>Parâmetros gerais salvos na base.</p>
+        </div>
+      </a>
+      {% endif %}
+    </section>
+  </main>
+  </div>
+
+  {% include 'partials/modal_despacho_delivery.html' %}
+  <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+  <script>try { lucide.createIcons(); } catch (e) {}</script>
+</body>
+</html>

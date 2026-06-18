@@ -1,0 +1,1150 @@
+<!-- MESA.HTML - V2.0 - 30/12/2025 15:00 -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesa - Sistema</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='produtos_enviados_mesa_fix.css') }}?v=1500">
+    <style>
+        .esquerda {
+            display: block !important;
+            white-space: normal !important;
+        }
+        .produtos-enviados-mesa ul, .produtos-enviados-mesa li {
+            display: block !important;
+            white-space: normal !important;
+            flex: none !important;
+            align-items: stretch !important;
+            overflow: visible !important;
+        }
+        /* ...demais estilos do arquivo, consolidados aqui... */
+    </style>
+    <style>
+        .container-casa {
+            width: 90%;
+            max-width: 400px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .carousel-casa-slides {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .carousel-casa-img {
+            width: 320px;
+            height: 320px;
+            object-fit: cover;
+            border-radius: 16px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            display: block;
+            margin: 0 auto;
+        }
+        .carousel-casa-slide.active {
+            opacity: 1;
+        }
+        .carousel-casa-slide img {
+            max-width: 40%;
+            max-height: 90vh;
+            height: 400px;
+            width: 220px;
+            object-fit: cover;
+            border-radius: 16px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            display: block;
+            margin: 0 auto;
+        }
+        .carousel-casa-btn.left {
+            left: 16px;
+                            }
+                            .carousel-casa-btn.right {
+                                right: 16px;
+                            }
+                        </style>
+                    <style>
+                        .carousel-casa-container {
+                            width: 90%;
+                            max-width: 400px;
+                            background: rgba(255,255,255,0.95);
+                            border-radius: 24px;
+                            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                            padding: 40px;
+                            margin: auto;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        .carousel-casa-slides {
+                            position: relative;
+                            width: 100%;
+                            height: 220px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            overflow: hidden;
+                        }
+                        .carousel-casa-slide {
+                            position: absolute;
+                            left: 0;
+                            top: 0;
+                            width: 100%;
+                            height: 100%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            opacity: 0;
+                            transition: opacity 0.5s;
+                        }
+                        .carousel-casa-slide.active {
+                            opacity: 1;
+                        }
+                        .carousel-casa-slide img {
+                            max-width: 80%;
+                            max-height: 80%;
+                            border-radius: 16px;
+                            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+                        }
+                            .carousel-casa-img {
+                                width: 150px;
+                                height: 150px;
+                                object-fit: cover;
+                                border-radius: 0;
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+                                display: block;
+                                margin: 0 auto;
+                            }
+                        .carousel-casa-btn.left {
+                            left: 16px;
+                        }
+                        .carousel-casa-btn.right {
+                            right: 16px;
+                        }
+                    </style>
+                <style>
+                    .carousel-casa {
+                        width: 90%;
+                        max-width: 400px;
+                        min-width: 220px;
+                        height: 240px;
+                        background: #fff;
+                        border-radius: 24px;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .carousel-casa-slide {
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        transition: opacity 0.5s;
+                        opacity: 0;
+                    }
+                    .carousel-casa-slide.active {
+                        opacity: 1;
+                    }
+                    .carousel-casa-slide img {
+                        max-width: 80%;
+                        max-height: 80%;
+                        border-radius: 16px;
+                        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+                    }
+                            .carousel-casa-img {
+                                width: 120px;
+                                height: calc((100vh - 24px * 18) / 19);
+                                min-height: 60px;
+                                object-fit: cover;
+                                border-radius: 0;
+                                box-shadow: none;
+                                display: block;
+                                margin: 0 auto;
+                            }
+                    /* Removido bloco solto de propriedades inválidas */
+                    .carousel-casa-btn.left {
+                        left: 16px;
+                    }
+                    .carousel-casa-btn.right {
+                        right: 16px;
+                    }
+                </style>
+            <style>
+                .linha {
+                    display: flex;
+                    width: 100vw;
+                    min-height: 100vh;
+                    margin: 0;
+                    padding: 0;
+                }
+                .esquerda {
+                    width: 44.6vw;
+                    min-width: 180px;
+                    background: #f6f8ff;
+                    height: 100vh;
+                }
+                .centro {
+                    width: 12.8vw;
+                    min-width: 180px;
+                    background: #eee;
+                    height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .direita {
+                    width: 44.6vw;
+                    min-width: 180px;
+                    background: #fff;
+                    height: 100vh;
+                }
+            </style>
+
+    <meta charset="UTF-8">
+    <title>Mesas - Novaloja</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0077ff 0%, #0055aa 100%);
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 60px auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            padding: 40px 30px;
+            text-align: center;
+        }
+        h1 {
+            color: #0077ff;
+            font-size: 2.2em;
+            margin-bottom: 18px;
+        }
+        .mesa-icon {
+            font-size: 3em;
+            margin-bottom: 18px;
+        }
+        .btn-voltar {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #0077ff 0%, #0055aa 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 1em;
+            transition: background 0.2s;
+        }
+        .btn-voltar:hover {
+            background: linear-gradient(135deg, #0055aa 0%, #0077ff 100%);
+        }
+    </style>
+    <script>
+        // Teste simples - se isso funcionar, JavaScript está rodando
+        window.testeFuncao = function() {
+            alert('JavaScript está funcionando!');
+        };
+        
+        // Definir funções globais ANTES do HTML ser renderizado
+        window.mesaSelecionada = null;
+        
+        window.selecionarMesa = function(numero) {
+            window.mesaSelecionada = numero;
+            var campo = document.getElementById('campo-mesa');
+            if (campo) {
+                campo.value = numero;
+                console.log('Mesa selecionada:', numero);
+            }
+            
+            // Remover borda de mesas sem registro
+            document.querySelectorAll('.mesa-img-esq').forEach(function(img) {
+                if (!img.classList.contains('tem-registro')) {
+                    img.style.border = '';
+                }
+            });
+            
+            // Adicionar borda vermelha se mesa tem registro
+            var imgMesa = document.querySelector('.mesa-img-esq[data-mesa="' + numero + '"]');
+            if (imgMesa && imgMesa.classList.contains('tem-registro')) {
+                imgMesa.style.border = '3px solid red';
+            }
+            
+            // Carregar registros da mesa via fetch
+            const divEsquerda = document.querySelector('.esquerda');
+            if (!divEsquerda) return;
+            
+            let gridAntigo = divEsquerda.querySelector('.grid-mesa-registros');
+            if (gridAntigo) gridAntigo.remove();
+            
+            fetch(`/api/mesa/${numero}`)
+                .then(r => r.json())
+                .then(result => {
+                    if (result.sucesso && result.registros && result.registros.length > 0) {
+                        let subtotal = 0;
+                        let html = `<div class='grid-mesa-registros' style='margin:38px 8px 8px 8px; background:#e6f0ff; border-radius:10px; padding:12px;'>`;
+                        html += `<table style='width:100%; border-collapse:collapse; background:#fff;'><thead><tr>`;
+                        html += `<th style='border:1px solid #ccc; padding:4px;'>Qtd</th><th style='border:1px solid #ccc; padding:4px;'>Produto</th><th style='border:1px solid #ccc; padding:4px;'>Preço</th></tr></thead><tbody>`;
+                        
+                        result.registros.forEach((r, idx, arr) => {
+                            const precoZero = Number(r.preco) === 0;
+                            let qtd = precoZero ? 0 : r.quantidade;
+                            let preco = Number(r.preco) || 0;
+                            subtotal += qtd * preco;
+                            
+                            let borderBottom = 'border-bottom:none;';
+                            if (idx < arr.length - 1 && Number(arr[idx + 1].preco) > 0) {
+                                borderBottom = 'border-bottom:1px solid #e0e0e0;';
+                            }
+                            
+                            const rawIdSel = (r.chave !== undefined ? r.chave : r.id);
+                            const itemIdSel = Number(rawIdSel);
+                            const nomeProduto = (r.produto || r.nome_produto || '-').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                            
+                            html += `<tr style='cursor:pointer;transition:background-color 0.2s;' 
+                                        onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                        onmouseout="this.style.backgroundColor=''" 
+                                        onclick="window.removerItemMesa(${itemIdSel}, '${nomeProduto}', ${numero})" 
+                                        title="Clique para remover este item">`;
+                            html += `<td style='${borderBottom} padding:4px; text-align:center;'>${qtd}</td>`;
+                            html += `<td style='${borderBottom} padding:4px;'>${r.produto || r.nome_produto || '-'}</td>`;
+                            html += `<td style='${borderBottom} padding:4px; text-align:right;'>R$ ${preco.toFixed(2)}</td>`;
+                            html += `</tr>`;
+                        });
+                        
+                        html += `</tbody></table>`;
+                        html += `<div style='text-align:right; margin-top:10px; font-size:1.15em; font-weight:bold; color:#0077ff;'>Subtotal: R$ ${subtotal.toFixed(2)}</div>`;
+                        
+                        // Buscar taxa de serviço
+                        fetch('/api/buscar-configuracao').then(r=>r.json()).then(cfg=>{
+                            let taxa = 0;
+                            if(cfg && cfg.sucesso && cfg.config && cfg.config.servicomesa) {
+                                taxa = parseFloat(cfg.config.servicomesa) || 0;
+                            }
+                            
+                            let valorServico = 0;
+                            if(taxa > 0) {
+                                valorServico = subtotal * (taxa/100);
+                                html += `<div style='text-align:right; margin-top:2px; font-size:1.08em; color:#b30000;'>Serviço (${taxa.toFixed(2)}%): <b>R$ ${valorServico.toFixed(2)}</b></div>`;
+                            }
+                            
+                            let total = subtotal + valorServico;
+                            html += `<div style='text-align:right; margin-top:6px; font-size:1.18em; font-weight:bold; color:#008000;'>Total: R$ ${total.toFixed(2)}</div>`;
+                            html += `</div>`;
+                            html += `<div style='display:flex; gap:16px; justify-content:center; margin-top:12px;'>`;
+                            html += `<button type="button" class="btn-novo" style="flex:1; font-size:18px; padding:12px; border:none; border-radius:8px; background:#0077ff; color:#fff; cursor:pointer;" onclick="window.imprimirMesa(${numero})">🖨️ Imprimir</button>`;
+                            html += `<button type="button" class="btn-salvar" style="flex:1; font-size:18px; padding:12px; border:none; border-radius:8px; background:#00aa00; color:#fff; cursor:pointer;" onclick="alert('Confirmar mesa!')">✅ Confirmar</button>`;
+                            html += `</div>`;
+                            
+                            divEsquerda.innerHTML = html;
+                        }).catch((err)=>{
+                            console.error('Erro buscar-configuracao:', err);
+                            html += `</div>`;
+                            divEsquerda.innerHTML = html;
+                        });
+                    } else {
+                        let html = `<div class='grid-mesa-registros' style='margin:18px 8px 8px 8px; background:#e6f0ff; border-radius:10px; padding:12px; text-align:center;'>`;
+                        html += `<h3 style='color:#0055aa; margin-bottom:10px;'>Nenhum registro encontrado para esta mesa.</h3>`;
+                        html += `</div>`;
+                        divEsquerda.insertAdjacentHTML('beforeend', html);
+                    }
+                })
+                .catch(err => console.error('Erro:', err));
+        };
+        
+        window.imprimirMesa = function(numeroMesa) {
+            const divEsquerda = document.querySelector('.esquerda');
+            if (!divEsquerda) {
+                alert('Nenhuma mesa selecionada');
+                return;
+            }
+
+            const gridMesaRegistros = divEsquerda.querySelector('.grid-mesa-registros');
+            if (!gridMesaRegistros) {
+                alert('Nenhum registro encontrado');
+                return;
+            }
+
+            // Extrair texto do grid para impressão
+            const table = gridMesaRegistros.querySelector('table');
+            if (!table) {
+                alert('Tabela não encontrada');
+                return;
+            }
+
+            // Montar conteúdo de texto para impressão
+            let conteudo = `\n`;
+            conteudo += `MESA ${numeroMesa}\n`;
+            conteudo += `================================\n\n`;
+            
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(function(row) {
+                const cols = row.querySelectorAll('td');
+                if (cols.length >= 3) {
+                    const qtd = cols[0].textContent.trim();
+                    const produto = cols[1].textContent.trim();
+                    const preco = cols[2].textContent.trim();
+                    conteudo += `${qtd}x ${produto.padEnd(20)} ${preco}\n`;
+                }
+            });
+            
+            conteudo += `\n================================\n`;
+            
+            // Adicionar totais se existirem
+            const divTotais = gridMesaRegistros.querySelectorAll('div');
+            divTotais.forEach(function(div) {
+                const texto = div.textContent.trim();
+                if (texto.includes('Subtotal:') || texto.includes('Serviço') || texto.includes('Total:')) {
+                    conteudo += texto + '\n';
+                }
+            });
+            
+            conteudo += `\n\n`;
+
+            // Enviar para impressão via API
+            fetch('/imprimir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conteudo: conteudo,
+                    copias: 1
+                })
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.sucesso) {
+                    console.log('Impresso com sucesso na impressora:', result.printer);
+                } else {
+                    alert('Erro ao imprimir: ' + (result.erro || 'Erro desconhecido'));
+                }
+            })
+            .catch(err => {
+                console.error('Erro na impressão:', err);
+                alert('Erro ao enviar para impressão');
+            });
+        };
+    </script>
+    </head>
+    <body>
+    <button type="button" class="btn-voltar" style="margin: 6px 0 0 16px; position: absolute; left: 0; top: 0; z-index: 10;" onclick="window.location.href='/'">Voltar</button>
+    
+    <!-- ID Cliente no topo da div azul, canto direito -->
+    <div style="position: absolute; top: 0; right: 0; z-index: 11; width: 44.6vw; min-width: 180px; height: 36px; pointer-events: none;">
+        <div style="position: absolute; top: 2px; right: 24px; font-size: 1.2em; color: #0077ff; font-weight: bold; background: #fff; border-radius: 8px; padding: 4px 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); pointer-events: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90vw;">
+            ID Cliente: {{ id_cliente }} | {{ nome_fantasia }}
+        </div>
+    </div>
+    <div style="display: flex; width: 100vw; height: 100vh; margin: 0; padding: 0; align-items: stretch;">
+        <div style="width: 33vw; min-width: 140px; background: #f6f8ff; height: 100vh; display: flex; flex-direction: column; position: relative; padding: 0; overflow-x: hidden; overflow-y: auto; justify-content: flex-start; align-items: stretch;">
+            <div style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 0px; margin-bottom: 0px; padding-left: 70px;">
+                <input id="campo-mesa" type="text" style="width: 90px; font-size: 2em; font-weight: bold; padding: 4px 10px; border: 2px solid #ff9800; border-radius: 8px; text-align: center; color: #ff9800; background: #fffbe6;" readonly>
+                <label for="campo-mesa" style="font-weight: bold; color: #0055aa; font-size: 1.1em;">Mesa Selecionada:</label>
+            </div>
+            {% set total_mesas = config.nromesa if config and config.nromesa else 100 %}
+            {% set colunas = 10 if total_mesas <= 10 else 12 if total_mesas <= 24 else 16 if total_mesas <= 48 else 20 %}
+            <div style="flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 18px; align-items: center; justify-items: center; padding: 48px 24px 24px 24px; overflow-y: auto; height: 100%;">
+                {% for i in range(1, total_mesas + 1) %}
+                {% set mesa_tem_registro = false %}
+                {% if mesas_com_registro is defined and mesas_com_registro and i in mesas_com_registro %}
+                    {% set mesa_tem_registro = true %}
+                {% endif %}
+                <div style="display: flex; flex-direction: column; align-items: center; width: 100%; aspect-ratio: 1/1; min-width: 70px; max-width: 120px;">
+                    <img src="/static/img/mesaa.png" alt="Mesa {{i}}"
+                        class="mesa-img-esq{% if mesa_tem_registro %} tem-registro{% endif %}"
+                        data-mesa="{{i}}"
+                        {% if mesa_tem_registro %}style="width: 100%; aspect-ratio: 1/1; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.10); object-fit: contain; display: block; margin: 0; cursor: pointer; border: 3px solid red;"{% else %}style="width: 100%; aspect-ratio: 1/1; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.10); object-fit: contain; display: block; margin: 0; cursor: pointer;"{% endif %}
+                        onclick='window.selecionarMesa({{ i }})'>
+                    <span style="font-size: 0.95em; color: #0055aa; font-weight: bold; margin-top: 2px;">{{i}}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div style="width: 13vw; min-width: 60px; height: 100vh; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; margin: 0; padding: 0;">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; overflow-y: auto; justify-content: stretch; width: 100%; margin-right: 0; padding-right: 0;">
+                {% for c in classificacoes %}
+                    {% set foto = c.nrofoto|string %}
+                    {% if foto.isdigit() %}
+                        {% set foto = foto ~ '.jpeg' %}
+                    {% endif %}
+                    <div style="width: 100%; position: relative; padding-bottom: 100%;">
+                        <img src="/static/img/{{ foto }}" alt="{{ c.nomeclassificacao }}" class="carousel-casa-img classificacao-img" title="{{ c.nomeclassificacao }}" data-nome="{{ c.nomeclassificacao }}" data-idx="{{ loop.index0 }}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0; display: block; margin: 0 auto; cursor: pointer;">
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div style="width: 54vw; min-width: 220px; background: #fff; height: 100vh; display: flex; flex-direction: row; align-items: stretch; justify-content: stretch; margin: 0; padding: 0; box-sizing: border-box;">
+            <div id="produtos-classificacao" style="flex: 1; background: #ffb3b3; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; box-sizing: border-box; margin: 0; padding: 0; overflow-y: auto;">
+                <!-- Label no topo da div rosa -->
+                <div id="label-nome-classificacao" style="padding: 12px 18px 6px 18px; font-size: 1.15em; font-weight: bold; color: #b30000; background: #ffd6d6; border-radius: 0 0 12px 12px; margin-bottom: 0; text-align: center;">Selecione uma classificação</div>
+                <div id="enviar-mesa-container" style="width: 100%; display: flex; justify-content: center; align-items: center; margin: 10px 0 18px 0; z-index: 2; position: relative; background: #ffd6d6;">
+                    <button id="btn-enviar-mesa" style="background: #ff4d4d; color: #fff; font-weight: bold; border: none; border-radius: 8px; padding: 12px 32px; font-size: 1.1em; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.10); transition: background 0.2s;">Enviar Mesa</button>
+                </div>
+                <!-- Produtos da classificação serão exibidos aqui -->
+            </div>
+            <div class="esquerda" style="flex: 1; background: #b3d1ff; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; box-sizing: border-box; margin: 0; padding: 0; min-width: 180px;">
+                <!-- Conteúdo da parte esquerda (div azul) -->
+                <!-- Placeholder inicial para orientar o usuário -->
+                <div class="grid-mesa-registros" style="margin:18px 8px 8px 8px; background:#e6f0ff; border-radius:10px; padding:12px; text-align:center;">
+                    <h3 style="color:#0055aa; margin-bottom:10px;">Selecione uma mesa à esquerda para visualizar os registros.</h3>
+                    <div style="font-size:0.95em; color:#333;">Clique em um número de mesa para carregar os itens.</div>
+                </div>
+                <!-- Bloco fixo de botões removido. Os botões serão renderizados apenas pelo JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+console.log('=== MESA.HTML SCRIPT INICIADO ===');
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOM PRONTO ===');
+        
+        // Array de classificacoes disponível no template para mapear nome -> chave
+        var classificacoes = {{ classificacoes|tojson|safe }};
+        console.log('DEBUG classificacoes:', classificacoes);
+        if (!classificacoes || classificacoes.length === 0) {
+            console.warn('ATENÇÃO: Nenhuma classificação foi carregada do backend!');
+        }
+
+        // Evento de clique nas imagens de classificação
+        const imgsClassificacao = document.querySelectorAll('.classificacao-img');
+        console.log('[DEBUG] Imagens de classificação encontradas:', imgsClassificacao.length);
+        
+        imgsClassificacao.forEach(function(img) {
+            img.style.border = '2px solid #007bff';
+            img.style.cursor = 'pointer';
+            img.addEventListener('click', function() {
+                console.log('[DEBUG] Clique na classificação:', this.getAttribute('data-nome'));
+                img.style.boxShadow = '0 0 0 4px #ff0';
+                const nomeClass = this.getAttribute('data-nome');
+                const label = document.getElementById('label-nome-classificacao');
+                if (label && nomeClass) label.textContent = nomeClass;
+                let quantidadeMax = 1;
+                let classif = classificacoes.find(c => c.nomeclassificacao === nomeClass);
+                if (!classif) classif = classificacoes.find(c => (c.nomeclassificacao || '').toString().trim().toLowerCase() === (nomeClass || '').toString().trim().toLowerCase());
+                if (classif && classif.quantidadepartes) {
+                    quantidadeMax = parseInt(classif.quantidadepartes);
+                    if (isNaN(quantidadeMax) || quantidadeMax < 1) quantidadeMax = 1;
+                }
+                // Salva a última quantidadeMax globalmente para uso no card (após cálculo correto)
+                window.ultimaQuantidadeMax = quantidadeMax;
+                fetch(`/produtos_por_classificacao/${encodeURIComponent(nomeClass)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById('produtos-classificacao');
+                        Array.from(container.children).forEach(function(child) {
+                            if (child.id !== 'label-nome-classificacao' && child.id !== 'enviar-mesa-container') child.remove();
+                        });
+                        if (!data || data.length === 0) {
+                            const div = document.createElement('div');
+                            div.style.padding = '24px';
+                            div.style.color = '#333';
+                            div.style.textAlign = 'center';
+                            div.textContent = 'Nenhum produto encontrado para esta classificação.';
+                            container.appendChild(div);
+                        } else {
+                            let html = '<table style="width:100%; border-collapse:collapse; background:#fff;">';
+                            html += '<thead><tr>' +
+                                '<th style="border:1px solid #ccc; padding:4px; background:#f5f5f5;">Sel</th>' +
+                                '<th style="border:1px solid #ccc; padding:4px; background:#f5f5f5;">Produto</th>' +
+                                '<th style="border:1px solid #ccc; padding:4px; background:#f5f5f5;">Preço</th>' +
+                                '<th style="border:1px solid #ccc; padding:4px; background:#f5f5f5;">Obs.</th>' +
+                                '<th style="border:1px solid #ccc; padding:4px; background:#f5f5f5;">Qtd</th>' +
+                                '</tr></thead><tbody>';
+                            data.forEach(function(produto, i) {
+                                const preco = typeof produto.preco === 'number' ? produto.preco : (parseFloat(produto.preco) || 0);
+                                html += `<tr>
+                                    <td style='border:1px solid #ccc; text-align:center;'><input type='checkbox' class='produto-checkbox' id='sel_${i}' value='${produto.chave}' data-produto='${produto.nome || produto.produto || ''}'></td>
+                                    <td style='border:1px solid #ccc;'>${produto.nome || produto.produto || ''}</td>
+                                    <td style='border:1px solid #ccc;'>R$ ${preco.toFixed(2)}</td>
+                                    <td style='border:1px solid #ccc;'><textarea id='obs_${i}' rows='2' maxlength='100' style='width:98%; resize:vertical; background:#f9f9f9;' placeholder='Observação'></textarea></td>
+                                    <td style='border:1px solid #ccc; text-align:center;'>
+                                        <input type='number' id='qtd_${i}' value='1' min='1' max='99' style='width:48px; text-align:center;'>
+                                    </td>
+                                </tr>`;
+                            });
+                            html += '</tbody></table>';
+                            const div = document.createElement('div');
+                            div.innerHTML = html;
+                            container.appendChild(div);
+                            // Limitar seleção de produtos
+                            const checkboxes = div.querySelectorAll('.produto-checkbox');
+                            checkboxes.forEach(function(checkbox) {
+                                checkbox.addEventListener('change', function() {
+                                    const checked = div.querySelectorAll('.produto-checkbox:checked');
+                                    if (checked.length > quantidadeMax) {
+                                        this.checked = false;
+                                        return;
+                                    }
+                                    // Se está marcando, sincroniza a quantidade com os outros selecionados
+                                    if (this.checked) {
+                                        // Pega a quantidade do primeiro selecionado (exceto o atual)
+                                        let qtdSincronizar = null;
+                                        for (let other of checked) {
+                                            if (other !== this) {
+                                                const trOther = other.closest('tr');
+                                                const inputOther = trOther.querySelector('input[type=number]');
+                                                if (inputOther) {
+                                                    qtdSincronizar = inputOther.value;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (qtdSincronizar !== null) {
+                                            const tr = this.closest('tr');
+                                            const inputQtd = tr.querySelector('input[type=number]');
+                                            if (inputQtd) inputQtd.value = qtdSincronizar;
+                                        }
+                                    }
+                                });
+                            });
+
+                            // Sincronizar quantidade entre todos os produtos selecionados
+                            const qtdInputs = div.querySelectorAll('input[type=number][id^=qtd_]');
+                            qtdInputs.forEach(function(input) {
+                                input.addEventListener('input', function() {
+                                    // Sempre sincroniza todos os produtos selecionados
+                                    const valor = input.value;
+                                    qtdInputs.forEach(function(otherInput) {
+                                        const otherTr = otherInput.closest('tr');
+                                        const otherCheckbox = otherTr.querySelector('.produto-checkbox');
+                                        if (otherCheckbox && otherCheckbox.checked) {
+                                            otherInput.value = valor;
+                                        }
+                                    });
+                                });
+                            });
+                        }
+                    })
+                    .catch(() => {
+                        const container = document.getElementById('produtos-classificacao');
+                        Array.from(container.children).forEach(function(child) {
+                            if (child.id !== 'label-nome-classificacao' && child.id !== 'enviar-mesa-container') child.remove();
+                        });
+                        const div = document.createElement('div');
+                        div.style.padding = '24px';
+                        div.style.color = '#c00';
+                        div.style.textAlign = 'center';
+                        div.textContent = 'Erro ao buscar produtos.';
+                        container.appendChild(div);
+                    });
+            });
+        });
+        
+        const btnEnviarMesa = document.getElementById('btn-enviar-mesa');
+        if (btnEnviarMesa) {
+            btnEnviarMesa.addEventListener('click', async function() {
+                console.log('[DEBUG] Botão Enviar Mesa clicado!');
+                
+                const labelClassificacao = document.getElementById('label-nome-classificacao');
+                const container = document.getElementById('produtos-classificacao');
+                const tabela = container.querySelector('table');
+                
+                if (!tabela) {
+                    console.log('[DEBUG] Nenhuma tabela encontrada');
+                    alert('Nenhuma tabela de produtos encontrada');
+                    return;
+                }
+                
+                const selecionados = tabela.querySelectorAll('.produto-checkbox:checked');
+                console.log('[DEBUG] Produtos selecionados:', selecionados.length);
+                
+                if (selecionados.length === 0) {
+                    alert('Selecione pelo menos um produto');
+                    return;
+                }
+                
+                console.log('[DEBUG] Mesa selecionada:', mesaSelecionada);
+                if (!mesaSelecionada) {
+                    alert('Selecione uma mesa primeiro');
+                    return;
+                }
+                const classe = labelClassificacao ? labelClassificacao.textContent.trim() : '';
+                const isTaxaExtra = classe === 'TAXA_EXTRA';
+                const isDesconto = classe === 'DESCONTO';
+                
+                console.log('[DEBUG] Classe selecionada:', classe);
+                console.log('[DEBUG] isTaxaExtra:', isTaxaExtra, 'isDesconto:', isDesconto);
+                
+                // Se for TAXA_EXTRA ou DESCONTO, solicita o valor digitado
+                let precoEspecial = null;
+                if (isTaxaExtra) {
+                    console.log('[DEBUG] Solicitando valor para TAXA_EXTRA');
+                    const valorInput = prompt('Digite o valor para TAXA_EXTRA:');
+                    if (valorInput === null) {
+                        return; // Usuário cancelou
+                    }
+                    precoEspecial = parseFloat(valorInput.replace(',', '.')) || 0;
+                    if (precoEspecial <= 0) {
+                        alert('Valor deve ser maior que zero');
+                        return;
+                    }
+                } else if (isDesconto) {
+                    console.log('[DEBUG] Solicitando valor para DESCONTO');
+                    const valorInput = prompt('Digite o valor do DESCONTO:');
+                    if (valorInput === null) {
+                        return; // Usuário cancelou
+                    }
+                    precoEspecial = parseFloat(valorInput.replace(',', '.')) || 0;
+                    if (precoEspecial <= 0) {
+                        alert('Valor deve ser maior que zero');
+                        return;
+                    }
+                    // Para desconto, transformar em valor negativo
+                    precoEspecial = -Math.abs(precoEspecial);
+                }
+                
+                // Monta array de produtos selecionados
+                const produtosData = [];
+                let qtdUnica = 1;
+                if (selecionados.length > 1 && !isTaxaExtra && !isDesconto) {
+                    const trPrimeiro = selecionados[0].closest('tr');
+                    qtdUnica = parseInt(trPrimeiro.querySelector('input[type=number]')?.value || '1');
+                    if (isNaN(qtdUnica) || qtdUnica < 1) qtdUnica = 1;
+                }
+                selecionados.forEach(function(checkbox, idx) {
+                    const tr = checkbox.closest('tr');
+                    const nome = tr.children[1].textContent.trim();
+                    const precoStr = tr.children[2].textContent.replace('R$', '').replace(',', '.').trim();
+                    const preco = parseFloat(precoStr) || 0;
+                    let qtd = 1;
+                    let nomeEnvio = nome;
+                    let precoEnvio = preco;
+                    
+                    if (isTaxaExtra) {
+                        // Para TAXA_EXTRA: nome="TAXA_EXTRA", qtd=1, preco=valor digitado
+                        nomeEnvio = 'TAXA_EXTRA';
+                        qtd = 1;
+                        precoEnvio = precoEspecial;
+                    } else if (isDesconto) {
+                        // Para DESCONTO: nome="DESCONTO", qtd=1, preco=valor negativo
+                        nomeEnvio = 'DESCONTO';
+                        qtd = 1;
+                        precoEnvio = precoEspecial;
+                    } else {
+                        qtd = parseInt(tr.querySelector('input[type=number]')?.value || '1');
+                        if (selecionados.length > 1) {
+                            qtd = qtdUnica;
+                            const inputQtd = tr.querySelector('input[type=number]');
+                            if (inputQtd) inputQtd.value = qtdUnica;
+                        }
+                    }
+                    const codigoproduto = checkbox.value;
+                    produtosData.push({ nome: nomeEnvio, preco: precoEnvio, qtd, codigoproduto });
+                });
+                const payload = {
+                    produtos: produtosData,
+                    nropedido: mesaSelecionada,
+                    classe: classe
+                };
+                
+                console.log('[DEBUG] Enviando payload:', payload);
+                
+                try {
+                    const resp = await fetch('/api/salvar-mesa', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    console.log('[DEBUG] Resposta recebida - Status:', resp.status);
+                    
+                    const result = await resp.json();
+                    console.log('[DEBUG] Resultado:', result);
+                    
+                    if (result.sucesso) {
+                        alert('Produtos enviados com sucesso!');
+                        Array.from(container.children).forEach(function(child) {
+                            if (child.id !== 'label-nome-classificacao' && child.id !== 'enviar-mesa-container') child.remove();
+                        });
+                        labelClassificacao.textContent = 'Selecione uma classificação';
+                        // Adiciona borda vermelha na imagem da mesa na esquerda ao adicionar o primeiro produto
+                        var imgMesa = document.querySelector('.mesa-img-esq[data-mesa="' + mesaSelecionada + '"]');
+                        if (imgMesa) {
+                            imgMesa.style.border = '3px solid red';
+                            imgMesa.classList.add('tem-registro');
+                        }
+                    } else {
+                        alert('Erro ao enviar: ' + (result.mensagem || 'Erro desconhecido'));
+                    }
+                } catch (error) {
+                    console.error('[ERRO] ao enviar produtos:', error);
+                    alert('Erro ao enviar produtos: ' + error.message);
+                } finally {
+                    // Atualiza o grid da mesa após enviar, mesmo em erro
+                    setTimeout(() => {
+                        if (typeof window.mesaSelecionada !== 'undefined' && window.mesaSelecionada) {
+                            buscarRegistrosMesa(window.mesaSelecionada);
+                        }
+                    }, 300);
+                }
+            });
+        }
+
+        // Função para buscar registros da mesa (semelhante ao cadastrar_classificacao.html)
+        window.buscarRegistrosMesa = async function(numeroMesa) {
+            const divEsquerda = document.querySelector('.esquerda');
+            if (!numeroMesa) {
+                if (divEsquerda) {
+                    let gridAntigo = divEsquerda.querySelector('.grid-mesa-registros');
+                    if (gridAntigo) gridAntigo.remove();
+                }
+                return;
+            }
+            try {
+                const resp = await fetch(`/api/mesa/${numeroMesa}`);
+                if (!resp.ok) throw new Error('Erro ao buscar registros da mesa');
+                const dados = await resp.json();
+                let registros = [];
+                if (Array.isArray(dados)) {
+                    registros = [...dados];
+                } else if (dados && dados.registros) {
+                    registros = [...dados.registros];
+                }
+                if (divEsquerda) {
+                    // Limpa conteúdo anterior
+                    divEsquerda.innerHTML = '';
+                    let html = '';
+                    if (!registros || registros.length === 0) {
+                        html = `<div class='grid-mesa-registros' style='margin:18px 8px 8px 8px; background:#e6f0ff; border-radius:10px; padding:12px; text-align:center;'>`;
+                        html += `<h3 style='color:#0055aa; margin-bottom:10px;'>Nenhum registro encontrado para esta mesa.</h3>`;
+                        html += `</div>`;
+                        divEsquerda.insertAdjacentHTML('beforeend', html);
+                    } else {
+                        let subtotal = 0;
+                        html = `<div class='grid-mesa-registros' style='margin:38px 8px 8px 8px; background:#e6f0ff; border-radius:10px; padding:12px;'>`;
+                        html += `<table style='width:100%; border-collapse:collapse; background:#fff;'><thead><tr>`;
+                        html += `<th style='border:1px solid #ccc; padding:4px; background:#f5f5f5;">Sel</th>`;
+                        html += `<th style='border:1px solid #ccc; padding:4px; background:#f5f5f5;">Produto</th>`;
+                        html += `<th style='border:1px solid #ccc; padding:4px; background:#f5f5f5;">Preço</th>`;
+                        html += `<th style='border:1px solid #ccc; padding:4px; background:#f5f5f5;">Obs.</th>`;
+                        html += `<th style='border:1px solid #ccc; padding:4px; background:#f5f5f5;">Qtd</th>`;
+                        html += `</tr></thead><tbody>`;
+                        registros.forEach((r, idx, arr) => {
+                            const precoZero = Number(r.preco) === 0;
+                            let qtd = precoZero ? 0 : r.quantidade;
+                            let preco = Number(r.preco) || 0;
+                            subtotal += qtd * preco;
+                            // Só mostra a linha divisória se o próximo produto tiver preco > 0
+                            let borderBottom = 'border-bottom:none;';
+                            if (idx < arr.length - 1 && Number(arr[idx + 1].preco) > 0) {
+                                borderBottom = 'border-bottom:1px solid #e0e0e0;';
+                            }
+                            const rawIdBusca = (r.chave !== undefined ? r.chave : r.id);
+                            const itemId = Number(rawIdBusca);
+                            if (!Number.isFinite(itemId)) {
+                                console.warn('[DEBUG] ID inválido para remoção (buscarRegistrosMesa):', rawIdBusca);
+                            }
+                            const nomeProduto = (r.produto || r.nome_produto || '-').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                            html += `<tr style='cursor:pointer;transition:background-color 0.2s;' 
+                                        onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                        onmouseout="this.style.backgroundColor=''" 
+                                        onclick="window.removerItemMesa(${itemId}, '${nomeProduto}', ${numeroMesa})" 
+                                        title="Clique para remover este item">`;
+                            html += `<td style='${borderBottom} padding:4px; text-align:center;'>${qtd}</td>`;
+                            html += `<td style='${borderBottom} padding:4px;'>${r.produto || r.nome_produto || '-'}</td>`;
+                            html += `<td style='${borderBottom} padding:4px; text-align:right;'>R$ ${preco.toFixed(2)}</td>`;
+                            html += `</tr>`;
+                        });
+                        html += `</tbody></table>`;
+                        html += `<div style='text-align:right; margin-top:10px; font-size:1.15em; font-weight:bold; color:#0077ff;'>Subtotal: R$ ${subtotal.toFixed(2)}</div>`;
+                        // Buscar taxa de serviço (servicomesa) da API
+                        fetch('/api/buscar-configuracao').then(r=>r.json()).then(cfg=>{
+                            console.log('[DEBUG] Resposta buscar-configuracao:', cfg);
+                            let taxa = 0;
+                            if(cfg && cfg.sucesso && cfg.config && cfg.config.servicomesa) {
+                                taxa = parseFloat(cfg.config.servicomesa) || 0;
+                            }
+                            console.log('[DEBUG] Subtotal:', subtotal, 'Taxa de serviço:', taxa);
+                            let valorServico = subtotal * (taxa/100);
+                            let total = subtotal + valorServico;
+                            html += `<div style='text-align:right; margin-top:2px; font-size:1.08em; color:#b30000;'>Serviço (${taxa.toFixed(2)}%): <b>R$ ${valorServico.toFixed(2)}</b></div>`;
+                            html += `<div style='text-align:right; margin-top:6px; font-size:1.18em; font-weight:bold; color:#008000;'>Total: R$ ${total.toFixed(2)}</div>`;
+                            html += `<div style='display:flex; gap:16px; justify-content:center; margin-top:12px; width:100%; max-width:600px; margin-left:auto; margin-right:auto;'>`;
+                            html += `<button type="button" class="btn-novo" style="flex:1 1 0; min-width:0; font-size:18px; box-shadow:0 2px 8px #bbb; width:100%; max-width:none;" onclick="window.imprimirMesa(${numeroMesa})">🖨️ Imprimir</button>`;
+                            html += `<button type="button" class="btn-salvar" style="flex:1 1 0; min-width:0; font-size:18px; box-shadow:0 2px 8px #bbb; width:100%; max-width:none;" onclick="alert('Confirmar mesa!')">✅ Confirmar</button>`;
+                            html += `</div>`;
+                            html += `</div>`;
+                            divEsquerda.innerHTML = html;
+                        }).catch((err)=>{
+                            console.error('[DEBUG] Erro buscar-configuracao:', err);
+                            html += `</div>`;
+                            divEsquerda.innerHTML = html;
+                        });
+                        return;
+                    }
+                }
+            } catch (e) {
+                if (divEsquerda) {
+                    let gridAntigo = divEsquerda.querySelector('.grid-mesa-registros');
+                    if (gridAntigo) gridAntigo.remove();
+                    let html = `<div class='grid-mesa-registros' style='margin:18px 8px 8px 8px; background:#e6f0ff; border-radius:10px; padding:12px; text-align:center;'>`;
+                    html += `<h3 style='color:#c00; margin-bottom:10px;'>Erro ao buscar registros da mesa.</h3>`;
+                    html += `</div>`;
+                    divEsquerda.insertAdjacentHTML('beforeend', html);
+                }
+            }
+        };
+    
+        // Função para remover item da mesa (escopo global para ser acessível pelo onclick)
+        window.removerItemMesa = async function(itemId, nomeProduto, numeroMesa) {
+            console.log('[DEBUG] removerItemMesa chamada - ID:', itemId, 'Produto:', nomeProduto, 'Mesa:', numeroMesa);
+            const idNum = Number(itemId);
+            if (!Number.isInteger(idNum)) {
+                alert('ID do item inválido para remoção.');
+                console.error('[DEBUG] ID não numérico:', itemId);
+                return;
+            }
+            
+            if (!idNum) {
+                alert('ID do item não encontrado.');
+                console.error('[DEBUG] ID do item é inválido:', idNum);
+                return;
+            }
+            
+            if (!confirm(`Deseja realmente remover "${nomeProduto}" da mesa ${numeroMesa}?`)) {
+                console.log('[DEBUG] Usuário cancelou a remoção');
+                return;
+            }
+
+            try {
+                const url = `/api/mesa/${numeroMesa}/item/${idNum}`;
+                console.log('[DEBUG] Fazendo DELETE para:', url);
+                
+                const resp = await fetch(url, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                console.log('[DEBUG] Resposta status:', resp.status);
+                
+                if (!resp.ok) {
+                    let detalhe = '';
+                    try {
+                        detalhe = await resp.text();
+                    } catch {}
+                    throw new Error(`Erro ao remover item - Status: ${resp.status}${detalhe ? ' - ' + detalhe : ''}`);
+                }
+                
+                const resultado = await resp.json();
+                console.log('[DEBUG] Resultado:', resultado);
+                
+                if (resultado.sucesso) {
+                    alert('Item removido com sucesso!');
+                    // Atualiza a tabela de registros da mesa
+                    console.log('[DEBUG] Atualizando grid da mesa...');
+                    await window.buscarRegistrosMesa(numeroMesa);
+                } else {
+                    alert(resultado.mensagem || 'Erro ao remover item.');
+                }
+            } catch (e) {
+                console.error('[DEBUG] Erro ao remover item:', e);
+                alert('Erro ao remover item da mesa: ' + e.message);
+            }
+        };
+
+        // Função para imprimir a mesa com número e grid de produtos
+        window.imprimirMesa = function(numeroMesa) {
+            console.log('[DEBUG IMPRIMIR] numeroMesa recebido:', numeroMesa);
+            console.log('[DEBUG IMPRIMIR] window.mesaSelecionada:', window.mesaSelecionada);
+            
+            // Se não recebeu número, tenta usar a mesa selecionada
+            if (!numeroMesa) {
+                numeroMesa = window.mesaSelecionada;
+            }
+            
+            if (!numeroMesa) {
+                alert('Nenhuma mesa selecionada para imprimir!');
+                return;
+            }
+            
+            const divEsquerda = document.querySelector('.esquerda');
+            if (!divEsquerda) {
+                alert('Div esquerda não encontrada.');
+                return;
+            }
+
+            // Captura o conteúdo do grid
+            const gridMesaRegistros = divEsquerda.querySelector('.grid-mesa-registros');
+            if (!gridMesaRegistros) {
+                alert('Nenhum registro encontrado para imprimir.');
+                return;
+            }
+
+            console.log('[DEBUG IMPRIMIR] Grid encontrado, abrindo janela...');
+            
+            // Cria uma nova janela para impressão
+            const janela = window.open('', '_blank', 'width=800,height=600');
+            
+            // Cria o HTML para impressão com número da mesa e grid
+            let htmlImpressao = `
+                <!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Impressão - Mesa ${numeroMesa}</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            margin: 20px;
+                            padding: 0;
+                        }
+                        .header {
+                            text-align: center;
+                            margin-bottom: 30px;
+                            border-bottom: 2px solid #333;
+                            padding-bottom: 15px;
+                        }
+                        .mesa-numero {
+                            font-size: 32px;
+                            font-weight: bold;
+                            color: #0077ff;
+                            margin-bottom: 10px;
+                        }
+                        .mesa-label {
+                            font-size: 18px;
+                            color: #333;
+                        }
+                        .conteudo {
+                            margin-top: 20px;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            background: #fff;
+                            margin-top: 20px;
+                        }
+                        th, td {
+                            border: 1px solid #ccc;
+                            padding: 8px;
+                            text-align: left;
+                        }
+                        th {
+                            background: #f5f5f5;
+                            font-weight: bold;
+                        }
+                        @media print {
+                            body {
+                                margin: 10px;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="mesa-numero">MESA ${numeroMesa}</div>
+                        <div class="mesa-label">Comanda de Atendimento</div>
+                    </div>
+                    <div class="conteudo">
+                        ${gridMesaRegistros.innerHTML}
+                    </div>
+                    <script>
+                        window.print();
+                        window.onafterprint = function() {
+                            window.close();
+                        };
+                    </script>
+                </body>
+                </html>
+            `;
+
+            janela.document.write(htmlImpressao);
+            janela.document.close();
+        };
+
+        // Carrossel fiel ao /casa
+        const casaSlides = document.querySelectorAll('.carousel-casa-slide');
+        if (casaSlides.length > 0) {
+            let casaCurrentSlide = 0;
+            function showCasaSlide(index) {
+                casaSlides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+            }
+            const prevCasa = document.getElementById('prev-casa');
+            const nextCasa = document.getElementById('next-casa');
+            if (prevCasa && nextCasa) {
+                prevCasa.onclick = function() {
+                    casaCurrentSlide = (casaCurrentSlide === 0) ? casaSlides.length - 1 : casaCurrentSlide - 1;
+                    showCasaSlide(casaCurrentSlide);
+                };
+                nextCasa.onclick = function() {
+                    casaCurrentSlide = (casaCurrentSlide === casaSlides.length - 1) ? 0 : casaCurrentSlide + 1;
+                    showCasaSlide(casaCurrentSlide);
+                };
+            }
+            showCasaSlide(casaCurrentSlide);
+        }
+
+        // Carrossel slides (se existir)
+        const slides = document.querySelectorAll('.carousel-slide');
+        if (slides.length > 0) {
+            let currentSlide = 0;
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.style.opacity = (i === index) ? '1' : '0';
+                });
+            }
+            const prev = document.getElementById('prev');
+            const next = document.getElementById('next');
+            if (prev && next) {
+                prev.onclick = function() {
+                    currentSlide = (currentSlide === 0) ? slides.length - 1 : currentSlide - 1;
+                    showSlide(currentSlide);
+                };
+                next.onclick = function() {
+                    currentSlide = (currentSlide === slides.length - 1) ? 0 : currentSlide + 1;
+                    showSlide(currentSlide);
+                };
+            }
+            showSlide(currentSlide);
+        }
+
+        // alert('JS principal carregado!');
+    });
+    
+    // Auto-seleção de uma mesa para demonstrar carregamento do grid
+    window.addEventListener('load', function() {
+        try {
+            var mesasComRegistro = {{ mesas_com_registro|list|tojson|safe }};
+            var autoMesa = (Array.isArray(mesasComRegistro) && mesasComRegistro.length > 0)
+                ? mesasComRegistro[0]
+                : 1;
+            if (autoMesa) {
+                console.log('[DEBUG] Auto-selecionando mesa:', autoMesa);
+                if (typeof window.selecionarMesa === 'function') {
+                    window.selecionarMesa(autoMesa);
+                }
+            }
+        } catch (e) {
+            console.warn('[DEBUG] Auto-seleção de mesa falhou:', e);
+        }
+    });
+    </script>
+    <!-- <script>alert('FORCE ALERT!')</script> -->
+    </body>
+</html>

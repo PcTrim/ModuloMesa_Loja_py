@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido - Impressão</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        .pedido-content {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .pedido-content pre {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #2d3748;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-print {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-print:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-close {
+            background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+            color: white;
+        }
+        
+        .btn-close:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 101, 101, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Estilos para impressão */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                display: block;
+            }
+            
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+                padding: 10mm;
+                max-width: 100%;
+            }
+            
+            .header {
+                border-bottom: 2px solid #000;
+            }
+            
+            .header h1 {
+                color: #000;
+                font-size: 24px;
+            }
+            
+            .header p {
+                color: #000;
+            }
+            
+            .pedido-content {
+                background: white;
+                border: 1px solid #000;
+                padding: 5mm;
+            }
+            
+            .pedido-content pre {
+                color: #000;
+                font-size: 12pt;
+            }
+            
+            .buttons {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include '_id_cliente_label.html' %}
+    <div class="container">
+        <div class="header">
+            <h1>🍕 Pedido - Novaloja</h1>
+            <p id="data-atual"></p>
+        </div>
+        
+        <div class="pedido-content">
+            <pre id="conteudo-pedido">{{ conteudo | safe }}</pre>
+        </div>
+        
+        <div class="buttons">
+            <button class="btn btn-print" onclick="imprimirEVoltar()">
+                🖨️ Imprimir
+            </button>
+            <button class="btn btn-close" onclick="voltarParaPrincipal()">
+                ✖️ Fechar
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        // Exibe a data atual
+        function exibirDataAtual() {
+            const dataEl = document.getElementById('data-atual');
+            const hoje = new Date();
+            
+            const opcoes = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            
+            const dataFormatada = hoje.toLocaleDateString('pt-BR', opcoes);
+            dataEl.textContent = dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
+        }
+        
+        // Imprime e volta para a página principal (endpoint /)
+        function imprimirEVoltar() {
+            // Imprime diretamente na impressora padrão sem abrir o diálogo
+            const printWindow = window.open('', '', 'height=400,width=600');
+            printWindow.document.write(document.documentElement.innerHTML);
+            printWindow.document.close();
+            printWindow.print();
+            
+            // Fecha a janela de impressão e volta para o endpoint /
+            printWindow.addEventListener('afterprint', () => {
+                printWindow.close();
+                window.location.href = '/';
+            });
+            
+            // Fallback se o evento afterprint não for suportado
+            setTimeout(() => {
+                printWindow.close();
+                window.location.href = '/';
+            }, 1000);
+        }
+        
+        // Volta para a página principal (endpoint /)
+        function voltarParaPrincipal() {
+            window.location.href = '/';
+        }
+        
+        // Chama ao carregar a página
+        window.addEventListener('DOMContentLoaded', exibirDataAtual);
+        
+        // Atalho Ctrl+P para imprimir
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                imprimirEVoltar();
+            }
+        });
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+</body>
+</html>

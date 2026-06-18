@@ -1,0 +1,9 @@
+<style>
+.produtos-enviados-mesa ul, .produtos-enviados-mesa li {
+  display: block !important;
+  white-space: normal !important;
+  flex: none !important;
+  align-items: stretch !important;
+  overflow: visible !important;
+}
+</style>

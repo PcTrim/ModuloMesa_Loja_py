@@ -1,0 +1,75 @@
+# Apache 2.4 — LojaOnline em subpath /LojaOnline/ (mesmo dominio que outro site na raiz)
+
+# Copiar para: /etc/apache2/sites-available/lojaonline.conf
+
+# Ou inserir no VirtualHost *:443 de pedidofacil.online (000-default-le-ssl.conf)
+
+#
+
+# Ativar: sudo a2enmod proxy proxy_http headers ssl
+
+#         sudo apache2ctl configtest && sudo systemctl reload apache2
+
+#
+
+# No .env do app: LOJA_URL_PREFIX=/LojaOnline
+
+
+
+<VirtualHost *:443>
+
+    ServerName pedidofacil.online
+
+
+
+    DocumentRoot /var/www/html
+
+
+
+    SSLEngine on
+
+    SSLCertificateFile /etc/letsencrypt/live/pedidofacil.online/fullchain.pem
+
+    SSLCertificateKeyFile /etc/letsencrypt/live/pedidofacil.online/privkey.pem
+
+
+
+    ProxyPreserveHost On
+
+    RequestHeader set X-Forwarded-Proto "https"
+
+    RequestHeader set X-Forwarded-For "%{REMOTE_ADDR}s"
+
+
+
+    # Estaticos do Flask sob o mesmo prefixo
+
+    Alias /LojaOnline/static /var/www/html/LojaOnline/static
+
+    <Directory /var/www/html/LojaOnline/static>
+
+        Require all granted
+
+    </Directory>
+
+
+
+    ProxyPass /LojaOnline/static !
+
+    ProxyPass /LojaOnline/ http://127.0.0.1:8001/
+
+    ProxyPassReverse /LojaOnline/ http://127.0.0.1:8001/
+
+
+
+    # NAO usar ProxyPass / na raiz se outro site ocupa /
+
+
+
+    ErrorLog ${APACHE_LOG_DIR}/lojaonline-error.log
+
+    CustomLog ${APACHE_LOG_DIR}/lojaonline-access.log combined
+
+</VirtualHost>
+
+

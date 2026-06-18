@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carregando | LojaOnline</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='ui_touch.css') }}">
+    {% include 'partials/topbar_meta_assets.html' %}
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root{
+            --bg: #0f0f14;
+            --surface: #1a1a28;
+            --line: #2a2a40;
+            --text: #e8e8f0;
+            --muted: #a2a8b8;
+            --brand: #7c3aed;
+            --brand2: #4f46e5;
+            --ok: #10b981;
+        }
+        html[data-theme="light"]{
+            --bg: #f3f5f9;
+            --surface: #ffffff;
+            --line: #e5e7eb;
+            --text: #0f172a;
+            --muted: #6b7280;
+            --brand: #6d28d9;
+            --brand2: #2563eb;
+            --ok: #059669;
+        }
+        html[data-theme="dark"] body {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(circle at top right, rgba(124, 58, 237, 0.18) 0%, transparent 42%),
+                radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.1) 0%, transparent 38%),
+                var(--bg);
+            font-family: Outfit, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            color: var(--text);
+            opacity: 0;
+            animation: fadeInBody .45s ease-out forwards;
+        }
+        html[data-theme="light"] body {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(circle at top right, #e6ecff 0%, transparent 38%),
+                radial-gradient(circle at bottom left, #efeaff 0%, transparent 35%),
+                var(--bg);
+            font-family: Outfit, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            color: var(--text);
+            opacity: 0;
+            animation: fadeInBody .45s ease-out forwards;
+        }
+        html[data-theme="dark"] .splash-card {
+            width: min(92vw, 540px);
+            background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0)) , var(--surface);
+            border: 0.5px solid var(--line);
+            border-radius: 20px;
+            box-shadow: 0 14px 38px rgba(0, 0, 0, 0.45);
+            padding: 28px 22px 24px;
+            text-align: center;
+            transform: translateY(10px);
+            animation: fadeInCard .45s ease-out forwards;
+        }
+        html[data-theme="light"] .splash-card {
+            width: min(92vw, 540px);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: 0 14px 38px rgba(0, 0, 0, 0.09);
+            padding: 28px 22px 24px;
+            text-align: center;
+            transform: translateY(10px);
+            animation: fadeInCard .45s ease-out forwards;
+        }
+        body.fade-out {
+            animation: fadeOutBody .45s ease-in forwards;
+        }
+        .logo {
+            width: min(420px, 100%);
+            height: auto;
+            margin: 0 auto 16px;
+            display: block;
+            filter: saturate(1.05);
+        }
+        .subtitle { color: var(--muted); }
+        .title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            margin-bottom: 16px;
+            font-size: 14px;
+            line-height: 1.35;
+        }
+        .progress {
+            height: 12px;
+            width: 100%;
+            border-radius: 999px;
+            overflow: hidden;
+            background: color-mix(in srgb, var(--line) 82%, transparent);
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(135deg, var(--brand2), var(--brand));
+            animation: fillBar linear forwards;
+            border-radius: 999px;
+            position: relative;
+            overflow: hidden;
+        }
+        .progress-bar::after{
+            content:"";
+            position:absolute;
+            inset:0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+            transform: translateX(-40%);
+            animation: shimmer 1.2s linear infinite;
+        }
+        @keyframes fillBar {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+        @keyframes shimmer {
+            from { transform: translateX(-60%); }
+            to { transform: translateX(60%); }
+        }
+        @keyframes fadeInBody {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOutBody {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes fadeInCard {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce){
+            .progress-bar::after{display:none;}
+        }
+    </style>
+</head>
+<body>
+    <span class="top-meta-badge app-version-badge splash-version-fixed" title="Versão da aplicação">v{{ app_version }}</span>
+    <main class="splash-card ui-card">
+        <img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt="Logo PcTrim Tecnologia" class="logo">
+        <h1 class="title">Bem-vindo ao sistema</h1>
+        <p class="subtitle">Carregando ambiente seguro para atendimento...</p>
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </main>
+    <script>
+        const delayMs = Number({{ delay_ms|tojson }}) || 5000;
+        const FADE_OUT_MS = 450;
+        const redirectUrl = {{ redirect_url|tojson }};
+        const progressBar = document.getElementById("progressBar");
+        const todayKey = new Date().toISOString().slice(0, 10);
+        const visitedKey = "lojaonline_splash_last_visit";
+
+        function isSlowDevice() {
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const hasLowMemory = typeof navigator.deviceMemory === "number" && navigator.deviceMemory <= 2;
+            const hasLowCpu = typeof navigator.hardwareConcurrency === "number" && navigator.hardwareConcurrency <= 2;
+            const hasSlowNetwork = connection && (
+                connection.saveData ||
+                connection.effectiveType === "2g" ||
+                connection.effectiveType === "slow-2g"
+            );
+            return Boolean(hasLowMemory || hasLowCpu || hasSlowNetwork);
+        }
+
+        function fadeAndRedirect(immediate = false) {
+            if (!immediate) {
+                document.body.classList.add("fade-out");
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, FADE_OUT_MS);
+                return;
+            }
+            window.location.href = redirectUrl;
+        }
+
+        const alreadyVisitedToday = localStorage.getItem(visitedKey) === todayKey;
+        const shouldSkipSplash = alreadyVisitedToday || isSlowDevice();
+
+        if (shouldSkipSplash) {
+            fadeAndRedirect(true);
+        } else {
+            progressBar.style.animationDuration = `${delayMs}ms`;
+            setTimeout(() => {
+                localStorage.setItem(visitedKey, todayKey);
+                fadeAndRedirect(false);
+            }, delayMs);
+        }
+    </script>
+</body>
+</html>

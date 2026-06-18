@@ -1,0 +1,16 @@
+Duplo clique: iniciar-print-bridge.bat
+
+
+
+Impressora: MySQL (comanda_delivery=S / conta_mesa=S). O bridge resolve
+
+maiúsculas/minúsculas e UNC (ex.: \\note\usb -> USB no Windows).
+
+
+
+Copie: .bat, app.py, printer_core.py, printer_match.py, requirements.txt
+
+NAO copie .venv
+
+
+

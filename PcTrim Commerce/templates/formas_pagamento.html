@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formas de Pagamento</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    {% include 'partials/topbar_meta_assets.html' %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+    <div class="pdv">
+    <header class="topbar">
+        <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
+        <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+        <div class="brand">Formas de pagamento</div>
+        {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+            <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+            <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+        </button>
+    </header>
+
+    <div class="shell">
+        <section class="center">
+            <div class="field-group">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <p class="title" style="margin:0;">Formas cadastradas</p>
+                    <button type="button" class="btn-purple" style="width:auto; padding:8px 12px;" onclick="novoRegistro()">Novo</button>
+                </div>
+            </div>
+
+            <table class="tbl" id="tabelaFormas">
+                <thead>
+                    <tr>
+                        <th style="width: 110px;">Código</th>
+                        <th>Forma</th>
+                        <th style="width: 140px;">Troco</th>
+                        <th style="width: 220px; text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabelaFormas">
+                    <tr><td colspan="4" class="empty">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <aside class="right">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+
+            <div class="field-group" id="formaFormPanel">
+                <p class="title">Cadastro</p>
+                <form id="formForma" class="form" onsubmit="salvarFormaPagamento(event)">
+                    <input type="text" id="formaNome" required placeholder="Forma (ex: PIX)">
+                    <select id="formaTroco">
+                        <option value="N">Troco: Não</option>
+                        <option value="S">Troco: Sim</option>
+                    </select>
+                    <input type="hidden" id="formaChave" value="">
+                    <div class="actions">
+                        <button type="button" class="btn-outline" onclick="window.location.href='{{ url_prefix }}/configuracoes'">Voltar</button>
+                        <button type="submit" class="btn-green" id="btnSalvarForma">Salvar</button>
+                        <button type="button" class="btn-modal" id="btnCancelarForma" onclick="cancelarEdicao()" style="display:none;">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </aside>
+    </div>
+    </div>
+    <script>
+        function showMsg(text, ok) {
+            const el = document.getElementById('mensagem');
+            if (!el) return;
+            el.className = 'mensagem ' + (ok ? 'sucesso' : 'erro');
+            el.textContent = text;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 3500);
+        }
+
+        async function carregarFormasPagamento() {
+            const tbody = document.getElementById('corpoTabelaFormas');
+            try {
+                const res = await fetch('/api/formas-pagamento');
+                const data = await res.json();
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                const formas = data && data.sucesso && Array.isArray(data.formas) ? data.formas : [];
+                if (!formas.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty">Nenhuma forma cadastrada.</td></tr>';
+                    return;
+                }
+                formas.forEach((f) => {
+                    const tr = document.createElement('tr');
+                    const t = String(f.troco || '').trim().toUpperCase();
+                    const pill = t === 'S'
+                        ? '<span class="pill ok">Sim</span>'
+                        : '<span class="pill bad">Não</span>';
+                    const nome = String(f.forma || '');
+                    tr.innerHTML = `
+                        <td class="kcell">#${f.chave}</td>
+                        <td>${nome}</td>
+                        <td>${pill}</td>
+                        <td style="text-align:center;">
+                            <span class="tbl-actions">
+                                <button class="btn-mini" onclick="editarFormaPagamento(${f.chave}, '${nome.replace(/'/g, "\\'")}', '${t === 'S' ? 'S' : 'N'}')">Editar</button>
+                                <button class="btn-mini btn-mini-danger" onclick="excluirFormaPagamento(${f.chave}, '${nome.replace(/'/g, "\\'")}')">Excluir</button>
+                            </span>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="empty">Erro ao carregar.</td></tr>';
+            }
+        }
+
+        function novoRegistro() {
+            cancelarEdicao();
+            document.getElementById('formaFormPanel')?.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('formaNome')?.focus();
+        }
+
+        function editarFormaPagamento(chave, nome, troco) {
+            document.getElementById('formaChave').value = String(chave || '');
+            document.getElementById('formaNome').value = String(nome || '');
+            document.getElementById('formaTroco').value = String(troco || 'N').toUpperCase() === 'S' ? 'S' : 'N';
+            document.getElementById('btnSalvarForma').textContent = 'Atualizar';
+            document.getElementById('btnCancelarForma').style.display = 'block';
+            document.getElementById('formaFormPanel')?.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('formaNome')?.focus();
+        }
+
+        function cancelarEdicao() {
+            document.getElementById('formaChave').value = '';
+            document.getElementById('formaNome').value = '';
+            document.getElementById('formaTroco').value = 'N';
+            document.getElementById('btnSalvarForma').textContent = 'Salvar';
+            document.getElementById('btnCancelarForma').style.display = 'none';
+        }
+
+        async function salvarFormaPagamento(ev) {
+            ev.preventDefault();
+            const chave = String(document.getElementById('formaChave').value || '').trim();
+            const nome = String(document.getElementById('formaNome').value || '').trim();
+            const troco = String(document.getElementById('formaTroco').value || 'N').trim().toUpperCase() === 'S' ? 'S' : 'N';
+            if (!nome) return;
+            try {
+                const url = chave ? `/api/editar-forma-pagamento/${encodeURIComponent(chave)}` : '/api/salvar-forma-pagamento';
+                const method = chave ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ forma: nome, troco })
+                });
+                const data = await res.json();
+                if (data && data.sucesso) {
+                    showMsg(data.mensagem || 'Salvo.', true);
+                    cancelarEdicao();
+                    await carregarFormasPagamento();
+                } else {
+                    showMsg((data && (data.erro || data.mensagem)) || 'Erro ao salvar.', false);
+                }
+            } catch (e) {
+                showMsg('Erro ao salvar.', false);
+            }
+        }
+
+        async function excluirFormaPagamento(chave, nome) {
+            if (!confirm(`Excluir a forma "${nome}"?`)) return;
+            try {
+                const res = await fetch(`/api/excluir-forma-pagamento/${encodeURIComponent(chave)}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data && data.sucesso) {
+                    showMsg(data.mensagem || 'Excluída.', true);
+                    await carregarFormasPagamento();
+                } else {
+                    showMsg((data && (data.erro || data.mensagem)) || 'Erro ao excluir.', false);
+                }
+            } catch (e) {
+                showMsg('Erro ao excluir.', false);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', carregarFormasPagamento);
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+<script>try { lucide.createIcons(); } catch (e) {}</script>
+</body>
+</html>

@@ -1,0 +1,2995 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %} | {{ nome_fantasia or 'Loja' }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {% include 'partials/topbar_meta_assets.html' %}
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root { --bg:#0f0f14; --surface:#1a1a28; --side:#13131f; --line:#2a2a40; --text:#e8e8f0; --muted:#888fa0; --purple:#7c3aed; --green:#10b981; --danger:#f87171; --input-bg:#10101a; --control-bg:#151522; --btn-secondary:#171726; --collapse-bg:#141422; --accent-soft:#ddd6fe; --tab-active:#e9d5ff; --outline-fg:#ddd6fe; --pay-selected-fg:#d1fae5; --sum-open:#c4b5fd; --on-primary:#fff; }
+    html[data-theme="light"] { --bg:#f1f5f9; --surface:#ffffff; --side:#e8ecf4; --line:#c8d0e0; --text:#0f172a; --muted:#64748b; --purple:#6d28d9; --green:#059669; --danger:#dc2626; --input-bg:#f8fafc; --control-bg:#e2e8f0; --btn-secondary:#eef2f7; --collapse-bg:#f8fafc; --accent-soft:#5b21b6; --tab-active:#5b21b6; --outline-fg:#5b21b6; --pay-selected-fg:#065f46; --sum-open:#6d28d9; --on-primary:#fff; }
+    *{box-sizing:border-box;} html,body{margin:0;height:100%;overflow:hidden;font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:var(--text);} 
+    .pdv{height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+    .topbar{height:44px;min-height:44px;background:var(--surface);border-bottom:.5px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 12px;gap:10px;}
+    .home{color:var(--muted);display:flex;align-items:center;text-decoration:none;padding:4px;border-radius:6px;} .home:hover{color:var(--text);background:rgba(255,255,255,.05);}
+    .home:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(124,58,237,.28);background:rgba(124,58,237,.12);color:var(--text);}
+    .top-logo{display:flex;align-items:center;pointer-events:none;}
+    .top-logo img{height:24px;width:auto;opacity:.9;}
+    .brand{flex:1;text-align:center;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .badge{background:rgba(124,58,237,.2);color:var(--accent-soft);border:.5px solid var(--purple);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap;}
+    .theme-top-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:32px;padding:0;border-radius:8px;border:.5px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;}
+    .theme-top-btn:hover{color:var(--text);border-color:var(--purple);}
+    .theme-top-btn:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.28);color:var(--text);}
+    html[data-theme="dark"] .theme-top-btn .icon-dark{display:none;}
+    html[data-theme="light"] .theme-top-btn .icon-light{display:none;}
+    .toggle{display:inline-flex;border:.5px solid var(--line);border-radius:999px;overflow:hidden;background:var(--bg);}
+    .toggle button{border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer;} .toggle button.active{background:var(--purple);color:var(--on-primary);}
+    .toggle button:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(124,58,237,.28);}
+
+    .shell{flex:1;display:grid;grid-template-columns:260px 1fr 300px;min-height:0;}
+    .left,.right{background:var(--side);min-height:0;padding:8px;display:flex;flex-direction:column;gap:8px;}
+    .left{overflow-y:auto;}
+    .left{border-right:.5px solid var(--line);} .right{border-left:.5px solid var(--line);} 
+    .center{padding:8px;display:flex;flex-direction:column;gap:8px;min-height:0;}
+
+    .title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 2px;}
+    .form{display:grid;gap:6px;}
+    .row{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;}
+    .row-split{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+    .form input,.form textarea{width:100%;padding:8px 10px;border-radius:6px;border:.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;transition:border-color .12s ease,box-shadow .12s ease,background-color .12s ease;}
+    .form input:focus,.form textarea:focus,.form input:focus-visible,.form textarea:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.28);background:var(--surface);}
+    .form input:disabled,.form textarea:disabled{background:var(--input-bg);color:var(--muted);cursor:not-allowed;}
+    .form input:-webkit-autofill,.form input:-webkit-autofill:hover,.form input:-webkit-autofill:focus{-webkit-text-fill-color:var(--text);-webkit-box-shadow:0 0 0 1000px var(--bg) inset;transition:background-color 9999s ease-in-out 0s;}
+    #cli-fone::-webkit-contacts-auto-fill-button{visibility:hidden;display:none !important;pointer-events:none;position:absolute;right:0;}
+    .form textarea{resize:vertical;min-height:56px;max-height:120px;}
+    .field-group{display:grid;gap:6px;padding:6px;border:.5px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02);}
+    .field-group .title{margin:0;}
+    .btn-mini{border:.5px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;}
+    .btn-mini:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.22);}
+    .btn-mini:disabled{opacity:.55;cursor:not-allowed;}
+    #btn-localizar{padding:6px 9px;font-size:11px;line-height:1.1;height:30px;white-space:nowrap;}
+    .row-thirds{display:grid;grid-template-columns:1fr 1fr 72px;gap:6px;}
+    .readonly{opacity:.9;background:var(--input-bg);}
+
+    #class-tabs{display:flex;gap:4px;overflow-x:auto;min-height:34px;}
+    #class-tabs button{border:.5px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+    #class-tabs button.active{background:rgba(124,58,237,.2);color:var(--tab-active);border-color:var(--purple);}    
+    .search{display:flex;align-items:center;gap:8px;background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--muted);} 
+    #busca-produto{flex:1;border:none;outline:none;background:transparent;font-family:inherit;font-size:13px;color:var(--text);} 
+    .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;align-content:start;overflow-y:auto;min-height:0;}
+    .prod-card{background:var(--surface);border:.5px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;}
+    .prod-card.sel-frac{border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.2);}
+    .prod-card.sel-frac .code{color:var(--accent-soft);}
+    .prod-card .name{font-size:12px;font-weight:700;line-height:1.25;} .prod-card .code{font-size:10px;color:var(--muted);font-weight:600;} .prod-card .price{font-size:12px;color:var(--green);font-weight:700;}
+    .btn-plus{width:100%;margin-top:auto;border:none;border-radius:6px;background:var(--purple);color:var(--on-primary);font-weight:600;font-size:15px;padding:8px;cursor:pointer;font-family:inherit;}
+
+    #itens-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;}
+    .item{background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:8px;font-size:12px;display:grid;gap:6px;}
+    .item.ajuste-tecnico{border-color:var(--purple);background:rgba(124,58,237,.08);}
+    .item-top,.item-mid,.item-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .item-top>div{min-width:0;flex:1;}
+    .item-name{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+    .item-desc{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+    .item-mid{color:var(--muted);}
+    .item-qty{display:flex;align-items:center;gap:4px;}
+    .qty-btn{min-width:24px;height:24px;border:.5px solid var(--line);border-radius:6px;background:var(--control-bg);color:var(--text);cursor:pointer;font-size:13px;line-height:1;padding:0 6px;}
+    .qty-input{width:44px;height:24px;text-align:center;border:.5px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--text);font-size:12px;}
+    .unit-price{font-size:11px;}
+    .item-obs{display:grid;grid-template-columns:1fr auto;gap:6px;}
+    .item-obs input{height:26px;padding:4px 8px;border:.5px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--text);font-size:12px;}
+    .item-obs.sep{border-top:.5px dashed var(--line);padding-top:6px;margin-top:2px;}
+    .item-obs-label{font-size:10px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .obs-save{height:26px;padding:0 8px;border:.5px solid var(--line);border-radius:6px;background:var(--btn-secondary);color:var(--accent-soft);cursor:pointer;font-size:11px;font-weight:700;}
+    .item-v{color:var(--green);font-weight:700;font-size:12px;}
+    .del{width:24px;height:24px;padding:0;border-radius:6px;border:.5px solid var(--line);background:transparent;color:var(--danger);cursor:pointer;font-size:16px;line-height:1;}
+    .item.fracionado .item-name{max-width:150px;}
+    .item.fracionado .item-desc{max-width:150px;}
+    .item.fracionado .item-obs{grid-template-columns:1fr;gap:4px;}
+
+    .tot{background:var(--surface);border:.5px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;}
+    .sum{display:flex;justify-content:space-between;font-size:12px;} .sum.total{font-size:14px;font-weight:800;padding-top:4px;border-top:.5px solid var(--line);}    
+    .btn-green,.btn-purple,.btn-outline{width:100%;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .btn-green{background:#059669;color:var(--on-primary);} .btn-purple{background:var(--purple);color:var(--on-primary);} .btn-outline{background:transparent;color:var(--outline-fg);border:1px solid var(--purple);} 
+    .btn-pay{width:100%;border:.5px solid var(--line);border-radius:6px;padding:8px 10px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--btn-secondary);color:var(--text);display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;}
+    .btn-pay:disabled{opacity:.55;cursor:not-allowed;}
+    .btn-pay:hover{border-color:var(--purple);}
+    .btn-pay.selected{border-color:var(--green);color:var(--pay-selected-fg);background:rgba(16,185,129,.12);}
+    .cep-row{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;}
+    .cep-status{font-size:11px;min-width:18px;text-align:center;color:var(--green);}
+    .status-line{font-size:11px;color:var(--muted);}
+    .status-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .status-dot{width:10px;height:10px;border-radius:999px;display:inline-block;background:#ef4444;border:.5px solid rgba(0,0,0,.25);}
+    .history-btn{width:36px;height:36px;border:.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+    .history-btn:hover{color:var(--text);border-color:var(--purple);}
+    .tot-collapse{border:.5px solid var(--line);border-radius:8px;background:var(--collapse-bg);padding:6px;}
+    .tot-collapse summary{cursor:pointer;list-style:none;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+    .tot-collapse summary::-webkit-details-marker{display:none;}
+    .tot-collapse[open] summary{margin-bottom:8px;color:var(--sum-open);}
+    .func-list{display:grid;gap:6px;}
+    .hotkey-btn{width:100%;border:.5px solid var(--line);border-radius:6px;background:var(--btn-secondary);color:var(--text);padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;text-align:left;}
+    .hotkey-btn kbd{font-family:inherit;background:rgba(124,58,237,.15);border:.5px solid var(--purple);border-radius:999px;padding:2px 8px;margin-right:6px;font-size:10px;}
+    .btn-icon-mini{width:100%;border:.5px solid var(--line);border-radius:6px;background:var(--btn-secondary);color:var(--text);padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;}
+
+    .modal{display:none;position:fixed;inset:0;z-index:2000;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.6);} .modal.open{display:flex;}
+    .modal-card{width:min(420px,100%);background:var(--surface);border:.5px solid var(--line);border-radius:12px;padding:20px;max-height:80vh;overflow:auto;}
+    .modal-card.print{width:min(760px,96vw);}
+    .modal-card.casa-conf-card{display:flex;flex-direction:column;max-height:min(90vh,820px);overflow:hidden;padding:16px 18px;gap:0;}
+    .casa-conf-head{flex-shrink:0;padding-bottom:10px;}
+    .casa-conf-head h3{margin:0 0 6px;font-size:1.15rem;font-weight:800;}
+    .casa-conf-head .muted{margin:0;}
+    .casa-conf-body{flex:1;min-height:120px;overflow-y:auto;margin:0;padding:2px 0;scrollbar-gutter:stable;}
+    .casa-conf-card .conferencia-pre{max-height:none;margin:0;}
+    .casa-conf-foot{flex-shrink:0;border-top:.5px solid var(--line);padding-top:12px;margin-top:12px;display:grid;gap:10px;}
+    .casa-conf-printer-row{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:10px;}
+    .casa-conf-printer-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap;}
+    .casa-conf-foot .imp-ro{margin:0;}
+    .casa-conf-actions{display:grid;gap:8px;}
+    .casa-conf-actions .btn-modal-primary{grid-column:1/-1;background:#059669;color:#fff;border-color:#059669;font-size:14px;font-weight:700;padding:12px 16px;}
+    .casa-conf-actions .btn-modal-primary:hover{filter:brightness(1.06);border-color:#047857;}
+    .casa-conf-actions-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .modal-card.zoom{width:min(860px,96vw);}
+    .modal-card.fracionado{width:min(700px,96vw);}
+    .modal-card.fracionado .modal-actions{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .frac-inline{display:none;border:.5px solid var(--line);border-radius:8px;background:var(--surface);padding:7px 8px;margin:6px 0;gap:5px;}
+    .frac-inline.open{display:grid;}
+    .frac-inline-top{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;}
+    .frac-inline-pie{width:36px;height:36px;border-radius:50%;border:.5px solid var(--line);background:conic-gradient(var(--line) 0 100%);}
+    .frac-inline-main{display:grid;gap:2px;min-width:0;}
+    .frac-inline-label{font-size:11px;font-weight:800;color:var(--purple);text-transform:uppercase;line-height:1.1;}
+    .frac-inline-count{font-size:10px;color:var(--muted);font-weight:700;line-height:1.1;}
+    .frac-inline-list{display:flex;flex-wrap:wrap;gap:4px;font-size:10px;color:var(--muted);line-height:1.2;}
+    .frac-chip{display:inline-flex;align-items:center;gap:4px;border:.5px solid var(--line);border-radius:999px;padding:2px 6px;background:var(--input-bg);max-width:220px;}
+    .frac-chip-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .frac-chip-x{background:transparent;border:none;color:var(--danger);cursor:pointer;padding:0;font-size:11px;line-height:1;}
+    .frac-inline-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+    .frac-inline-actions .btn-modal{padding:6px 8px;font-size:11px;border-radius:7px;}
+    .frac-etiqueta{font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--purple);margin:-4px 0 10px;text-transform:uppercase;}
+    .frac-search{width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;border:.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;transition:border-color .15s,box-shadow .15s,background .15s;}
+    .frac-search:focus,.frac-search:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.28);background:var(--surface);}
+    .frac-busca-lbl{display:block;margin-bottom:4px;font-size:11px;color:var(--muted);}
+    .frac-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0;}
+    .frac-col-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;}
+    .frac-prod-list{display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto;}
+    .frac-prod-btn{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;width:100%;padding:7px 10px;border:.5px solid var(--line);border-radius:7px;background:var(--btn-secondary);color:var(--text);cursor:pointer;font-family:inherit;font-size:12px;text-align:left;transition:border-color .15s,box-shadow .15s;}
+    .frac-prod-btn:focus,.frac-prod-btn:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.22);}
+    .frac-prod-btn:hover:not(:disabled){border-color:var(--purple);}
+    .frac-prod-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .frac-prod-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+    .frac-prod-code{font-size:10px;font-weight:600;color:var(--muted);}
+    .frac-prod-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;}
+    .frac-prod-preco{font-size:11px;color:var(--muted);white-space:nowrap;}
+    .frac-sabores-list{display:flex;flex-direction:column;gap:7px;max-height:300px;overflow-y:auto;}
+    .frac-sabor-item{border:.5px solid var(--line);border-radius:8px;padding:8px;}
+    .frac-sabor-header{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:12px;gap:6px;}
+    .frac-remove-frac{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border:none;border-radius:4px;background:var(--danger,#ef4444);color:#fff;cursor:pointer;font-size:14px;line-height:1;padding:0;flex-shrink:0;transition:box-shadow .15s;}
+    .frac-remove-frac:focus,.frac-remove-frac:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(239,68,68,.35);}
+    .frac-sabor-code{font-size:10px;font-weight:600;color:var(--muted);margin-top:4px;}
+    .frac-count-badge{font-size:11px;font-weight:600;color:var(--purple);}
+    .modal-card.fracionado .btn-modal:focus,.modal-card.fracionado .btn-modal:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.22);}
+    .muted{font-size:12px;color:var(--muted);margin-bottom:8px;}
+    .pay-list{display:grid;gap:8px;margin:10px 0 12px;}
+    .pay-opt{width:100%;text-align:left;border:.5px solid var(--line);border-radius:10px;background:var(--btn-secondary);color:var(--text);padding:10px 12px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+    .conferencia-pre{white-space:pre-wrap;background:var(--input-bg);border:.5px solid var(--line);border-radius:8px;padding:14px;max-height:52vh;overflow:auto;font-size:13px;line-height:1.45;font-family:Consolas,"Courier New",monospace;}
+    .conferencia-pre.zoom{max-height:70vh;font-size:13px;}
+    .zoom-editor-list{display:grid;gap:8px;margin:10px 0;}
+    .zoom-editor-item{border:.5px solid var(--line);border-radius:8px;background:var(--input-bg);padding:10px;display:grid;gap:8px;}
+    .zoom-editor-name{font-size:12px;font-weight:700;}
+    .zoom-editor-fields{display:grid;grid-template-columns:96px 1fr;gap:8px;}
+    .zoom-editor-fields input{width:100%;padding:8px 10px;border-radius:6px;border:.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;}
+    .zoom-fracionado-sabores{font-size:11px;color:var(--muted);line-height:1.35;}
+    .zoom-group-part{display:grid;gap:4px;padding-top:6px;margin-top:4px;border-top:.5px dashed var(--line);}
+    .zoom-group-part:first-of-type{margin-top:0;padding-top:0;border-top:none;}
+    .zoom-group-label{font-size:11px;font-weight:700;color:var(--text);}
+    .zoom-resumo{border:.5px solid var(--line);border-radius:8px;background:var(--input-bg);padding:10px;display:grid;gap:6px;margin-bottom:8px;}
+    .zoom-resumo-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;}
+    .opt-grid{display:grid;gap:10px;margin-top:8px;}
+    .opt-block{border:.5px solid var(--line);border-radius:10px;background:var(--input-bg);padding:10px;}
+    .opt-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;}
+    .opt-choices{display:flex;flex-wrap:wrap;gap:6px;}
+    .opt-btn{border:.5px solid var(--line);background:var(--btn-secondary);color:var(--text);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+    .opt-btn:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.22);}
+    .opt-btn.sel{border-color:var(--green);background:rgba(16,185,129,.14);}
+    .opt-price{font-size:11px;color:var(--muted);font-weight:700;}
+    .opt-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;}
+    .opt-total{font-size:13px;font-weight:800;color:var(--green);}
+    .imp-ro{width:100%;margin:8px 0;padding:8px 10px;border-radius:6px;border:.5px solid var(--line);background:var(--input-bg);color:var(--text);font-family:inherit;font-size:12px;}
+    .modal-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px;}
+    .btn-modal{width:100%;border:.5px solid var(--line);border-radius:8px;background:var(--btn-secondary);color:var(--text);padding:10px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .btn-modal:hover{border-color:var(--purple);}
+    .pay-opt:hover{border-color:var(--purple);}
+    .pay-opt.active{border-color:var(--green);background:rgba(16,185,129,.13);}
+    .badge-pend-aguarde{cursor:pointer;border:1px solid rgba(202,138,4,.55);background:rgba(202,138,4,.15);color:var(--text);font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;}
+    .badge-pend-aguarde:hover{filter:brightness(1.06);}
+    .aguarde-pedido-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:.5px solid var(--line);}
+    .aguarde-pedido-row:last-child{border-bottom:none;}
+    .obs-box{width:100%;padding:8px 10px;border-radius:6px;border:.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;min-height:56px;resize:vertical;}
+
+    @media (max-width: 1200px){
+      .shell{grid-template-columns:220px 1fr 260px;}
+    }
+    @media (max-width: 900px){
+      .shell{grid-template-columns:1fr;}
+      .left,.center,.right{border:none;}
+      .left{order:1;}
+      .center{order:2;min-height:320px;}
+      .right{order:3;min-height:260px;}
+      .modal-actions{grid-template-columns:1fr;}
+      .casa-conf-actions-row{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+<div class="pdv">
+  <header class="topbar">
+    <a class="home" href="{{ url_prefix }}/" title="Painel"><i data-lucide="home" width="18" height="18"></i></a>
+    <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+    <div class="brand">{{ nome_fantasia or 'Minha Loja' }}</div>
+    <span class="badge" id="pedido-badge">{% if IS_RETAIL %}Venda -{% else %}Pedido -{% endif %}</span>
+    <button type="button" class="badge-pend-aguarde" id="btn-pend-aguarde" data-retail-hide style="display:none;" title="Ver pedidos em AGUARDE">AGUARDE · 0</button>
+    <span class="badge" id="comanda-status-badge" style="display:none;">COMANDA MODIFICADA</span>
+    <div class="toggle">
+      <button type="button" data-modo="mesa" data-retail-hide>Mesa</button>
+      <button type="button" data-modo="delivery" data-retail-hide{% if not IS_RETAIL %} class="active"{% endif %}>Delivery</button>
+      <button type="button" data-modo="balcao"{% if IS_RETAIL %} class="active"{% endif %}>Balcão</button>
+    </div>
+    {% include 'partials/topbar_meta.html' %}
+    <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro"><i data-lucide="sun" class="icon-light" width="18" height="18"></i><i data-lucide="moon" class="icon-dark" width="18" height="18"></i></button>
+  </header>
+
+  <main class="shell">
+    <div id="banner-terminal-imp" class="status-line" style="display:none; margin:0 0 10px; padding:10px 12px; border-radius:8px; background:rgba(255,180,0,0.15); border:1px solid rgba(255,180,0,0.35);">
+      <span id="banner-terminal-imp-text">Este terminal ainda não está configurado para impressão.</span>
+      <a href="{{ url_prefix }}/configuracoes-dados" style="margin-left:8px;">Configurar agora</a>
+    </div>
+    <aside class="left">
+      <p class="title">Cliente</p>
+      <div class="form" id="delivery-form" data-retail-hide autocomplete="off">
+        <div class="field-group">
+          <p class="title">Contato</p>
+          <div class="row"><input id="cli-fone" name="telefone_contato_operacional" placeholder="Telefone (sem DDD)" type="text" autocomplete="new-password" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="numeric"><button type="button" class="btn-mini" id="btn-localizar">Localizar</button><span class="status-dot" id="cliente-localizado-ok" title="Cliente não localizado"></span><button type="button" class="history-btn" id="btn-historico-cliente" title="Ver histórico do cliente" style="display:none;"><i data-lucide="history" width="14" height="14"></i></button></div>
+          <div class="status-row"><span class="status-line" id="cliente-pedidos-info">Pedidos anteriores: -</span><button type="button" class="btn-mini" id="btn-editar-cliente">Editar</button></div>
+        </div>
+        <div class="field-group">
+          <p class="title">Endereço</p>
+          <div class="cep-row"><input id="cli-cep" placeholder="CEP" inputmode="numeric" autocomplete="new-password"><span class="cep-status" id="cep-status"></span></div>
+          <input id="cli-nome" placeholder="Nome">
+          <input id="cli-end" placeholder="Endereço">
+          <div class="row-split"><input id="cli-nrocasa" placeholder="Nº"><input id="cli-complemento" placeholder="Complemento"></div>
+          <textarea id="cli-ref" placeholder="Referência"></textarea>
+          <div class="row-thirds"><input id="cli-bairro" placeholder="Bairro"><input id="cli-cidade" placeholder="Cidade"><input id="cli-uf" placeholder="UF" maxlength="2"></div>
+        </div>
+        <div class="field-group">
+          <p class="title">Entrega</p>
+          <div class="row-split"><input id="cli-distancia" class="readonly" placeholder="Distância (km)"><input id="cli-taxa" class="readonly" placeholder="Taxa entrega"></div>
+          <button type="button" class="btn-mini" id="btn-salvar-cliente">Calcular / salvar entrega</button>
+        </div>
+      </div>
+      <div class="form" id="balcao-form" style="display:{% if IS_RETAIL %}grid{% else %}none{% endif %};">
+        <input id="balcao-nome" placeholder="Nome do cliente (opcional)">
+        <input id="balcao-fone" placeholder="Celular (opcional, para avisar quando pronto)" type="text" inputmode="numeric" autocomplete="off">
+        <div class="field-group" style="margin-top:10px;">
+          <p class="title">Pagamento</p>
+          <div class="pay-list" id="balcao-pagamento-momento">
+            <button type="button" class="pay-opt active" data-balcao-pag="agora">Na hora</button>
+            <button type="button" class="pay-opt" data-balcao-pag="retirada">Na retirada</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="center">
+      <div id="class-tabs"></div>
+      <div class="search"><i data-lucide="search" width="16" height="16"></i><input id="busca-produto" placeholder="Buscar por nome, código ou código de barras..."></div>
+      <div id="frac-inline" class="frac-inline" aria-live="polite">
+        <div class="frac-inline-top">
+          <span id="frac-inline-pie" class="frac-inline-pie" aria-hidden="true"></span>
+          <div class="frac-inline-main">
+            <span id="frac-inline-label" class="frac-inline-label"></span>
+            <div id="frac-inline-resumo" class="frac-inline-count"></div>
+          </div>
+          <span id="frac-inline-count" class="frac-inline-count"></span>
+        </div>
+        <div id="frac-inline-list" class="frac-inline-list"></div>
+        <div class="frac-inline-actions">
+          <button type="button" class="btn-modal" id="btn-frac-inline-desfazer">Desfazer</button>
+          <button type="button" class="btn-modal" id="btn-frac-inline-cancelar">Cancelar</button>
+          <button type="button" class="btn-modal" id="btn-frac-inline-confirmar">Confirmar</button>
+        </div>
+      </div>
+      <div id="prod-grid" class="prod-grid"></div>
+    </section>
+
+    <aside class="right">
+      <p class="title">{% if IS_RETAIL %}Itens da venda{% else %}Itens do pedido{% endif %}</p>
+      <div id="itens-list"></div>
+      <div class="tot">
+        <div class="sum"><span>Subtotal</span><strong id="subtotal">R$ 0,00</strong></div>
+        <div class="sum"><span>Serviço</span><strong id="servico">R$ 0,00</strong></div>
+        <div class="sum" id="sum-entrega"><span>Taxa entrega</span><strong id="taxa-entrega">R$ 0,00</strong></div>
+        <details class="tot-collapse" id="detalhes-pedido">
+          <summary>{% if IS_RETAIL %}Detalhes da venda{% else %}Detalhes do pedido{% endif %}</summary>
+          <div class="sum"><span>Pagamento</span><strong id="forma-pagamento-atual">-</strong></div>
+          <textarea id="obs-geral" class="obs-box" placeholder="{% if IS_RETAIL %}Observação geral da venda{% else %}Observação geral do pedido (/casa){% endif %}"></textarea>
+          <button class="btn-outline" id="btn-salvar-obs-geral">Salvar observação geral</button>
+          <button type="button" class="btn-icon-mini" id="btn-conferencia-zoom">Conferir em tela cheia</button>
+        </details>
+        <details class="tot-collapse" id="acoes-rapidas">
+          <summary>Funções rápidas</summary>
+          <div class="func-list">
+            <button type="button" class="hotkey-btn" id="btn-recuperar-comanda"><kbd>F7</kbd>Recuperar comanda</button>
+            <button type="button" class="hotkey-btn" id="btn-ajuste-extra"><kbd>F6</kbd>Taxa extra / desconto</button>
+          </div>
+        </details>
+        <div class="sum" id="sum-ajuste" style="display:none;"><span id="ajuste-label">Ajuste</span><strong id="ajuste-valor">R$ 0,00</strong></div>
+        <div class="sum total"><span>Total</span><strong id="total">R$ 0,00</strong></div>
+        <button class="btn-pay" id="btn-pagamento-trigger" data-open-modal="modal-pag">Escolher pagamento</button>
+        <button class="btn-outline" id="btn-imprimir">Imprimir</button>
+        <button class="btn-purple" id="btn-distribuir-preparo" style="display:none;">Distribuir preparo</button>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="modal" id="modal-pag"><div class="modal-card"><h3>Forma de pagamento</h3><p class="muted">Escolha uma opção para {% if IS_RETAIL %}esta venda{% else %}este pedido{% endif %}</p><div id="formas-pagamento-troco-panel" style="display:none;"><p class="muted" id="formas-pagamento-troco-hint"></p><input id="formas-pagamento-troco-input" class="form" type="text" inputmode="decimal" placeholder="Cliente paga com (R$)" autocomplete="off" /><p class="muted" id="formas-pagamento-troco-preview"></p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" class="btn-purple" id="formas-pagamento-troco-confirm">Confirmar</button><button type="button" class="btn-outline" id="formas-pagamento-troco-back">Outras formas</button></div></div><div id="formas-pagamento-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
+<div class="modal" id="modal-conferencia"><div class="modal-card print casa-conf-card"><header class="casa-conf-head"><h3>{% if IS_RETAIL %}Conferir venda{% else %}Conferir pedido{% endif %}</h3><p class="muted">Revise os dados antes de salvar/imprimir</p></header><div class="casa-conf-body"><pre id="conferencia-conteudo" class="conferencia-pre"></pre></div><footer class="casa-conf-foot"><div class="casa-conf-printer-row"><span class="casa-conf-printer-lbl">Impressora</span><input id="imp-compartilhada" class="imp-ro" readonly placeholder="(cadastro MySQL)"></div><div class="casa-conf-actions"><button type="button" class="btn-modal btn-modal-primary" id="btn-salvar-imprimir">Salvar e imprimir</button><div class="casa-conf-actions-row"><button type="button" class="btn-modal" id="btn-salvar-txt">Salvar {% if IS_RETAIL %}venda{% else %}pedido{% endif %} (.txt)</button><button type="button" class="btn-modal" id="btn-enviar-whatsapp" style="display:none;">Enviar no WhatsApp</button><button type="button" class="btn-modal" data-close-modal>Fechar</button></div></div></footer></div></div>
+<div class="modal" id="modal-baixa-balcao"><div class="modal-card zoom"><h3>Baixa do balcão</h3><p class="muted">Feche o pagamento agora ou deixe para a retirada</p><div class="zoom-resumo" style="margin-top:10px;"><div><strong id="bb-titulo">{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %}</strong></div><div class="muted" id="bb-sub">BALCÃO</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"><span class="badge" id="bb-total">Total: R$ 0,00</span><span class="badge" id="bb-somado">Somado: R$ 0,00</span><span class="badge" id="bb-restante">Restante: R$ 0,00</span><span class="badge" id="bb-troco" style="display:none;">Troco: R$ 0,00</span></div></div><div id="bb-formas" class="pay-list" style="margin-top:12px;"></div><div class="modal-actions"><button class="btn-modal" id="btn-bb-receber">Marcar RECEBIDO</button><button class="btn-modal" id="btn-bb-depois">Depois</button></div></div></div>
+<div class="modal" id="modal-conferencia-zoom"><div class="modal-card zoom"><h3>Conferência ampliada</h3><p class="muted">Visualização completa {% if IS_RETAIL %}da venda{% else %}do pedido{% endif %} para revisão</p><div id="conferencia-zoom-resumo" class="zoom-resumo"></div><div id="conferencia-zoom-editor-list" class="zoom-editor-list"></div><div class="modal-actions"><button class="btn-modal" id="btn-zoom-aplicar">Aplicar alterações</button><button class="btn-modal" data-close-modal>Fechar</button></div></div></div>
+<div class="modal" id="modal-historico-cliente"><div class="modal-card zoom"><h3>Histórico do cliente</h3><p class="muted">Últimos 3 pedidos recebidos</p><div id="historico-cliente-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
+<div class="modal" id="modal-aguarde-pendentes" data-retail-hide><div class="modal-card zoom"><h3>Pedidos em AGUARDE</h3><p class="muted">Pedidos aguardando conclusão ou impressão. Abra para retomar o atendimento.</p><div id="aguarde-pendentes-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
+
+<div class="modal" id="modal-opcoes-item"><div class="modal-card zoom"><h3>Montagem do item</h3><p class="muted" id="opcoes-sub">Selecione as opções e confirme</p><div id="opcoes-body" class="opt-grid"></div><div class="opt-footer"><div class="opt-total" id="opcoes-total">+ R$ 0,00</div><div class="modal-actions" style="margin-top:0;"><button class="btn-modal" id="btn-opcoes-confirmar">Confirmar</button><button class="btn-modal" id="btn-opcoes-cancelar" data-close-modal>Cancelar</button></div></div></div></div>
+
+<div class="modal" id="modal-dados-item"><div class="modal-card zoom"><h3>Detalhes do item</h3><pre id="dados-item-body" class="conferencia-pre" style="white-space:pre-wrap;"></pre><button class="btn-outline" data-close-modal>Fechar</button></div></div>
+
+<script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=10"></script>
+<script src="{{ url_for('static', filename='print-format.js') }}?v=1"></script>
+{% include 'partials/retail_mode.html' %}
+<script>
+(function(){
+  const IS_RETAIL = window.IS_RETAIL;
+  const LABEL_PEDIDO = window.LABEL_PEDIDO;
+  const el=(id)=>document.getElementById(id);
+  const money=(n)=>"R$ "+Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2});
+  let impressoraCasaLabel="(carregando impressora…)";
+  let impressoraCasaFeed=6;
+  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
+  function msgCasaPedidoBloqueado(){ return IS_RETAIL ? "Comanda cancelada ou venda em ROTA/RECEBIDA não pode ser alterada na tela /casa." : "Comanda cancelada ou pedido em ROTA/RECEBIDO não pode ser alterado na tela /casa."; }
+  function aplicarBloqueioCasaUi(host){
+    const bloq = !!state.pedidoBloqueadoCasa && (Number(state.pedidoId)||0) > 0;
+    const og = el("obs-geral");
+    if (og) og.readOnly = bloq;
+    if (host) {
+      host.querySelectorAll(".del, .qty-btn, [data-save-obs]").forEach((b) => { b.disabled = bloq; });
+      host.querySelectorAll("input.qty-input, input[data-obs-item], input[data-obs-item-group]").forEach((ip) => { ip.readOnly = bloq; });
+    }
+    const grid = el("prod-grid");
+    if (grid) grid.querySelectorAll(".btn-plus").forEach((b) => { b.disabled = bloq; });
+  }
+  const numOrZero=(v)=>{ const n=Number(v); return Number.isFinite(n)?n:0; };
+  const parseKm=(txt)=>numOrZero(String(txt||"").replace(/[^\d,.-]/g,"").replace(",","."));
+  const fmtKm=(v)=> numOrZero(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})+" km";
+  const parseMoneyInput=(txt)=>{ const t=String(txt||"").trim(); if(!t) return 0; const n=Number(t.replace(/\./g,"").replace(",",".").replace(/[^\d.-]/g,"")); return Number.isFinite(n)?n:0; };
+  function updateAjusteUi(){
+    const temAjuste=Math.abs(numOrZero(state.ajusteValor))>0;
+    const wrap=el("sum-ajuste");
+    if(!wrap) return;
+    wrap.style.display=temAjuste?"flex":"none";
+    el("ajuste-label").textContent=state.ajusteValor>=0?"Taxa extra":"Desconto";
+    el("ajuste-valor").textContent=money(state.ajusteValor);
+  }
+  function recalcTotals(subtotal){
+    const serv=0;
+    const taxa=state.modo==="delivery"?numOrZero(state.taxaEntrega):0;
+    const ajuste=numOrZero(state.ajusteValor);
+    state.subtotal=numOrZero(subtotal);
+    el("subtotal").textContent=money(state.subtotal);
+    el("servico").textContent=money(serv);
+    el("taxa-entrega").textContent=money(taxa);
+    updateAjusteUi();
+    el("total").textContent=money(state.subtotal+serv+taxa+ajuste);
+  }
+  function totalPedidoAtual(){ const serv=0; const taxa=state.modo==="delivery"?numOrZero(state.taxaEntrega):0; return numOrZero(state.subtotal)+serv+taxa+numOrZero(state.ajusteValor); }
+  function formaCadastroExigeTroco(f){ const t=String(f&&f.troco!=null?f.troco:"").trim().toUpperCase(); return t==="S"||t==="SIM"||t==="1"||t==="Y"; }
+  function refreshFormaPagamentoUi(){
+    const fa=el("forma-pagamento-atual");
+    if(!fa) return;
+    if(state.modo==="balcao" && String(state.balcaoPagamentoMomento||"agora")==="agora"){
+      fa.textContent="NA HORA";
+      return;
+    }
+    const f=String(state.formaPagamento||"").trim();
+    let line=f||"-";
+    if(state.modo==="delivery" && state.valorPagoTroco!=null && Number.isFinite(state.valorPagoTroco))
+      line=`${f} · paga ${money(state.valorPagoTroco)}`;
+    fa.textContent=line;
+  }
+
+  function updatePedidoBadge(){
+    const id=Number(state.pedidoId)||0;
+    if(id>0){ el("pedido-badge").textContent = LABEL_PEDIDO+" #"+id; return; }
+    const prev=Number(state.pedidoPreview)||0;
+    el("pedido-badge").textContent = prev>0 ? ("Próximo #"+prev) : (LABEL_PEDIDO+" -");
+  }
+  async function refreshPendentesAguarde(){
+    if(IS_RETAIL) return;
+    const btn=el("btn-pend-aguarde");
+    try{
+      const r=await fetch("/api/casa/pedidos-aguarde",{credentials:"same-origin",headers:{Accept:"application/json"}});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok||!d||d.sucesso===false){
+        if(btn) btn.style.display="none";
+        state.pedidosAguardeList=[];
+        return;
+      }
+      const list=Array.isArray(d.pedidos)?d.pedidos:[];
+      state.pedidosAguardeList=list;
+      const n=list.length;
+      if(btn){
+        if(n>0){ btn.style.display="inline-flex"; btn.textContent="AGUARDE · "+n; }
+        else{ btn.style.display="none"; }
+      }
+    }catch(_e){
+      if(btn) btn.style.display="none";
+      state.pedidosAguardeList=[];
+    }
+  }
+  function renderAguardePendentesModal(){
+    const host=el("aguarde-pendentes-list");
+    if(!host) return;
+    const rows=state.pedidosAguardeList||[];
+    host.innerHTML="";
+    if(!rows.length){
+      const p=document.createElement("p"); p.className="muted"; p.textContent="Nenhum pedido em AGUARDE."; host.appendChild(p); return;
+    }
+    rows.forEach((ped)=>{
+      const np=Number(ped.nropedido)||0;
+      const tel=String(ped.telefone||"").trim();
+      const nome=String(ped.nome||"").trim();
+      const linhas=Number(ped.linhas)||0;
+      const row=document.createElement("div"); row.className="aguarde-pedido-row";
+      const left=document.createElement("div");
+      const t1=document.createElement("strong"); t1.textContent="#"+np;
+      const sub=document.createElement("div"); sub.className="muted"; sub.style.fontSize="12px"; sub.style.marginTop="4px";
+      const subParts=[];
+      if(nome) subParts.push(nome);
+      if(tel) subParts.push("Tel. "+tel);
+      subParts.push(linhas+" linha(s)");
+      sub.textContent=subParts.join(" · ");
+      left.appendChild(t1); left.appendChild(sub);
+      const ab=document.createElement("button"); ab.type="button"; ab.className="btn-mini"; ab.textContent="Abrir";
+      ab.onclick=()=>abrirPedidoDaListaAguarde(np,tel);
+      row.appendChild(left); row.appendChild(ab);
+      host.appendChild(row);
+    });
+  }
+  async function abrirPedidoDaListaAguarde(np, telRaw){
+    const n=Number(np)||0;
+    if(!n) return;
+    closeModals();
+    state.pedidoId=n;
+    state.pedidoReservado=true;
+    updatePedidoBadge();
+    state.emRecuperacao=false;
+    const tel=String(telRaw||"");
+    const upper=tel.toUpperCase();
+    if(state.modo==="delivery" && upper.indexOf("BALCAO")<0){
+      const d=onlyDigits(tel);
+      if(d){
+        const localDigits=d.length>9?d.slice(-9):d;
+        const f=el("cli-fone"); if(f) f.value=localDigits;
+        state.ultimoTelefoneLocalizado="";
+        await localizarCliente(true);
+      }else{
+        await loadItens("normal");
+      }
+    }else{
+      await loadItens("normal");
+    }
+    await refreshPendentesAguarde();
+  }
+  function updateComandaStatusBadge(){
+    const b=el("comanda-status-badge");
+    if(!b) return;
+    const st=String(state.statusComanda||"NORMAL").toUpperCase();
+    const cancelada=st==="CANCELADA";
+    const mod=st==="MODIFICADA";
+    if(cancelada){
+      b.textContent="COMANDA CANCELADA";
+      b.style.display="inline-flex";
+      b.style.background="rgba(220,38,38,.14)";
+      b.style.borderColor="rgba(220,38,38,.45)";
+      b.style.color="#fca5a5";
+      return;
+    }
+    b.style.background="";
+    b.style.borderColor="";
+    b.style.color="";
+    b.textContent="COMANDA MODIFICADA";
+    b.style.display=mod?"inline-flex":"none";
+  }
+  function syncModeUi(){
+    document.querySelectorAll("[data-modo]").forEach((b)=>b.classList.toggle("active",b.dataset.modo===state.modo));
+    el("delivery-form").style.display = state.modo==="delivery" ? "grid" : "none";
+    el("balcao-form").style.display = state.modo==="balcao" ? "grid" : "none";
+    if (el("servico") && el("servico").closest(".sum")) el("servico").closest(".sum").style.display = "none";
+    const showEntrega = state.modo==="delivery";
+    if (el("sum-entrega")) el("sum-entrega").style.display = showEntrega ? "flex" : "none";
+    if (!showEntrega) state.taxaEntrega = 0;
+    recalcTotals(state.subtotal);
+    applyClienteFieldsLock();
+    updatePrintState();
+  }
+  async function setModo(modo){
+    if(window.retailBlockModo(modo)) return;
+    if(modo==="mesa"){ lojaGo("/mesa"); return; }
+    if(state.trocandoModo) return;
+    if(state.modo===modo) return;
+    if(state.fracionadoDraftInline) resetFracionadoInline(true);
+    state.trocandoModo=true;
+    try{
+      state.modo=modo;
+      syncModeUi();
+      history.replaceState({},"",lojaUrl(`/casa?modo=${modo}`));
+      if(modo==="balcao"){
+        await resetPedidoRapido(true);
+      }else if(modo==="delivery"){
+        await resetPedidoRapido(false);
+        await syncPedidoAtual();
+        syncModeUi();
+        await loadItens("normal");
+        await refreshPendentesAguarde();
+      }
+    }finally{
+      state.trocandoModo=false;
+    }
+  }
+  async function fetchNumeroPedido(incrementar){
+    const url=incrementar?"/proximo-pedido":"/numero-pedido-atual";
+    const r=await fetch(url,{credentials:"same-origin"});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d || d.numero==null){
+      throw new Error((d&&d.erro)||`Falha ao obter número do pedido (${r.status})`);
+    }
+    return Number(d.numero)||0;
+  }
+  async function syncPedidoAtual(){
+    state.pedidoPreview=await fetchNumeroPedido(false);
+    state.pedidoReservado=false;
+    updatePedidoBadge();
+  }
+  async function avancarParaProximoPedido(){
+    state.pedidoId=0;
+    state.pedidoReservado=false;
+    await syncPedidoAtual();
+  }
+  function onlyDigits(v){ return String(v||"").replace(/\D/g,""); }
+  function telefoneComDdd(telefoneSemDdd){
+    const base=onlyDigits(telefoneSemDdd);
+    if(!base) return "";
+    if(base.length>9) return base;
+    return `${onlyDigits(state.dddPadrao)}${base}`;
+  }
+  function captureClienteSnapshot(){
+    const keys=["cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-ref","cli-bairro","cli-cidade","cli-uf","cli-cep","cli-distancia","cli-taxa"];
+    state.clienteSnapshot=JSON.stringify(keys.map((id)=>String((el(id)?.value||"").trim())));
+  }
+  function isClienteDirty(){
+    const keys=["cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-ref","cli-bairro","cli-cidade","cli-uf","cli-cep","cli-distancia","cli-taxa"];
+    const now=JSON.stringify(keys.map((id)=>String((el(id)?.value||"").trim())));
+    return now!==state.clienteSnapshot;
+  }
+  function applyClienteFieldsLock(){
+    const setLock=(id,locked)=>{
+      const node=el(id);
+      if(!node) return;
+      node.disabled=!!locked;
+      node.classList.toggle("readonly",!!locked);
+    };
+    const lockedByDefault = state.clienteLocalizado && !state.editandoCliente;
+    setLock("cli-cep", lockedByDefault ? true : false);
+    setLock("cli-nrocasa", lockedByDefault);
+    setLock("cli-complemento", lockedByDefault);
+    setLock("cli-ref", lockedByDefault);
+    setLock("cli-nome", lockedByDefault);
+    setLock("cli-end", lockedByDefault);
+    setLock("cli-bairro", !state.editandoCliente);
+    setLock("cli-cidade", !state.editandoCliente);
+    setLock("cli-uf", !state.editandoCliente);
+    setLock("cli-distancia", !state.editandoCliente);
+    setLock("cli-taxa", !state.editandoCliente);
+    const btnEditar=el("btn-editar-cliente");
+    if(btnEditar){
+      const podeEditar = state.modo==="delivery" && state.clienteLocalizado;
+      btnEditar.style.display = podeEditar ? "inline-flex" : "none";
+      btnEditar.disabled = !podeEditar;
+      btnEditar.textContent = state.editandoCliente ? "Bloquear" : "Editar";
+    }
+  }
+  function updateSaveClienteState(){
+    const btn=el("btn-salvar-cliente");
+    if(!btn) return;
+    const tel=(el("cli-fone")?.value||"").trim();
+    btn.disabled = !(tel && isClienteDirty());
+  }
+  function updatePrintState(){
+    const btn=el("btn-imprimir");
+    if(!btn) return;
+    const tel=(el("cli-fone")?.value||"").trim();
+    const pagamento=String(state.formaPagamento||"").trim();
+    const temPedido = (Number(state.pedidoId)||0) > 0 && pedidoAtualTemItens();
+    const ok = state.modo!=="delivery"
+      ? temPedido
+      : (temPedido && !!tel && state.clienteLocalizado && !!pagamento);
+    btn.disabled = !ok;
+  }
+  function labelOrigemHistorico(origem){
+    const o=String(origem||"").trim().toUpperCase();
+    if(o==="BALCAO") return "Balcão";
+    if(o==="DELIVERY") return "Delivery";
+    return "";
+  }
+  function renderHistoricoClienteResumo(){
+    const info=el("cliente-pedidos-info");
+    const btn=el("btn-historico-cliente");
+    const total=Number(state.historicoClienteTotal);
+    const n=Number.isFinite(total)&&total>=0?total:(Number(state.historicoCliente.length)||0);
+    if(info) info.textContent=`Pedidos anteriores: ${n}`;
+    if(btn){ btn.style.display = state.clienteLocalizado?"inline-flex":"none"; }
+  }
+  function updateClienteLocalizadoBadge(){
+    const ok=el("cliente-localizado-ok");
+    if(!ok) return;
+    const ativo = state.modo==="delivery" && state.clienteLocalizado;
+    ok.style.background = ativo ? "#22c55e" : "#ef4444";
+    ok.title = ativo ? "Cliente localizado" : "Cliente não localizado";
+  }
+  async function carregarDddPadrao(){
+    try{
+      const r=await fetch("/api/casa/ddd-padrao",{credentials:"same-origin"});
+      const d=await r.json().catch(()=>({}));
+      if(r.ok && d.sucesso) state.dddPadrao=onlyDigits(d.ddd||"");
+    }catch(_){}
+  }
+  async function carregarHistoricoCliente(telefoneCompleto){
+    try{
+      const r=await fetch(`/api/casa/historico-cliente?telefone=${encodeURIComponent(telefoneCompleto)}`,{credentials:"same-origin"});
+      const d=await r.json().catch(()=>({}));
+      if(r.ok && d.sucesso){
+        state.historicoCliente = Array.isArray(d.pedidos)?d.pedidos:[];
+        const t=Number(d.total_pedidos);
+        state.historicoClienteTotal = Number.isFinite(t)&&t>=0?t:state.historicoCliente.length;
+      }else{
+        state.historicoCliente = [];
+        state.historicoClienteTotal = 0;
+      }
+    }catch(_){
+      state.historicoCliente = [];
+      state.historicoClienteTotal = 0;
+    }
+    renderHistoricoClienteResumo();
+  }
+  function setClienteStatus(msg){
+    const info=el("cliente-pedidos-info");
+    if(info) info.textContent=msg;
+    updateClienteLocalizadoBadge();
+  }
+  function abrirHistoricoCliente(){
+    const host=el("historico-cliente-list");
+    if(!host) return;
+    host.innerHTML="";
+    if(!state.historicoCliente.length){
+      host.innerHTML='<p class="muted">Nenhum pedido recebido encontrado para este telefone.</p>';
+      openModal("modal-historico-cliente");
+      return;
+    }
+    state.historicoCliente.forEach((p)=>{
+      const wrap=document.createElement("details");
+      wrap.className="tot-collapse";
+      const itens=(p.itens||[]).map((it)=>`${Number(it.quantidade)||1}x ${it.produto||"-"} (${money(it.preco||0)})${it.obs_item?` - Obs: ${it.obs_item}`:""}`).join("<br>");
+      const origemLbl=labelOrigemHistorico(p.origem);
+      const tituloOrigem=origemLbl?` · ${origemLbl}`:"";
+      wrap.innerHTML=`<summary>Pedido #${p.nropedido}${tituloOrigem} ${p.data?`- ${escapeHtml(String(p.data))}`:""}</summary><div class="muted">${itens||"Sem itens"}</div>${p.obs_geral?`<div class="muted"><strong>Obs:</strong> ${escapeHtml(String(p.obs_geral))}</div>`:""}`;
+      host.appendChild(wrap);
+    });
+    openModal("modal-historico-cliente");
+  }
+
+  async function refreshTaxaServico(){ try{ const r=await fetch("/api/buscar-configuracao"); const d=await r.json(); state.servicoPct=(d.sucesso&&d.config&&d.config.servicomesa!=null)?(parseFloat(d.config.servicomesa)||0):0; }catch(_){ state.servicoPct=0; } }
+  function escapeHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;"); }
+  function parseOpcoesTxt(txt){
+    const raw=String(txt||"").replace(/\r/g,"").trim();
+    if(!raw) return [];
+    return raw.split("\n").map((ln)=>ln.trim()).filter(Boolean).map((ln)=>{
+      const m=ln.match(/^(.*?)(?:\s*(?:=|:|\|)\s*)([-+]?\d+(?:[\.,]\d+)?%?)\s*$/);
+      if(m){
+        const label=String(m[1]||"").trim();
+        const vRaw=String(m[2]||"").trim();
+        if(vRaw.endsWith("%")){
+          const pct=numOrZero(vRaw.slice(0,-1).replace(",","."));
+          const mult=pct>0?pct/100:0;
+          return label?{label,price:0,mult,raw:vRaw}:null;
+        }
+        if(vRaw.startsWith("+") || vRaw.startsWith("-")){
+          const delta=numOrZero(vRaw.replace(",","."));
+          return label?{label,price:0,delta,raw:vRaw}:null;
+        }
+        const price=numOrZero(vRaw.replace(",","."));
+        return label?{label,price}:null;
+      }
+      return {label:ln,price:0};
+    }).filter(Boolean);
+  }
+  function tamanhoMultiplier(sel){
+    const meta=sel._meta||{};
+    const arr=Array.isArray(meta.tamanhos)?meta.tamanhos:[];
+    const f=arr.find((x)=>x.label===sel.tamanho);
+    const m=f&&Number(f.mult);
+    return Number.isFinite(m)&&m>0 ? m : 1;
+  }
+  function tamanhoOverridePrice(sel){
+    const meta=sel._meta||{};
+    const arr=Array.isArray(meta.tamanhos)?meta.tamanhos:[];
+    const f=arr.find((x)=>x.label===sel.tamanho);
+    const hasMult = f && Number.isFinite(Number(f.mult)) && Number(f.mult) > 0;
+    if(hasMult) return null;
+    const hasDelta = f && Number.isFinite(Number(f.delta)) && Number(f.delta) !== 0;
+    if(hasDelta) return null;
+    const p = f ? numOrZero(f.price) : 0;
+    return p>0 ? p : null;
+  }
+  function tamanhoDelta(sel){
+    const meta=sel._meta||{};
+    const arr=Array.isArray(meta.tamanhos)?meta.tamanhos:[];
+    const f=arr.find((x)=>x.label===sel.tamanho);
+    const d=f?Number(f.delta):0;
+    return Number.isFinite(d) ? d : 0;
+  }
+  function fmtOpcoesObs(sel, partes=1){
+    const p=Math.max(1,Number(partes)||1);
+    const scope=sel._scope||{cobertura:"todas",adicionais:"todas"};
+    const frac=(kind)=> (scope[kind]==="uma_parte" && p>1) ? `(1/${p})` : "";
+    const parts=[];
+    if(sel.tamanho) parts.push(`TAM=${sel.tamanho}`);
+    if(sel.massa) parts.push(`MASSA=${sel.massa}`);
+    if(sel.borda) parts.push(`BORDA=${sel.borda}`);
+    if(sel.cobertura) parts.push(`COB=${sel.cobertura}${frac("cobertura")}`);
+    if(sel.adicionais && sel.adicionais.length) parts.push(`ADD=${sel.adicionais.join(", ")}${frac("adicionais")}`);
+    return parts.join(" | ");
+  }
+  function acrescimoDetalhado(sel, partes=1){
+    const p=Math.max(1,Number(partes)||1);
+    const scope=sel._scope||{cobertura:"todas",adicionais:"todas"};
+    const sumOne=(opt,map)=>{ if(!opt) return 0; const f=map.find((x)=>x.label===opt); return f?numOrZero(f.price):0; };
+    const meta=sel._meta||{};
+    const m0=Array.isArray(meta.massas)?sumOne(sel.massa,meta.massas):0;
+    const b0=Array.isArray(meta.bordas)?sumOne(sel.borda,meta.bordas):0;
+    const c0=Array.isArray(meta.coberturas)?sumOne(sel.cobertura,meta.coberturas):0;
+    const a0=(sel.adicionais||[]).reduce((s,n)=>{ const f=(meta.adicionais||[]).find((x)=>x.label===n); return s+numOrZero(f?f.price:0); },0);
+    const cEff = scope.cobertura==="uma_parte" && p>1 ? (c0/p) : c0;
+    const aEff = scope.adicionais==="uma_parte" && p>1 ? (a0/p) : a0;
+    const mult=tamanhoMultiplier(sel);
+    const massa = m0*mult;
+    const borda = b0*mult;
+    const cobertura = cEff*mult;
+    const adicionais = aEff*mult;
+    return {partes:p,mult,massa,borda,cobertura,adicionais,total:(massa+borda+cobertura+adicionais)};
+  }
+  function totalAcrescimo(sel, partes=1){
+    const det=acrescimoDetalhado(sel, partes);
+    return numOrZero(det.total);
+  }
+  function buildDadosItem(sel, partes=1){
+    if(!sel) return "";
+    const override=tamanhoOverridePrice(sel);
+    const delta=tamanhoDelta(sel);
+    const mult=tamanhoMultiplier(sel);
+    const acrescimos=acrescimoDetalhado(sel, partes);
+    return JSON.stringify({
+      v: 1,
+      tipo: "montagem",
+      partes: Math.max(1, Number(partes)||1),
+      tamanho: sel.tamanho || "",
+      massa: sel.massa || "",
+      borda: sel.borda || "",
+      cobertura: sel.cobertura || "",
+      adicionais: Array.isArray(sel.adicionais)?sel.adicionais:[],
+      scope: sel._scope || {cobertura:"todas",adicionais:"todas"},
+      pricing: {mult, delta, override},
+      acrescimos
+    });
+  }
+  function formatDadosItem(raw){
+    const txt=String(raw||"").trim();
+    if(!txt) return "";
+    try{
+      const j=JSON.parse(txt);
+      const parts=[];
+      const ac=j.acrescimos||{};
+      const pr=j.pricing||{};
+      const partesN=Math.max(1,Math.floor(Number(j.partes)||1));
+      const sizeRelevant = (pr && ((Number(pr.mult)||1)!==1 || numOrZero(pr.delta)!==0 || (pr.override!=null && numOrZero(pr.override)>0)));
+      if(j.tamanho && sizeRelevant) parts.push(`Tamanho: ${j.tamanho}`);
+      if(j.massa && numOrZero(ac.massa)>0) parts.push(`Massa: ${j.massa}`);
+      if(j.borda && numOrZero(ac.borda)>0) parts.push(`Borda: ${j.borda}`);
+      if(j.cobertura && numOrZero(ac.cobertura)>0){
+        const suf=(j.scope && partesN>1 && j.scope.cobertura==="uma_parte")?` (1/${partesN})`:"";
+        parts.push(`Cobertura: ${j.cobertura}${suf}`);
+      }
+      if(Array.isArray(j.adicionais) && j.adicionais.length && numOrZero(ac.adicionais)>0){
+        const suf=(j.scope && partesN>1 && j.scope.adicionais==="uma_parte")?` (1/${partesN})`:"";
+        parts.push(`Adicionais: ${j.adicionais.join(", ")}${suf}`);
+      }
+      if(Array.isArray(j.sabores) && j.sabores.length){
+        j.sabores.forEach((s,idx)=>{
+          const nome=String((s||{}).nome||"").trim();
+          const cob=String((s||{}).cobertura||"").trim();
+          const adds=Array.isArray((s||{}).adicionais)?(s||{}).adicionais:[];
+          const sac=(s||{}).acrescimos||{};
+          const hasMoney=numOrZero(sac.total)>0;
+          if(!hasMoney) return;
+          const ln=[];
+          ln.push(nome?nome:`Sabor ${idx+1}`);
+          if(cob) ln.push(`Cobertura: ${cob}`);
+          if(adds.length) ln.push(`Adicionais: ${adds.join(", ")}`);
+          const sc=(s||{}).scope||{};
+          if(partesN>1){
+            if(sc.cobertura==="uma_parte" && numOrZero(sac.cobertura)>0) ln.push(`Cobertura: 1/${partesN}`);
+            if(sc.adicionais==="uma_parte" && numOrZero(sac.adicionais)>0) ln.push(`Adicionais: 1/${partesN}`);
+          }
+          parts.push(`Sabor ${idx+1}: ${ln.join(" | ")}`);
+        });
+      }
+      return parts.join("\n");
+    }catch{
+      return txt;
+    }
+  }
+  async function escolherOpcoesParaItem(produtoNome, precoBase, partes=1, keys=null){
+    const metaRaw=state.classMeta[state.classificacao]||{};
+    const tamanhos=parseOpcoesTxt(metaRaw.op_tamanhos);
+    const massas=parseOpcoesTxt(metaRaw.op_massas);
+    const bordas=parseOpcoesTxt(metaRaw.op_bordas);
+    const coberturas=parseOpcoesTxt(metaRaw.op_coberturas);
+    const adicionais=parseOpcoesTxt(metaRaw.op_adicionais);
+    const tem=tamanhos.length||massas.length||bordas.length||coberturas.length||adicionais.length;
+    if(!tem) return {sel:null,acrescimo:0,obs:""};
+    const pickFirst=(arr, pred)=>{ if(!Array.isArray(arr)||!arr.length) return ""; if(typeof pred==="function"){ const f=arr.find(pred); if(f&&f.label) return f.label; } return (arr[0]&&arr[0].label)?arr[0].label:""; };
+    const pickZero=(arr, preferRe)=> pickFirst(arr,(o)=>numOrZero(o.price)===0 && (!preferRe || preferRe.test(String(o.label||""))));
+    const defTamanho = pickFirst(tamanhos,(o)=>Number(o.mult)===1) || pickZero(tamanhos) || "";
+    const defMassa = pickZero(massas) || "";
+    const defBorda = pickZero(bordas) || "";
+    const defCob = pickZero(coberturas,/SEM/i) || pickZero(coberturas) || "";
+    const defAdd = (()=>{
+      const nm = pickZero(adicionais,/SEM/i) || pickZero(adicionais);
+      return nm ? [nm] : [];
+    })();
+    return new Promise((resolve)=>{
+      const podeFracionar = Number(metaRaw.quantidadepartes||0) > 1;
+      const ks=Array.isArray(keys)?keys:null;
+      const forceUmaParte = !!(podeFracionar && ks && (ks.includes("cobertura") || ks.includes("adicionais")));
+      const initSel={tamanho:defTamanho,massa:defMassa,borda:defBorda,cobertura:defCob,adicionais:defAdd.slice()};
+      if(ks && !ks.includes("tamanho")) initSel.tamanho="";
+      if(ks && !ks.includes("massa")) initSel.massa="";
+      if(ks && !ks.includes("borda")) initSel.borda="";
+      if(ks && !ks.includes("cobertura")) initSel.cobertura="";
+      if(ks && !ks.includes("adicionais")) initSel.adicionais=[];
+      state.opcoesDraft={resolve,basePreco:numOrZero(precoBase),partes:Math.max(1,Math.floor(Number(partes)||1)),keys:ks,sel:{tamanho:initSel.tamanho,massa:initSel.massa,borda:initSel.borda,cobertura:initSel.cobertura,adicionais:initSel.adicionais,_scope:{cobertura:(forceUmaParte?"uma_parte":(Number(partes)>1?"uma_parte":"todas")),adicionais:(forceUmaParte?"uma_parte":(Number(partes)>1?"uma_parte":"todas"))},_meta:{tamanhos,massas,bordas,coberturas,adicionais,podeFracionar}}};
+      const body=el("opcoes-body");
+      const sub=el("opcoes-sub");
+      if(sub) sub.textContent=`Item: ${String(produtoNome||"-")}`;
+      const render=()=>{
+        if(!body) return;
+        body.innerHTML="";
+        const mkBlock=(titulo,arr,key,multi)=>{
+          const ks=state.opcoesDraft&&state.opcoesDraft.keys;
+          if(ks && !ks.includes(key)) return;
+          if(!arr||!arr.length) return;
+          const wrap=document.createElement("div");
+          wrap.className="opt-block";
+          const scopeRow = (key==="cobertura"||key==="adicionais") && state.opcoesDraft.sel._meta.podeFracionar
+            ? `<div style="display:flex;gap:8px;align-items:center;margin:-2px 0 8px;flex-wrap:wrap;">
+                 <span class="opt-price" style="font-size:12px;">Cobrar:</span>
+                 <button type="button" class="opt-btn" data-scope="todas">Pizza inteira</button>
+                 <button type="button" class="opt-btn" data-scope="uma_parte">1 parte</button>
+               </div>`
+            : "";
+          wrap.innerHTML=`<div class="opt-title">${escapeHtml(titulo)}</div>${scopeRow}<div class="opt-choices"></div>`;
+          const host=wrap.querySelector(".opt-choices");
+          const scopeButtons=wrap.querySelectorAll("[data-scope]");
+          if(scopeButtons && scopeButtons.length){
+            scopeButtons.forEach((sb)=>{
+              const v=sb.getAttribute("data-scope");
+              sb.classList.toggle("sel", state.opcoesDraft.sel._scope[key]===v);
+              sb.onclick=()=>{ state.opcoesDraft.sel._scope[key]=v; render(); };
+            });
+          }
+          arr.forEach((o)=>{
+            const b=document.createElement("button");
+            b.type="button";
+            b.className="opt-btn";
+            const p=numOrZero(o.price);
+            const mult = Number(o.mult);
+            const delta = Number(o.delta);
+            const multTag = Number.isFinite(mult) && mult>0 ? `<span class="opt-price">× ${(mult*100).toLocaleString("pt-BR",{maximumFractionDigits:0})}%</span>` : "";
+            const deltaTag = (!multTag && key==="tamanho" && Number.isFinite(delta) && delta!==0) ? `<span class="opt-price">${delta>0?"+":"-"} ${money(Math.abs(delta))}</span>` : "";
+            const priceTag = (!multTag && !deltaTag && key==="tamanho" && p>0) ? `<span class="opt-price">${money(p)}</span>` : (!multTag && !deltaTag && p?`<span class="opt-price">+ ${money(p)}</span>`:"");
+            const metaTag = multTag || deltaTag || priceTag;
+            b.innerHTML=`<span>${escapeHtml(o.label)}</span>${metaTag}`;
+            const isSel = multi ? state.opcoesDraft.sel[key].includes(o.label) : state.opcoesDraft.sel[key]===o.label;
+            if(isSel) b.classList.add("sel");
+            b.onclick=()=>{
+              if(multi){
+                const list=state.opcoesDraft.sel[key];
+                const idx=list.indexOf(o.label);
+                const isSem = /SEM/i.test(String(o.label||""));
+                if(idx>=0){
+                  list.splice(idx,1);
+                }else{
+                  if(isSem){
+                    list.splice(0,list.length);
+                    list.push(o.label);
+                  }else{
+                    for(let i=list.length-1;i>=0;i--){ if(/SEM/i.test(String(list[i]||""))) list.splice(i,1); }
+                    list.push(o.label);
+                  }
+                }
+              }else{
+                state.opcoesDraft.sel[key]= state.opcoesDraft.sel[key]===o.label ? "" : o.label;
+              }
+              render();
+            };
+            host.appendChild(b);
+          });
+          body.appendChild(wrap);
+        };
+        mkBlock("Tamanho",tamanhos,"tamanho",false);
+        mkBlock("Massa",massas,"massa",false);
+        mkBlock("Borda",bordas,"borda",false);
+        mkBlock("Cobertura",coberturas,"cobertura",false);
+        mkBlock("Adicionais",adicionais,"adicionais",true);
+        const sel=state.opcoesDraft.sel;
+        const partesEst = Math.max(1, Math.floor(Number(state.opcoesDraft.partes)||1));
+        const acres=totalAcrescimo(sel, partesEst);
+        const mult=tamanhoMultiplier(sel);
+        const override=tamanhoOverridePrice(sel);
+        const delta=tamanhoDelta(sel);
+        const base=override!=null ? Number(override) : ((numOrZero(state.opcoesDraft.basePreco)*mult) + numOrZero(delta));
+        const total=base + acres;
+        const tot=el("opcoes-total");
+        if(tot){
+          if(state.opcoesDraft.basePreco>0 || override!=null || delta){
+            tot.textContent = `Total estimado: ${money(total)}`;
+          }else{
+            tot.textContent = acres>0 ? (`+ ${money(acres)}`) : "+ R$ 0,00";
+          }
+        }
+      };
+      const btnOk=el("btn-opcoes-confirmar");
+      if(btnOk){
+        btnOk.onclick=()=>{
+          const sel=state.opcoesDraft?state.opcoesDraft.sel:null;
+          const r=state.opcoesDraft&&state.opcoesDraft.resolve;
+          state.opcoesDraft=null;
+          closeModals();
+          if(r) r({sel});
+        };
+      }
+      render();
+      openModal("modal-opcoes-item");
+    });
+  }
+  function pkItem(row){ if(row.id!=null&&row.id!=="") return row.id; if(row.chave!=null) return row.chave; return null; }
+  function lineTot(row){ return (Number(row.quantidade)||1)*(Number(row.preco)||0); }
+  function pedidoAtualTemItens(){ return Number(state.itensCount||0) > 0; }
+  async function persistFormaPagamentoSePendente(){
+    if(!state.formaPagamentoPendente) return;
+    const id=Number(state.pedidoId)||0;
+    if(id<=0) return;
+    if(state.pedidoBloqueadoCasa){ state.formaPagamentoPendente=false; return; }
+    if(!pedidoAtualTemItens()) return;
+    if(state.modo==="delivery" && !state.clienteLocalizado) return;
+    const forma=String(state.formaPagamento||"").trim();
+    if(!forma){ state.formaPagamentoPendente=false; return; }
+    try{
+      const payload={ forma };
+      if(state.modo==="delivery" && state.valorPagoTroco!=null && Number.isFinite(state.valorPagoTroco))
+        payload.valor_pago_troco=state.valorPagoTroco;
+      const r=await fetch(`/api/casa/${id}/formapagamento`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      const d=await r.json().catch(()=>({}));
+      if(r.ok && d && d.sucesso!==false){
+        state.formaPagamentoPendente=false;
+      }
+    }catch(_e){}
+  }
+  function clienteCasaPayload(){
+    if(IS_RETAIL) state.modo="balcao";
+    const modoOp = state.modo==="balcao" ? "BALCAO" : (state.modo==="mesa" ? "MESA" : "DELIVERY");
+    let tel = telefoneComDdd(el("cli-fone").value||"");
+    if (modoOp === "BALCAO") {
+      const balcaoTel = telefoneComDdd((el("balcao-fone")?.value || "").trim());
+      tel = balcaoTel || "BALCAO";
+    }
+    return { telefone:tel, cep:(el("cli-cep").value||"").trim(), nome:(el("cli-nome").value||"").trim(), endereco:(el("cli-end").value||"").trim(), nrocasa:(el("cli-nrocasa").value||"").trim(), complemento:(el("cli-complemento").value||"").trim(), cliente:nomeClienteAtual(), modo:modoOp, em_recuperacao:!!state.emRecuperacao };
+  }
+
+  async function loadItens(modoCarga="normal"){
+    const host=el("itens-list");
+    if(state.modo==="delivery" && modoCarga!=="recuperacao" && !state.clienteLocalizado){
+      host.innerHTML="";
+      state.itensCount=0;
+      state.obsGeral="";
+      state.pedidoBloqueadoCasa=false;
+      state.itemDadosMap={};
+      state.grupoDadosMap={};
+      state.preparoMetaById={};
+      if(el("obs-geral")) el("obs-geral").value="";
+      state.statusComanda="NORMAL";
+      updateComandaStatusBadge();
+      recalcTotals(0);
+      updatePrintState();
+      updateDistribuirPreparoUiCasa();
+      aplicarBloqueioCasaUi(host);
+      return true;
+    }
+    if((Number(state.pedidoId)||0) <= 0){
+      host.innerHTML="";
+      state.itensCount=0;
+      state.obsGeral="";
+      state.pedidoBloqueadoCasa=false;
+      state.itemDadosMap={};
+      state.grupoDadosMap={};
+      state.preparoMetaById={};
+      if(el("obs-geral")) el("obs-geral").value="";
+      state.statusComanda="NORMAL";
+      updateComandaStatusBadge();
+      recalcTotals(0);
+      updatePrintState();
+      updateDistribuirPreparoUiCasa();
+      aplicarBloqueioCasaUi(host);
+      return true;
+    }
+    const qp=new URLSearchParams();
+    const modoApi = modoCarga==="recuperacao" ? "recuperacao" : (state.modo==="balcao" ? "balcao" : (state.modo==="mesa" ? "mesa" : "delivery"));
+    qp.set("modo",modoApi);
+    if(modoApi==="recuperacao"){
+      if(state.modo==="balcao") qp.set("origem","BALCAO");
+      else if(state.modo==="delivery") qp.set("origem","DELIVERY");
+    }
+    if(modoApi==="delivery"){
+      const tel=telefoneComDdd((el("cli-fone").value||"").trim());
+      if(tel) qp.set("telefone",tel);
+      qp.set("status",modoCarga==="recuperacao"?"ABERTO":"AGUARDE");
+    }
+    const res=await fetch(`/api/casa/${encodeURIComponent(state.pedidoId)}?${qp.toString()}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok || data.sucesso===false){
+      const msg=(data&& (data.erro||data.mensagem)) || `Falha ao carregar itens do pedido (HTTP ${res.status}).`;
+      console.error("[LOAD ITENS ERRO]", msg, data);
+      alert(msg);
+      host.innerHTML="";
+      state.itensCount=0;
+      state.pedidoBloqueadoCasa=false;
+      recalcTotals(0);
+      return false;
+    }
+    const regs=data.registros||data.itens||[];
+    state.pedidoBloqueadoCasa=!!data.pedido_bloqueado_casa || !!data.comanda_cancelada || String(data.status_comanda||"").toUpperCase()==="CANCELADA";
+    state.itensCount=regs.length; host.innerHTML=""; let subtotal=0; state.obsGeral=(data.obs_geral||"").trim(); if(el("obs-geral")) el("obs-geral").value=state.obsGeral; state.itemDadosMap={}; state.grupoDadosMap={}; state.preparoMetaById={};
+    let fpHydrate=String(data.formapagamento!=null?data.formapagamento:"").trim();
+    let vpRaw=data.valor_pago_troco;
+    if((vpRaw===undefined||vpRaw===null)&&regs.length&&regs[0].valor_pago_troco!=null&&regs[0].valor_pago_troco!=="")
+      vpRaw=regs[0].valor_pago_troco;
+    if(!fpHydrate&&regs.length) fpHydrate=String(regs[0].formapagamento||"").trim();
+    const vpNum=(vpRaw!=null&&vpRaw!==""&&!Number.isNaN(Number(vpRaw)))?Number(vpRaw):null;
+    state.formaPagamento=fpHydrate;
+    state.valorPagoTroco=(vpNum!=null&&Number.isFinite(vpNum))?vpNum:null;
+    refreshFormaPagamentoUi();
+    state.statusComanda=String(data.status_comanda||"NORMAL").toUpperCase();
+    if(!regs.length) state.statusComanda="NORMAL";
+    updateComandaStatusBadge();
+    const origemRec = String(data.origem||"").toUpperCase();
+    if(modoCarga==="recuperacao"){
+      if(origemRec==="BALCAO" && state.modo!=="balcao"){ state.modo="balcao"; syncModeUi(); }
+      if(origemRec==="DELIVERY" && state.modo!=="delivery" && !IS_RETAIL){ state.modo="delivery"; syncModeUi(); }
+      if(origemRec==="DELIVERY" && IS_RETAIL){ state.modo="balcao"; syncModeUi(); }
+    }
+    if(modoCarga==="recuperacao" && data.cliente && origemRec!=="BALCAO"){
+      const c=data.cliente||{};
+      if(el("cli-fone") && c.telefone) el("cli-fone").value=String(c.telefone).replace(/\D/g,"");
+      if(el("cli-nome")) el("cli-nome").value=c.nome||"";
+      if(el("cli-end")) el("cli-end").value=c.endereco||"";
+      if(el("cli-nrocasa")) el("cli-nrocasa").value=c.nrocasa||"";
+      if(el("cli-complemento")) el("cli-complemento").value=c.complemento||"";
+      if(el("cli-ref")) el("cli-ref").value=c.referencia||"";
+      if(el("cli-bairro")) el("cli-bairro").value=c.bairro||"";
+      if(el("cli-cidade")) el("cli-cidade").value=c.cidade||"";
+      if(el("cli-uf")) el("cli-uf").value=(c.estado||"").toString().toUpperCase();
+      if(el("cli-cep")) el("cli-cep").value=c.cep||"";
+      state.clienteLocalizado=true;
+      state.editandoCliente=false;
+      applyClienteFieldsLock();
+      updatePrintState();
+      updateSaveClienteState();
+      updateClienteLocalizadoBadge();
+    }else if(modoCarga==="recuperacao" && data.cliente && origemRec==="BALCAO"){
+      const c=data.cliente||{};
+      if(el("balcao-nome") && c.nome) el("balcao-nome").value=c.nome||"";
+      if(el("balcao-fone") && c.telefone){
+        const t=String(c.telefone||"").trim();
+        if(t && !t.toUpperCase().startsWith("BALCAO")){
+          const d=t.replace(/\D/g,"");
+          const ddd=onlyDigits(state.dddPadrao);
+          el("balcao-fone").value=(ddd && d.startsWith(ddd) && d.length>ddd.length)?d.slice(ddd.length):d;
+        }
+      }
+      state.clienteLocalizado=false;
+      state.editandoCliente=false;
+      applyClienteFieldsLock();
+      updatePrintState();
+      updateSaveClienteState();
+      updateClienteLocalizadoBadge();
+    }
+    regs.forEach((it)=>{ subtotal+=lineTot(it); const id=pkItem(it); if(id!=null){ state.preparoMetaById[String(id)]={ imp_preparo:String(it.imp_preparo||"N"), impressoras:String(it.impressoras_produto||""), codigoproduto:String(it.codigoproduto||"") }; } });
+    const grupos=new Map();
+    const simples=[];
+    regs.forEach((it)=>{
+      const lanc=Number(it.lancamento)||0;
+      if(lanc>0){
+        if(!grupos.has(lanc)) grupos.set(lanc,[]);
+        grupos.get(lanc).push(it);
+      }else{
+        simples.push(it);
+      }
+    });
+    grupos.forEach((arr,lanc)=>{
+      if(arr.length===1){
+        simples.push(arr[0]);
+        grupos.delete(lanc);
+      }
+    });
+    simples.forEach((it)=>{ const id=pkItem(it); const qtd=Number(it.quantidade)||1; const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const desc=(it.descricao_produto||"").trim(); const ehAjuste=String(it.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO"; const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":""); row.innerHTML=`<div class="item-top"><div><span class="item-name">${escapeHtml(it.produto||it.nome||"-")}</span>${desc?`<div class="item-desc">${escapeHtml(desc)}</div>`:""}</div><div style="display:flex;gap:8px;align-items:center;">${dadosRaw?`<button class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button class="del" data-del="${id}">×</button></div></div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`; host.appendChild(row); });
+    grupos.forEach((itens,lanc)=>{
+      const idRef=pkItem(itens[0]);
+      const qtd=Number(itens[0]?.quantidade)||1;
+      const totalGrupo=itens.reduce((s,x)=>s+lineTot(x),0);
+      const dadosRaw=(itens[0]?.dados_item||"").trim();
+      if(lanc!=null) state.grupoDadosMap[String(lanc)]=dadosRaw;
+      const nomesLista=itens.map((x)=>String(x.produto||x.nome||"-"));
+      const nomeSemPrefixo=(txt)=>String(txt||"").replace(/^\s*\d+\s*\/\s*\d+\s+/,"").trim();
+      const saboresLista=itens.map((x)=>nomeSemPrefixo(x.produto||x.nome||"-"));
+      const saboresPreview=saboresLista.length<=2 ? saboresLista.join(" | ") : `${saboresLista.slice(0,2).join(" | ")} +${saboresLista.length-2}`;
+      const bodyObs=itens.map((x,idxItem)=>{ const idx=pkItem(x); const ob=(x.obs_item||"").trim(); const sepClass=idxItem===0?"":" sep"; const label=nomeSemPrefixo(x.produto||x.nome||"-"); return `<div class="item-obs${sepClass}"><span class="item-obs-label">${escapeHtml(label)}</span><input data-obs-item-group="${idx}" placeholder="Observação do sabor" value="${escapeHtml(ob)}"></div>`; }).join("");
+      const row=document.createElement("div");
+      row.className="item fracionado";
+      row.innerHTML=`<div class="item-top"><div><span class="item-name" title="${escapeHtml(saboresLista.join(" | "))}">Pizza fracionada</span><div class="item-desc">${itens.length} sabor(es): ${escapeHtml(saboresPreview)}</div></div><div style="display:flex;gap:8px;align-items:center;">${dadosRaw?`<button class="obs-save" data-info-group="${lanc}" title="Detalhes do item">i</button>`:""}<button class="del" data-del-group="${idRef}">×</button></div></div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus-group="${lanc}">-</button><input class="qty-input" data-qtd-input-group="${lanc}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus-group="${lanc}">+</button></div><span class="unit-price">${money(totalGrupo/Math.max(1,qtd))}</span></div>${bodyObs}<div class="item-foot"><span></span><span class="item-v">${money(totalGrupo)}</span></div>`;
+      host.appendChild(row);
+    });
+    host.querySelectorAll("[data-del]").forEach((b)=>{ b.onclick=async()=>{ const id=b.getAttribute("data-del"); if(!id)return; b.disabled=true; const r=await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"DELETE"}); if(!r.ok) alert("Não foi possível remover item."); await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-del-group]").forEach((b)=>{ b.onclick=async()=>{ const id=b.getAttribute("data-del-group"); if(!id)return; b.disabled=true; const r=await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"DELETE"}); if(!r.ok) alert("Não foi possível remover item fracionado."); await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-minus]").forEach((b)=>{ b.onclick=async()=>{ const id=b.getAttribute("data-minus"); const ip=host.querySelector(`[data-qtd-input="${id}"]`); const curr=Number(ip?.value||1); const novo=Math.max(1,curr-1); b.disabled=true; await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({qtd:novo})}); await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-plus]").forEach((b)=>{ b.onclick=async()=>{ const id=b.getAttribute("data-plus"); const ip=host.querySelector(`[data-qtd-input="${id}"]`); const curr=Number(ip?.value||1); const novo=curr+1; b.disabled=true; await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({qtd:novo})}); await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-qtd-input]").forEach((ip)=>{ ip.onchange=async()=>{ const id=ip.getAttribute("data-qtd-input"); const novo=Math.max(1,Math.floor(Number(ip.value)||1)); ip.disabled=true; await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({qtd:novo})}); await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-minus-group]").forEach((b)=>{ b.onclick=async()=>{ const lanc=Number(b.getAttribute("data-minus-group"))||0; const ip=host.querySelector(`[data-qtd-input-group="${lanc}"]`); const curr=Number(ip?.value||1); const novo=Math.max(1,curr-1); b.disabled=true; const itens=(grupos.get(lanc)||[]); for(const it of itens){ const id=pkItem(it); if(id) await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({qtd:novo})}); } await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-plus-group]").forEach((b)=>{ b.onclick=async()=>{ const lanc=Number(b.getAttribute("data-plus-group"))||0; const ip=host.querySelector(`[data-qtd-input-group="${lanc}"]`); const curr=Number(ip?.value||1); const novo=curr+1; b.disabled=true; const itens=(grupos.get(lanc)||[]); for(const it of itens){ const id=pkItem(it); if(id) await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({qtd:novo})}); } await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-qtd-input-group]").forEach((ip)=>{ ip.onchange=async()=>{ const lanc=Number(ip.getAttribute("data-qtd-input-group"))||0; const novo=Math.max(1,Math.floor(Number(ip.value)||1)); ip.disabled=true; const itens=(grupos.get(lanc)||[]); for(const it of itens){ const id=pkItem(it); if(id) await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({qtd:novo})}); } await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-save-obs]").forEach((b)=>{ b.onclick=async()=>{ const id=b.getAttribute("data-save-obs"); const ip=host.querySelector(`[data-obs-item="${id}"]`); const obs=(ip?.value||"").trim(); b.disabled=true; await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({obs_item:obs})}); await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-obs-item-group]").forEach((ip)=>{ ip.onchange=async()=>{ const id=ip.getAttribute("data-obs-item-group"); if(!id) return; ip.disabled=true; const obs=(ip.value||"").trim(); await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({obs_item:obs})}); await loadItens(modoCarga); }; });
+    host.querySelectorAll("[data-info]").forEach((b)=>{ b.onclick=()=>{ const id=String(b.getAttribute("data-info")||""); const raw=state.itemDadosMap[id]||""; const txt=formatDadosItem(raw); const body=el("dados-item-body"); if(body) body.textContent = txt || "Sem detalhes."; openModal("modal-dados-item"); }; });
+    host.querySelectorAll("[data-info-group]").forEach((b)=>{ b.onclick=()=>{ const lanc=String(b.getAttribute("data-info-group")||""); const raw=state.grupoDadosMap[lanc]||""; const txt=formatDadosItem(raw); const body=el("dados-item-body"); if(body) body.textContent = txt || "Sem detalhes."; openModal("modal-dados-item"); }; });
+    aplicarBloqueioCasaUi(host);
+    recalcTotals(subtotal);
+    updatePrintState();
+    updateDistribuirPreparoUiCasa();
+    await persistFormaPagamentoSePendente();
+    return true;
+  }
+
+  async function loadClassTabs(){
+    const wrap=el("class-tabs"); wrap.innerHTML="";
+    const res=await fetch("/api/listar-classificacoes"); const data=await res.json(); const list=Array.isArray(data)?data:[];
+    state.classMeta={};
+    list.forEach((c,idx)=>{ const nome=(c.nomeclassificacao!=null&&String(c.nomeclassificacao))||String(c.classificacao||`Classe ${idx+1}`); state.classMeta[nome]={ quantidadepartes:Number(c.quantidadepartes)||0, formadecobrar:String(c.formadecobrar||"").trim(), op_tamanhos:c.op_tamanhos||"", op_massas:c.op_massas||"", op_bordas:c.op_bordas||"", op_coberturas:c.op_coberturas||"", op_adicionais:c.op_adicionais||"" }; const b=document.createElement("button"); b.textContent=nome; b.onclick=()=>{ wrap.querySelectorAll("button").forEach((x)=>x.classList.remove("active")); b.classList.add("active"); loadProdutos(nome); }; wrap.appendChild(b); if(idx===0){ b.classList.add("active"); loadProdutos(nome); } });
+  }
+  async function loadProdutos(classificacao){
+    if(state.fracionadoDraftInline) resetFracionadoInline(true);
+    state.classificacao=classificacao;
+    const r=await fetch(`/produtos_por_classificacao/${encodeURIComponent(classificacao)}`);
+    const raw=await r.json();
+    state.produtos=Array.isArray(raw)?raw:[];
+    renderProdutos();
+  }
+  function renderProdutos(){
+    const q=(el("busca-produto").value||"").toLowerCase().trim();
+    const wrap=el("prod-grid");
+    if(!wrap) return;
+    wrap.innerHTML="";
+    const draft=state.fracionadoDraftInline;
+    state.produtos
+      .filter((p)=>{
+        const nome=String(p.produto||p.nome||"").toLowerCase();
+        const codigo=String(p.chave||p.codigoproduto||"").toLowerCase();
+        const barcode=String(p.barcode||"").toLowerCase();
+        return nome.includes(q)||codigo.includes(q)||(barcode&&barcode.includes(q));
+      })
+      .forEach((p)=>{
+        const card=document.createElement("div");
+        const codigo=String(p.chave||p.codigoproduto||"").trim();
+        const desc=((p.observacao||p.descricao||"")+"").trim();
+        const chaveAtual=String(p.chave||p.codigoproduto||"");
+        const selecionado=!!(draft && draft.partes.some((x)=>String(x.codigoproduto||"")===chaveAtual));
+        card.className="prod-card"+(selecionado?" sel-frac":"");
+        if(desc) card.title=`Descrição: ${desc}`;
+        card.innerHTML=`<span class="name">${escapeHtml(p.nome||p.produto||"-")}</span><span class="code">Cód: ${escapeHtml(codigo||"-")}</span><span class="price">${money(p.preco)}</span><button class="btn-plus">+</button>`;
+        card.querySelector("button").onclick=(e)=>addItem(p,e.currentTarget);
+        wrap.appendChild(card);
+      });
+    lucide.createIcons();
+    renderFracionadoInlinePanel();
+    aplicarBloqueioCasaUi(null);
+  }
+
+  async function enviarItemCasa(payload, btn, tentarRecuperarConflito=true){
+    const labelAntigo = btn ? btn.textContent : "";
+    if ((Number(state.pedidoId)||0) > 0 && state.pedidoBloqueadoCasa) {
+      alert(msgCasaPedidoBloqueado());
+      if (btn) { btn.disabled = false; btn.textContent = labelAntigo || "+"; }
+      return;
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "...";
+    }
+    try{
+      const payloadSend = (Number(state.pedidoId)||0) > 0 ? ({...payload,nropedido:Number(state.pedidoId)}) : payload;
+      const res=await fetch("/api/casa/item",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payloadSend)});
+      const ct=(res.headers.get("content-type")||"").toLowerCase(); const data=ct.includes("application/json") ? await res.json() : null;
+      if(res.status===401 || res.status===403){
+        alert((data && data.erro) || "Sessão expirada. Faça login novamente.");
+        lojaGo("/login/form");
+        return;
+      }
+      if(!res.ok || (data && data.sucesso===false)){
+        if(res.status===409 && data && data.codigo==="CONFLITO_TELEFONE_PEDIDO"){
+          const pedidoAntes=Number(state.pedidoId)||0;
+          await localizarCliente(true);
+          if(tentarRecuperarConflito){
+            const payloadRetry={...payload,...clienteCasaPayload()};
+            await enviarItemCasa(payloadRetry, btn, false);
+            return;
+          }
+          alert((data && data.erro) || "Pedido atual pertence a outro telefone. Localize novamente.");
+          return;
+        }
+        alert((data && (data.mensagem||data.erro)) || "Não foi possível incluir item no pedido.");
+        return;
+      }
+      const novoNumero = data && Number(data.nropedido);
+      if(novoNumero>0 && (Number(state.pedidoId)||0)!==novoNumero){
+        state.pedidoId=novoNumero;
+        state.pedidoReservado=true;
+        state.pedidoPreview=novoNumero;
+        updatePedidoBadge();
+      }
+      await loadItens(state.emRecuperacao?"recuperacao":"normal");
+    }catch(err){
+      console.error(err);
+      alert("Falha de conexão ao incluir item no pedido.");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = labelAntigo || "+";
+      }
+    }
+  }
+  function etiquetaMontagemFracionada(qtd,maxPartes){
+    if(qtd<=0) return "";
+    const m=maxPartes|0;
+    if(m===2) return qtd===1?"INTEIRA":"MEIO A MEIO";
+    if(m===3){ if(qtd===1)return "INTEIRA"; if(qtd===2)return "DOIS TERÇOS"; return "TRÊS TERÇOS"; }
+    if(m===4){ const map=["","INTEIRA","MEIO A MEIO","TRÊS TERÇOS","QUATRO QUARTOS"]; return map[qtd]||(qtd+" sabores"); }
+    const fallback={1:"INTEIRA",2:"MEIO A MEIO",3:"TRÊS TERÇOS",4:"QUATRO QUARTOS"};
+    return qtd<=4?fallback[qtd]:(qtd+" sabores");
+  }
+  /** Gradiente do indicador circular: INTEIRA roxo cheio; meia vermelho/cinza; 3/4 amarelo; 4/4 verde; progresso proporcional nos demais. */
+  function buildFracionadoPieGradient(maxPartes,qtd){
+    const max=Math.max(1,Number(maxPartes)||1);
+    const q=Math.max(0,Math.min(Number(qtd)||0,max));
+    const gray="var(--line)";
+    const purple="var(--purple)";
+    const red="#e11d48";
+    const yellow="#ca8a04";
+    const green="#16a34a";
+    if(q<=0) return `conic-gradient(${gray} 0deg 360deg)`;
+    if(q===1) return `conic-gradient(${purple} 0deg 360deg)`;
+    if(max===2 && q===2) return `conic-gradient(${red} 0deg 180deg, ${gray} 180deg 360deg)`;
+    if(max===3){
+      const seg=360/3;
+      if(q===3) return `conic-gradient(${yellow} 0deg 360deg)`;
+      return `conic-gradient(${yellow} 0deg ${q*seg}deg, ${gray} ${q*seg}deg 360deg)`;
+    }
+    if(max===4){
+      const seg=90;
+      if(q===4){
+        let grad="";
+        for(let i=0;i<4;i++){
+          const ini=i*seg; const fim=(i+1)*seg;
+          grad+=`${green} ${ini}deg ${fim}deg${i<3?", ":""}`;
+        }
+        return `conic-gradient(${grad})`;
+      }
+      if(q===3) return `conic-gradient(${yellow} 0deg 270deg, ${gray} 270deg 360deg)`;
+      return `conic-gradient(${yellow} 0deg ${q*seg}deg, ${gray} ${q*seg}deg 360deg)`;
+    }
+    let grad="";
+    for(let i=0;i<max;i++){
+      const ini=(i*360)/max; const fim=((i+1)*360)/max;
+      const cor=i<q?purple:gray;
+      grad+=`${cor} ${ini}deg ${fim}deg${i<max-1?", ":""}`;
+    }
+    return `conic-gradient(${grad})`;
+  }
+  function resetFracionadoInline(cancelar=true){
+    const d=state.fracionadoDraftInline;
+    state.fracionadoDraftInline=null;
+    renderProdutos();
+    if(cancelar && d && d.resolve) d.resolve(null);
+  }
+  function renderFracionadoInlinePanel(){
+    const wrap=el("frac-inline");
+    const d=state.fracionadoDraftInline;
+    if(!wrap) return;
+    if(!d){ wrap.classList.remove("open"); return; }
+    wrap.classList.add("open");
+    const qtd=d.partes.length;
+    const lbl=el("frac-inline-label");
+    if(lbl) lbl.textContent="Sabores";
+    const cnt=el("frac-inline-count");
+    if(cnt) cnt.textContent=`${qtd}/${d.maxPartes} sabor(es)`;
+    const resumo=el("frac-inline-resumo");
+    if(resumo){
+      const agg=new Map();
+      d.partes.forEach((p)=>{ const k=String(p.nome||"-"); agg.set(k,(agg.get(k)||0)+1); });
+      resumo.textContent=Array.from(agg.entries()).map(([n,c])=>`${n} x${c}`).join(" | ");
+    }
+    const pie=el("frac-inline-pie");
+    if(pie) pie.style.background=buildFracionadoPieGradient(d.maxPartes,qtd);
+    const lista=el("frac-inline-list");
+    if(lista){
+      if(!d.partes.length){
+        lista.textContent="Selecione os sabores na grade";
+      }else{
+        lista.innerHTML=d.partes.map((p,idx)=>`<span class="frac-chip"><span class="frac-chip-name">${idx+1}. ${escapeHtml(String(p.nome||"-"))}</span><button type="button" class="frac-chip-x" data-frac-remove-idx="${idx}" aria-label="Remover parte">×</button></span>`).join("");
+        lista.querySelectorAll("[data-frac-remove-idx]").forEach((b)=>{
+          b.onclick=()=>{
+            const i=Number(b.getAttribute("data-frac-remove-idx"));
+            if(Number.isFinite(i) && i>=0 && i<d.partes.length){ d.partes.splice(i,1); renderProdutos(); }
+          };
+        });
+      }
+    }
+    const btnConf=el("btn-frac-inline-confirmar");
+    if(btnConf){
+      const min=Math.max(1,Math.floor(Number(d.minPartes||1)));
+      btnConf.disabled = qtd < min;
+    }
+    const btnDesf=el("btn-frac-inline-desfazer");
+    if(btnDesf) btnDesf.disabled=qtd<=1;
+  }
+  function fluxoFracionado(primeiroProduto, obsPadrao="", maxOverride=null, minPartes=1){
+    const meta=state.classMeta[state.classificacao]||{};
+    const metaMax=Math.max(0,Number(meta.quantidadepartes)||0);
+    const reqMax = maxOverride!=null ? Math.max(1,Math.floor(Number(maxOverride)||1)) : metaMax;
+    const maxPartes = Math.min(metaMax||reqMax, reqMax);
+    if(maxPartes<=1) return Promise.resolve(null);
+    return new Promise((resolve)=>{
+      const seed = primeiroProduto ? [{nome:String(primeiroProduto.nome||primeiroProduto.produto||"-"),preco:Number(primeiroProduto.preco)||0,codigoproduto:String(primeiroProduto.chave||primeiroProduto.codigoproduto||""),obs_item:String(obsPadrao||"")}] : [];
+      state.fracionadoDraftInline={
+        maxPartes,
+        minPartes: Math.max(1, Math.floor(Number(minPartes)||1)),
+        obsPadrao:String(obsPadrao||""),
+        partes: seed,
+        meta,
+        resolve
+      };
+      renderFracionadoInlinePanel();
+      renderProdutos();
+      const busca=el("busca-produto");
+      if(busca) busca.focus();
+    });
+  }
+  async function addItem(p, btn){
+    if(!state.classificacao){ alert("Selecione uma categoria."); return; }
+    if(state.modo==="delivery" && !state.clienteLocalizado){ alert("Localize o cliente antes de incluir itens."); return; }
+    const draft=state.fracionadoDraftInline;
+    if(draft){
+      const codAtual=String(p.chave||p.codigoproduto||"");
+      if(draft.partes.length>=draft.maxPartes){ return; }
+      const nomeSabor=String(p.nome||p.produto||"-");
+      const partesEst=Math.max(1, Math.floor(Number(draft.partes.length+1)||1));
+      const optSabor=await escolherOpcoesParaItem(`Sabor: ${nomeSabor}`, 0, partesEst, ["cobertura","adicionais"]);
+      if(optSabor && optSabor.cancelado) return;
+      draft.partes.push({nome:nomeSabor,preco:Number(p.preco)||0,codigoproduto:codAtual,obs_item:String(draft.obsPadrao||""),selExtras:(optSabor&&optSabor.sel)?optSabor.sel:null});
+      renderProdutos();
+      return;
+    }
+    const nome=p.nome||p.produto;
+    const cod=p.chave!=null?String(p.chave):String(Date.now());
+    const meta=state.classMeta[state.classificacao]||{};
+    if((Number(meta.quantidadepartes)||0)>1){
+      const prom=fluxoFracionado(null, "", null, 1);
+      await addItem(p, btn);
+      const fr=await prom;
+      if(!fr) return;
+      const partesCount = Array.isArray(fr.partes)?fr.partes.length:0;
+      const precos = (fr.partes||[]).map((x)=>Number(x.preco)||0);
+      const baseRef = precos.length ? Math.max(...precos) : (Number(p.preco)||0);
+      const optGlobal=await escolherOpcoesParaItem(`Pizza (${partesCount} sabor(es))`, baseRef, partesCount, ["tamanho","massa","borda"]);
+      if(optGlobal && optGlobal.cancelado) return;
+      const selG=optGlobal&&optGlobal.sel?optGlobal.sel:null;
+      const mult=selG?tamanhoMultiplier(selG):1;
+      const override=selG?tamanhoOverridePrice(selG):null;
+      const delta=selG?tamanhoDelta(selG):0;
+      const acresGlobal=selG?totalAcrescimo(selG, partesCount):0;
+      let acresSabores=0;
+      const sabores=(fr.partes||[]).map((pt)=>{
+        const ex=pt.selExtras||null;
+        const selCalc=ex?Object.assign({}, ex, {tamanho:(selG?selG.tamanho:"")}) : null;
+        const det = selCalc ? acrescimoDetalhado(selCalc, partesCount) : null;
+        if(det) acresSabores += numOrZero(det.total);
+        return {nome:String(pt.nome||"-"),cobertura:ex?(ex.cobertura||""):"",adicionais:ex&&Array.isArray(ex.adicionais)?ex.adicionais:[],scope:ex&&ex._scope?ex._scope:null,acrescimos:det};
+      });
+      const acresTotal = numOrZero(acresGlobal) + numOrZero(acresSabores);
+      const dadosPizza=selG?buildDadosItem(selG, partesCount):"";
+      const dadosFinal = dadosPizza ? (()=>{
+        try{ const j=JSON.parse(dadosPizza); j.sabores=sabores; j.tipo="pizza"; j.v=2; return JSON.stringify(j); }catch{ return dadosPizza; }
+      })() : JSON.stringify({v:2,tipo:"pizza",partes:partesCount,tamanho:(selG&&selG.tamanho)||"",massa:(selG&&selG.massa)||"",borda:(selG&&selG.borda)||"",sabores});
+      if(partesCount<=1){
+        const pt=(fr.partes||[])[0]||{};
+        const ex=pt.selExtras||null;
+        const selCalc=ex?Object.assign({}, ex, {tamanho:(selG?selG.tamanho:"")}) : null;
+        const acresSabor1 = selCalc ? numOrZero(acrescimoDetalhado(selCalc,1).total) : 0;
+        const baseSolo = override!=null ? Number(override) : (((Number(pt.preco)||Number(p.preco)||0)*mult) + (Number(delta)||0));
+        const pay={ ...clienteCasaPayload(), obs_geral:(el("obs-geral").value||"").trim(), item:{ nome:String(pt.nome||nome), preco:baseSolo+numOrZero(acresGlobal)+numOrZero(acresSabor1), qtd:1, codigoproduto:String(pt.codigoproduto||cod), classe:state.classificacao, obs_item:String(pt.obs_item||"").trim(), dados_item:dadosFinal } };
+        await enviarItemCasa(pay, btn);
+        return;
+      }
+      const obsFrac = "";
+      const partes=Array.isArray(fr.partes)?fr.partes.map((x)=>({
+        nome:String(x.nome||"-"),
+        preco: override!=null ? Number(override) : (((Number(x.preco)||0)*mult) + (Number(delta)||0)),
+        codigoproduto:String(x.codigoproduto||""),
+        obs_item:obsFrac||String(x.obs_item||""),
+        dados_item:dadosFinal
+      })) : [];
+      if(acresTotal>0 && partes.length){
+        let max=-1, idx=0;
+        for(let i=0;i<partes.length;i++){ const v=Number(partes[i].preco)||0; if(v>max){ max=v; idx=i; } }
+        partes[idx].preco = (Number(partes[idx].preco)||0) + acresTotal;
+      }
+      const basePayload={ ...clienteCasaPayload(), obs_geral:(el("obs-geral").value||"").trim(), item:{ nome:nome, preco:0, qtd:1, codigoproduto:cod, classe:state.classificacao, obs_item:"", dados_item:"" } };
+      await enviarItemCasa({ ...basePayload, fracionado:true, partes, formadecobrar:fr.formadecobrar, quantidadepartes:(Array.isArray(fr.partes)?fr.partes.length:1) }, btn);
+      return;
+    }else{
+      const opt=await escolherOpcoesParaItem(nome, Number(p.preco)||0, 1, null);
+      if(opt && opt.cancelado) return;
+      const sel=opt&&opt.sel?opt.sel:null;
+      const mult=sel?tamanhoMultiplier(sel):1;
+      const override=sel?tamanhoOverridePrice(sel):null;
+      const delta=sel?tamanhoDelta(sel):0;
+      const obs1="";
+      const dados1=sel?buildDadosItem(sel,1):"";
+      const acres1=sel?totalAcrescimo(sel,1):0;
+      const basePreco = override!=null ? Number(override) : ((Number(p.preco)*mult) + (Number(delta)||0));
+      const basePayload={ ...clienteCasaPayload(), obs_geral:(el("obs-geral").value||"").trim(), item:{ nome:nome, preco:basePreco+acres1, qtd:1, codigoproduto:cod, classe:state.classificacao, obs_item:obs1, dados_item:dados1 } };
+      await enviarItemCasa(basePayload, btn);
+    }
+  }
+
+  function formatarCep(v){ const d=(v||"").replace(/\D/g,"").slice(0,8); return d.length>5?d.slice(0,5)+"-"+d.slice(5):d; }
+  async function buscarEnderecoPorCep(){
+    const raw=(el("cli-cep").value||"").replace(/\D/g,"");
+    const statusEl=el("cep-status");
+    if(raw.length!==8){ if(statusEl) statusEl.textContent="CEP inválido"; return; }
+    if(statusEl) statusEl.textContent="…";
+    try{
+      const r=await fetch("/api/casa/buscar-cep?cep="+encodeURIComponent(raw),{credentials:"same-origin",headers:{Accept:"application/json"}});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok||!d.sucesso){ if(statusEl) statusEl.textContent=d.erro||"Não encontrado"; return; }
+      if(d.cep) el("cli-cep").value=d.cep;
+      if(d.logradouro) el("cli-end").value=d.logradouro;
+      if(d.bairro) el("cli-bairro").value=d.bairro;
+      if(d.cidade) el("cli-cidade").value=d.cidade;
+      if(d.estado) el("cli-uf").value=d.estado;
+      if(statusEl) statusEl.textContent="✓";
+      updateSaveClienteState();
+      const nr=el("cli-nrocasa"); if(nr) nr.focus();
+    }catch(e){ console.error(e); if(statusEl) statusEl.textContent="Erro"; }
+  }
+  async function localizarCliente(force=false) {
+    if(state.localizandoCliente) return;
+    if (state.modo !== "delivery") {
+      setClienteStatus("Localização disponível apenas no modo Delivery.");
+      return;
+    }
+    const telRaw = (el("cli-fone").value || "").trim();
+    if (!telRaw) {
+      setClienteStatus("Informe o telefone para localizar.");
+      return;
+    }
+    const tel = telefoneComDdd(telRaw);
+    if(!force && tel === state.ultimoTelefoneLocalizado) return;
+    let pedidoAguardeExistente=0;
+    try{
+      const rPend=await fetch("/api/casa/pedido-aguarde?telefone="+encodeURIComponent(tel),{credentials:"same-origin",headers:{Accept:"application/json"}});
+      const dPend=await rPend.json().catch(()=>({}));
+      if(rPend.ok && dPend && dPend.encontrado && Number(dPend.nropedido)>0){
+        pedidoAguardeExistente=Number(dPend.nropedido);
+      }
+    }catch(_e){}
+    const telAnterior = state.ultimoTelefoneCompleto || "";
+    const mudouTelefone = !!telAnterior && telAnterior !== tel;
+    if(pedidoAguardeExistente>0){
+      state.pedidoId=pedidoAguardeExistente;
+      state.pedidoReservado=true;
+      state.pedidoPreview=state.pedidoId;
+      updatePedidoBadge();
+    }else if(!state.pedidoReservado || mudouTelefone){
+      state.pedidoId=0;
+      state.pedidoReservado=false;
+      await syncPedidoAtual();
+      state.itensCount = 0;
+      const host=el("itens-list");
+      if(host) host.innerHTML="";
+      recalcTotals(0);
+      updatePrintState();
+    }
+    const btn = el("btn-localizar");
+    const prevLabel = btn ? btn.textContent : "";
+    state.localizandoCliente = true;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "…";
+    }
+    try {
+      const r = await fetch(
+        "/buscar-cliente?telefone=" + encodeURIComponent(tel),
+        {
+          credentials: "same-origin",
+          redirect: "manual",
+          headers: { Accept: "application/json" },
+        }
+      );
+      if (
+        r.type === "opaqueredirect" ||
+        r.status === 302 ||
+        r.status === 301 ||
+        r.status === 307 ||
+        r.status === 308
+      ) {
+        alert("Sessão expirada. Faça login novamente.");
+        lojaGo("/login/form");
+        return;
+      }
+      const ct = (r.headers.get("content-type") || "").toLowerCase();
+      let d;
+      if (ct.indexOf("application/json") !== -1) {
+        d = await r.json();
+      } else {
+        if (r.status === 401 || r.status === 403) {
+          alert("Sessão expirada. Faça login novamente.");
+          lojaGo("/login/form");
+          return;
+        }
+        alert("Não foi possível interpretar a resposta do servidor. Verifique se está logado.");
+        return;
+      }
+      const limparDadosClienteAnterior = () => {
+        ["cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-ref","cli-bairro","cli-cidade","cli-uf","cli-cep","cli-distancia","cli-taxa"].forEach((id)=>{ const node=el(id); if(node) node.value=""; });
+        state.taxaEntrega = 0;
+        captureClienteSnapshot();
+      };
+      if (!r.ok) {
+        limparDadosClienteAnterior();
+        state.clienteLocalizado = false;
+        state.editandoCliente = false;
+        state.historicoCliente = [];
+        state.historicoClienteTotal = 0;
+        renderHistoricoClienteResumo();
+        applyClienteFieldsLock();
+        updatePrintState();
+        setClienteStatus((d && d.erro) || "Cliente não encontrado.");
+        const cep=el("cli-cep"); if(cep) cep.focus();
+        return false;
+      }
+      if (d.erro) {
+        limparDadosClienteAnterior();
+        state.clienteLocalizado = false;
+        state.editandoCliente = false;
+        state.historicoCliente = [];
+        state.historicoClienteTotal = 0;
+        renderHistoricoClienteResumo();
+        applyClienteFieldsLock();
+        updatePrintState();
+        setClienteStatus(d.erro);
+        const cep=el("cli-cep"); if(cep) cep.focus();
+        return false;
+      }
+      el("cli-nome").value = d.nome || "";
+      el("cli-end").value = d.endereco || "";
+      el("cli-bairro").value = d.bairro || "";
+      el("cli-cidade").value = d.cidade || "";
+      el("cli-uf").value = (d.estado || "").toString().toUpperCase();
+      el("cli-cep").value = d.cep || "";
+      el("cli-nrocasa").value = d.nrocasa != null ? d.nrocasa : "";
+      el("cli-complemento").value = d.complemento || "";
+      el("cli-ref").value = d.referencia || "";
+      state.taxaEntrega = numOrZero(d.taxaentrega);
+      el("cli-distancia").value = d.distancia != null && d.distancia !== "" ? fmtKm(d.distancia) : "";
+      el("cli-taxa").value = money(state.taxaEntrega);
+      state.ultimoTelefoneLocalizado = tel;
+      state.ultimoTelefoneCompleto = tel;
+      state.clienteLocalizado = true;
+      state.emRecuperacao = false;
+      state.editandoCliente = false;
+      captureClienteSnapshot();
+      applyClienteFieldsLock();
+      updateSaveClienteState();
+      updatePrintState();
+      await carregarHistoricoCliente(tel);
+      updateClienteLocalizadoBadge();
+      await loadItens("normal");
+      await refreshPendentesAguarde();
+      const busca=el("busca-produto");
+      if(busca) busca.focus();
+      return true;
+    } catch (e) {
+      console.error(e);
+      setClienteStatus("Falha ao localizar cliente. Tente novamente.");
+      return false;
+    } finally {
+      state.localizandoCliente = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = prevLabel || "Localizar";
+      }
+      updateClienteLocalizadoBadge();
+    }
+  }
+  async function salvarClienteEntrega(){
+    if (state.modo !== "delivery") {
+      alert("Esse cadastro é usado no modo Delivery.");
+      return;
+    }
+    const telefone = telefoneComDdd(el("cli-fone").value || "");
+    if (!telefone) {
+      alert("Informe o telefone.");
+      return;
+    }
+    const payload = {
+      telefone,
+      nome: (el("cli-nome").value || "").trim(),
+      endereco: (el("cli-end").value || "").trim(),
+      nrocasa: (el("cli-nrocasa").value || "").trim(),
+      complemento: (el("cli-complemento").value || "").trim(),
+      referencia: (el("cli-ref").value || "").trim(),
+      bairro: (el("cli-bairro").value || "").trim(),
+      cidade: (el("cli-cidade").value || "").trim(),
+      estado: (el("cli-uf").value || "").trim().toUpperCase(),
+      cep: (el("cli-cep").value || "").trim(),
+      distancia: parseKm(el("cli-distancia").value || ""),
+    };
+    const btn = el("btn-salvar-cliente");
+    const prevLabel = btn ? btn.textContent : "";
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Salvando...";
+    }
+    try {
+      const r = await fetch("/salvar-cliente", {
+        method: "POST",
+        credentials: "same-origin",
+        redirect: "manual",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (r.type === "opaqueredirect" || [301,302,307,308].includes(r.status)) {
+        alert("Sessão expirada. Faça login novamente.");
+        lojaGo("/login/form");
+        return;
+      }
+      const ct = (r.headers.get("content-type") || "").toLowerCase();
+      if (ct.indexOf("application/json") === -1) {
+        alert("Resposta inválida do servidor ao salvar cliente.");
+        return;
+      }
+      const d = await r.json();
+      if (!r.ok || d.erro) {
+        alert(d.erro || "Erro ao salvar cliente.");
+        return;
+      }
+      state.taxaEntrega = numOrZero(d.taxa_calculada);
+      if (d.distancia_calculada != null) el("cli-distancia").value = fmtKm(d.distancia_calculada);
+      el("cli-taxa").value = money(state.taxaEntrega);
+      state.clienteLocalizado = true;
+      state.emRecuperacao = false;
+      state.editandoCliente = false;
+      captureClienteSnapshot();
+      applyClienteFieldsLock();
+      updateSaveClienteState();
+      updatePrintState();
+      updateClienteLocalizadoBadge();
+      await loadItens("normal");
+      const busca=el("busca-produto");
+      if(busca) busca.focus();
+      alert(d.mensagem || "Cliente salvo com sucesso.");
+    } catch (e) {
+      console.error(e);
+      alert("Não foi possível salvar os dados do cliente.");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = prevLabel || "Calcular / salvar entrega";
+      }
+    }
+  }
+  function nomeClienteAtual(){ if(state.modo==="balcao"){ const nm=(el("balcao-nome").value||"").trim(); return nm||"cliente"; } return (el("cli-nome").value||"").trim()||"cliente"; }
+
+  function textoImpressao(){
+    const F=window.lojaPrintFmt;
+    const W=(F&&F.width)?F.width(48):48;
+    const out=[];
+    const ESC="\x1b";
+    const B_ON=ESC+"E"+String.fromCharCode(1);
+    const B_OFF=ESC+"E"+String.fromCharCode(0);
+    const bold=(s)=>B_ON+String(s==null?"":s)+B_OFF;
+    const hr=(ch)=> (F&&F.hr)?F.hr(ch,W):String(ch||"-").slice(0,1).repeat(W);
+    const center=(s)=> (F&&F.center)?F.center(s,W):String(s||"");
+    const cols=(l,r)=> (F&&F.cols)?F.cols(l,r,W,1):(`${String(l||"")} ${String(r||"")}`).trim();
+    const wrap=(s,indent)=> (F&&F.wrap)?F.wrap(s,W,indent||0):[String(s||"")];
+    const kv=(l,v)=> (F&&F.kv)?F.kv(l,v,W):(`${String(l||"")}: ${String(v||"")}`);
+
+    out.push(ESC+"a"+String.fromCharCode(1));
+    out.push((ESC+"!"+String.fromCharCode(0x30))+`PEDIDO #${state.pedidoId}`+(ESC+"!"+String.fromCharCode(0x00)));
+    out.push(ESC+"a"+String.fromCharCode(0));
+    const st=String(state.statusComanda||"NORMAL").toUpperCase();
+    if(st==="MODIFICADA") out.push(center("*** COMANDA MODIFICADA ***"));
+    if(st==="CANCELADA") out.push(center("*** COMANDA CANCELADA ***"));
+    out.push(hr("-"));
+    out.push(bold(cols("TIPO", String(state.modo||"").toUpperCase())));
+    const cliente=nomeClienteAtual();
+    if(`CLIENTE: ${cliente}`.length<=W) out.push(`CLIENTE: ${cliente}`);
+    else{ out.push("CLIENTE:"); wrap(cliente,2).forEach((ln)=>{ if(String(ln||"").trim()) out.push(ln); }); }
+
+    if(state.modo==="delivery"){
+      const comp=(el("cli-complemento").value||"").trim();
+      const ref=(el("cli-ref").value||"").trim();
+      out.push(`TEL: ${telefoneComDdd((el("cli-fone").value||"").trim())||"-"}`);
+      const end=(`${(el("cli-end").value||"").trim()} ${(el("cli-nrocasa").value||"").trim()}`).trim();
+      if(end){
+        if(`END: ${end}`.length<=W) out.push(`END: ${end}`);
+        else{ out.push("END:"); wrap(end,2).forEach((ln)=>{ if(String(ln||"").trim()) out.push(ln); }); }
+      }
+      if(comp){
+        if(`COMP: ${comp}`.length<=W) out.push(`COMP: ${comp}`);
+        else{ out.push("COMP:"); wrap(comp,2).forEach((ln)=>{ if(String(ln||"").trim()) out.push(ln); }); }
+      }
+      if(ref){
+        if(`REF: ${ref}`.length<=W) out.push(`REF: ${ref}`);
+        else{ out.push("REF:"); wrap(ref,2).forEach((ln)=>{ if(String(ln||"").trim()) out.push(ln); }); }
+      }
+      if(el("cli-distancia").value) out.push(`DIST: ${el("cli-distancia").value}`);
+      if(el("cli-taxa").value) out.push(cols("TAXA ENTREGA", el("cli-taxa").value));
+    }
+
+    out.push(hr("-"));
+    out.push(ESC+"a"+String.fromCharCode(1));
+    out.push(B_ON+(ESC+"!"+String.fromCharCode(0x10))+"ITENS"+(ESC+"!"+String.fromCharCode(0x00))+B_OFF);
+    out.push(ESC+"a"+String.fromCharCode(0));
+    out.push(hr("-"));
+    el("itens-list").querySelectorAll(".item").forEach((row)=>{
+      const nm=row.querySelector(".item-name");
+      const ob=row.querySelector("[data-obs-item]");
+      const q=row.querySelector("[data-qtd-input]");
+      const qg=row.querySelector("[data-qtd-input-group]");
+      const up=row.querySelector(".unit-price");
+      const lv=row.querySelector(".item-v");
+      const qtd=(q&&q.value)?Number(q.value)||1:((qg&&qg.value)?Number(qg.value)||1:1);
+      const nome=(nm?nm.textContent:"").trim();
+      const unit=up?up.textContent:"";
+      const linha=lv?lv.textContent:"";
+
+      out.push(bold(cols(`${qtd}x ${nome}`, linha)));
+      if(unit) out.push(cols("  Un", unit));
+
+      let dadosRaw="";
+      if(ob){
+        const id=String(ob.getAttribute("data-obs-item")||"");
+        dadosRaw = state.itemDadosMap[id] || "";
+      }else{
+        const infoGrp=row.querySelector("[data-info-group]");
+        if(infoGrp){
+          const lanc=String(infoGrp.getAttribute("data-info-group")||"");
+          dadosRaw = state.grupoDadosMap[lanc] || "";
+        }
+      }
+      if(dadosRaw){
+        const txt=formatDadosItem(dadosRaw);
+        if(txt){
+          txt.split("\n").forEach((ln)=>{
+            const t=String(ln||"").trim();
+            if(!t) return;
+            wrap(t,2).forEach((wln)=>{ if(String(wln||"").trim()) out.push(wln); });
+          });
+        }
+      }
+      if(row.classList.contains("fracionado")){
+        const sabores=[];
+        row.querySelectorAll(".item-obs-label").forEach((lb)=>{ const t=(lb.textContent||"").trim(); if(t) sabores.push(t); });
+        if(sabores.length){
+          sabores.forEach((s)=>{ wrap(s,2).forEach((wln)=>{ if(String(wln||"").trim()) out.push(wln); }); });
+        }else{
+          const desc=row.querySelector(".item-desc");
+          const t=(desc?desc.textContent:"").trim();
+          if(t) wrap(t,2).forEach((wln)=>{ if(String(wln||"").trim()) out.push(wln); });
+        }
+      }
+      if(ob && ob.value && ob.value.trim()){
+        wrap(`Obs: ${ob.value.trim()}`,2).forEach((wln)=>{ if(String(wln||"").trim()) out.push(wln); });
+      }
+      out.push("");
+    });
+
+    const og=(el("obs-geral").value||"").trim();
+    if(og){
+      out.push(hr("-"));
+      out.push("OBS GERAL:");
+      wrap(og,2).forEach((ln)=>{ if(String(ln||"").trim()) out.push(ln); });
+    }
+    out.push(hr("-"));
+    out.push(kv("Subtotal", el("subtotal").textContent));
+    if(String(state.formaPagamento||"").trim()){
+      const fp=`Forma de pagamento: ${state.formaPagamento}`;
+      if(fp.length<=W) out.push(fp);
+      else{ out.push("Forma de pagamento:"); wrap(state.formaPagamento,2).forEach((ln)=>{ if(String(ln||"").trim()) out.push(ln); }); }
+    }
+    if(state.modo==="delivery" && state.valorPagoTroco!=null && Number.isFinite(state.valorPagoTroco)){
+      const tot=totalPedidoAtual();
+      out.push(kv("Cliente paga com", money(state.valorPagoTroco)));
+      out.push(kv("Troco a levar", money(Math.max(0, state.valorPagoTroco-tot))));
+    }
+    if(state.modo==="delivery") out.push(kv("Taxa entrega", el("taxa-entrega").textContent));
+    if(Math.abs(numOrZero(state.ajusteValor))>0) out.push(kv(state.ajusteValor>=0?"Taxa extra":"Desconto", money(state.ajusteValor)));
+    out.push(bold(kv("TOTAL", el("total").textContent)));
+    const feed = Math.max(0, Math.min(20, Math.floor(Number(impressoraCasaFeed)||0)));
+    if(feed>0) out.push(ESC+"d"+String.fromCharCode(feed));
+    out.push("");
+    out.push("");
+    out.push("");
+    return `\n${out.join("\n")}\n`;
+  }
+  function limparCamposCliente(){
+    ["cli-fone","cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-ref","cli-bairro","cli-cidade","cli-uf","cli-cep","cli-distancia","cli-taxa","balcao-nome","balcao-fone"].forEach((id)=>{ const node=el(id); if(node) node.value=""; });
+  }
+  function focoOperacional(){
+    if(state.modo==="delivery"){ const f=el("cli-fone"); if(f) f.focus(); return; }
+    const b=el("busca-produto"); if(b) b.focus();
+  }
+  function applyInitialUiState(){
+    const bp=el("btn-pagamento-trigger");
+    if(bp){
+      bp.textContent="Escolher pagamento";
+      bp.classList.remove("selected");
+    }
+    state.formaPagamento="";
+    state.valorPagoTroco=null;
+    refreshFormaPagamentoUi();
+    const detalhes=el("detalhes-pedido");
+    if(detalhes) detalhes.open=false;
+    const acoes=el("acoes-rapidas");
+    if(acoes) acoes.open=false;
+    if(el("obs-geral")) el("obs-geral").value="";
+    state.editandoCliente=false;
+    state.emRecuperacao=false;
+    state.statusComanda="NORMAL";
+    updateComandaStatusBadge();
+    state.fracionadoDraftInline=null;
+    renderFracionadoInlinePanel();
+    renderHistoricoClienteResumo();
+    updateClienteLocalizadoBadge();
+    applyClienteFieldsLock();
+    updateSaveClienteState();
+    updateBalcaoPagamentoMomentoUi();
+    updatePrintState();
+  }
+  async function resetPedidoRapido(incrementarPedido=true){
+    const lista = el("itens-list");
+    if (lista) lista.innerHTML = "";
+    recalcTotals(0);
+    state.pedidoId=0;
+    state.pedidoBloqueadoCasa=false;
+    state.pedidoReservado=false;
+    state.itensCount=0;
+    state.itemDadosMap={};
+    state.grupoDadosMap={};
+    state.preparoMetaById={};
+    updateDistribuirPreparoUiCasa();
+    if(incrementarPedido) await syncPedidoAtual();
+    state.formaPagamento="";
+    state.valorPagoTroco=null;
+    state.obsGeral="";
+    state.taxaEntrega=0;
+    state.clienteLocalizado=false;
+    state.historicoCliente=[];
+    state.historicoClienteTotal=0;
+    state.ultimoTelefoneLocalizado="";
+    state.ultimoTelefoneCompleto="";
+    state.ajusteValor=0;
+    state.ajusteDescricao="";
+    state.conferenciaConteudo="";
+    limparCamposCliente();
+    applyInitialUiState();
+    await loadItens(state.emRecuperacao?"recuperacao":"normal");
+    await refreshPendentesAguarde();
+    closeModals();
+    focoOperacional();
+  }
+  async function recuperarComanda(){
+    const raw=window.prompt("Informe o número da comanda/pedido para recuperar:");
+    if(raw===null) return;
+    const pedido=Number(String(raw).replace(/[^\d]/g,""));
+    if(!pedido){ alert("Número inválido."); return; }
+    state.pedidoId=pedido;
+    state.pedidoReservado=true;
+    updatePedidoBadge();
+    state.emRecuperacao=true;
+    try{
+      const ok=await loadItens("recuperacao");
+      const acoes=el("acoes-rapidas"); if(acoes) acoes.open=false;
+      await refreshPendentesAguarde();
+      if(ok){
+        alert(`Comanda ${pedido} carregada.`);
+      } else {
+        state.emRecuperacao=false;
+        state.pedidoId=0;
+        state.pedidoReservado=false;
+        await syncPedidoAtual();
+        await loadItens("normal");
+        updatePedidoBadge();
+      }
+    }catch(_e){
+      state.emRecuperacao=false;
+      state.pedidoId=0;
+      state.pedidoReservado=false;
+      try{ await syncPedidoAtual(); }catch(__e){}
+      try{ await loadItens("normal"); }catch(__e){}
+      updatePedidoBadge();
+      alert("Não foi possível recuperar a comanda.");
+    }
+  }
+  async function ajustarTaxaOuDesconto(){
+    const raw=window.prompt("Informe o valor do ajuste. Use positivo para taxa extra e negativo para desconto.\nEx.: 5,00 ou -3,50","0");
+    if(raw===null) return;
+    const val=numOrZero(String(raw).trim().replace(",","."));
+    if(!val){ alert("Informe um valor diferente de zero."); return; }
+    if ((Number(state.pedidoId)||0) > 0 && state.pedidoBloqueadoCasa) { alert(msgCasaPedidoBloqueado()); return; }
+    const r=await fetch(`/api/casa/${state.pedidoId}/ajuste-item`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({valor:val})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.sucesso===false){ alert(d.erro||"Não foi possível aplicar ajuste."); return; }
+    await loadItens("normal");
+    const acoes=el("acoes-rapidas"); if(acoes) acoes.open=false;
+    alert(`Ajuste aplicado como item técnico: ${val>=0?"taxa extra":"desconto"} de ${money(val)}.`);
+  }
+
+  async function salvarFormaPagamento(forma, valorPagoTrocoOpt){
+    const id=Number(state.pedidoId)||0;
+    if(id>0 && state.pedidoBloqueadoCasa){
+      alert(msgCasaPedidoBloqueado());
+      return false;
+    }
+    state.formaPagamento=forma;
+    if(state.modo==="delivery"){
+      state.valorPagoTroco = (valorPagoTrocoOpt!=null && Number.isFinite(valorPagoTrocoOpt) && valorPagoTrocoOpt>=0) ? valorPagoTrocoOpt : null;
+    }else{
+      state.valorPagoTroco=null;
+    }
+    refreshFormaPagamentoUi();
+    updateBalcaoPagamentoMomentoUi();
+    updatePrintState();
+    if(id<=0 || !pedidoAtualTemItens()){
+      state.formaPagamentoPendente = true;
+      return true;
+    }
+    if(state.modo==="delivery" && !state.clienteLocalizado){
+      alert("Localize ou salve o cliente antes de gravar a forma de pagamento.");
+      return false;
+    }
+    const payload={ forma };
+    if(state.modo==="delivery" && state.valorPagoTroco!=null && Number.isFinite(state.valorPagoTroco))
+      payload.valor_pago_troco=state.valorPagoTroco;
+    const r=await fetch(`/api/casa/${id}/formapagamento`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || d.sucesso===false){
+      state.formaPagamentoPendente = true;
+      alert(d.erro||"Não foi possível salvar a forma de pagamento.");
+      return false;
+    }
+    state.formaPagamentoPendente = false;
+    return true;
+  }
+  function resetFormasPagamentoTrocoUi(){
+    const pan=el("formas-pagamento-troco-panel");
+    const lst=el("formas-pagamento-list");
+    const ip=el("formas-pagamento-troco-input");
+    const pv=el("formas-pagamento-troco-preview");
+    if(pan) pan.style.display="none";
+    if(lst) lst.style.display="";
+    if(ip){ ip.value=""; ip.oninput=null; }
+    if(pv) pv.textContent="";
+  }
+  function bindFormasPagamentoTrocoPanel(nomeForma){
+    const pan=el("formas-pagamento-troco-panel");
+    const lst=el("formas-pagamento-list");
+    const hint=el("formas-pagamento-troco-hint");
+    const ip=el("formas-pagamento-troco-input");
+    const pv=el("formas-pagamento-troco-preview");
+    const total=totalPedidoAtual();
+    if(hint) hint.textContent=`Total do pedido: ${money(total)}`;
+    const updPrev=()=>{
+      if(!pv) return;
+      const v=parseMoneyInput(ip?ip.value:"");
+      if(!(v>0)){ pv.textContent=""; return; }
+      pv.textContent=`Troco a levar: ${money(Math.max(0,v-total))}`;
+    };
+    if(ip){ ip.oninput=updPrev; ip.value=""; }
+    updPrev();
+    if(pan) pan.style.display="block";
+    if(lst) lst.style.display="none";
+    const back=el("formas-pagamento-troco-back");
+    const okBtn=el("formas-pagamento-troco-confirm");
+    if(back){ back.onclick=(e)=>{ e.preventDefault(); resetFormasPagamentoTrocoUi(); }; }
+    if(okBtn){
+      okBtn.onclick=async(e)=>{
+        e.preventDefault();
+        const v=parseMoneyInput(ip?ip.value:"");
+        if(!(v+1e-6>=total)){ alert("Informe um valor maior ou igual ao total do pedido."); return; }
+        const okSave=await salvarFormaPagamento(nomeForma, v);
+        if(okSave){ resetFormasPagamentoTrocoUi(); closeModals(); }
+      };
+    }
+  }
+  async function loadFormasPagamento(){
+    const host=el("formas-pagamento-list");
+    if(!host) return;
+    resetFormasPagamentoTrocoUi();
+    host.innerHTML="";
+    const r=await fetch("/api/formas-pagamento");
+    const d=await r.json();
+    const arr=d.formas||[];
+    if(!arr.length){ host.innerHTML='<p class="muted">Cadastre formas em /formas-pagamento</p>'; return; }
+    arr.forEach((f)=>{
+      const nome=(f.forma||f.nome||"-").trim();
+      if(!nome||nome==="-") return;
+      const b=document.createElement("button");
+      b.className="pay-opt"+(state.formaPagamento===nome?" active":"");
+      b.textContent=nome;
+      b.onclick=async()=>{
+        const entrega=state.modo==="delivery";
+        const exige=formaCadastroExigeTroco(f);
+        if(entrega && exige){
+          if(!(totalPedidoAtual()>0)){ alert("Adicione itens ao pedido (total maior que zero) antes de informar o valor pago."); return; }
+          bindFormasPagamentoTrocoPanel(nome);
+          return;
+        }
+        const ok=await salvarFormaPagamento(nome, null);
+        if(ok){ closeModals(); }
+      };
+      host.appendChild(b);
+    });
+  }
+  async function salvarObsGeral(){
+    if ((Number(state.pedidoId)||0) > 0 && state.pedidoBloqueadoCasa) { alert(msgCasaPedidoBloqueado()); return; }
+    const obs=(el("obs-geral").value||"").trim();
+    const r=await fetch(`/api/casa/${state.pedidoId}/obs-geral`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({obs_geral:obs})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.sucesso===false){ alert(d.erro||"Erro ao salvar observação geral."); return; }
+    state.obsGeral=obs;
+    const detalhes=el("detalhes-pedido");
+    if(detalhes) detalhes.open=false;
+  }
+  async function fecharPedido(){
+    const id=Number(state.pedidoId)||0;
+    if(id>0 && state.pedidoBloqueadoCasa){ alert(msgCasaPedidoBloqueado()); return; }
+    if(id>0){ await fetch(`/api/casa/${id}`,{method:"DELETE"}); }
+    await resetPedidoRapido(true);
+  }
+  function _flagSimImp(v){
+    return ["S","SIM","1","Y","YES","T","TRUE"].indexOf(String(v||"").toUpperCase())>=0;
+  }
+  function _printerFromImpRow(row){
+    if(!row) return "";
+    let cam=String(row.caminho||"").trim();
+    if(/^https?:\/\//i.test(cam)) cam="";
+    return (cam||String(row.nomedaimpressora||"").trim())||"";
+  }
+  function _feedFromImpRow(row){
+    const n = Number(row && row.feed_final_linhas);
+    if(!Number.isFinite(n)) return 6;
+    return Math.max(0, Math.min(20, Math.floor(n)));
+  }
+  async function refreshImpressoraCasaLabel(){
+    let label="";
+    let feed=6;
+    let rows=[];
+    try{
+      const rRows=await fetch("/api/impressoras-cadastro",{credentials:"same-origin"});
+      const dRows=await rRows.json().catch(()=>({}));
+      rows=(dRows && dRows.sucesso && Array.isArray(dRows.impressoras)) ? dRows.impressoras : [];
+
+      const r=await fetch("/api/impressora-para-origem?origem=casa",{credentials:"same-origin"});
+      const d=await r.json().catch(()=>({}));
+      if(d.sucesso&&d.printer){
+        label=d.printer;
+        const target=String(label||"").trim().toLowerCase();
+        if(target){
+          for(const row of rows){
+            const p=_printerFromImpRow(row).trim().toLowerCase();
+            if(p && p===target){ feed=_feedFromImpRow(row); break; }
+          }
+        }
+      }else{
+        for(const row of rows){
+          if(_flagSimImp(row.comanda_delivery)){ label=_printerFromImpRow(row); feed=_feedFromImpRow(row); break; }
+        }
+        if(!label) label=d.erro||"(sem impressora com comanda_delivery=S)";
+      }
+    }catch(_){ label="(erro ao ler cadastro)"; }
+    impressoraCasaLabel=label;
+    impressoraCasaFeed=feed;
+    const ip=el("imp-compartilhada"); if(ip) ip.value=impressoraCasaLabel;
+  }
+  function preencherConferencias(){ const conteudo=textoImpressao(); state.conferenciaConteudo=conteudo; const pre=el("conferencia-conteudo"); if(pre) pre.textContent=conteudo; const preZoom=el("conferencia-zoom-conteudo"); if(preZoom) preZoom.textContent=conteudo; refreshImpressoraCasaLabel(); }
+
+  async function checarTerminalImpressao(){
+    try{
+      if(typeof window.lojaGetBridgeTerminalId!=="function") return;
+      const tid=await window.lojaGetBridgeTerminalId(true);
+      if(!tid) return;
+      const r=await fetch("/api/terminal-impressoras?terminal_id="+encodeURIComponent(tid),{credentials:"same-origin",headers:{Accept:"application/json","X-Requested-With":"XMLHttpRequest"}});
+      const d=await r.json().catch(()=>({}));
+      if(!d||!d.sucesso||d.configurado) return;
+      const banner=el("banner-terminal-imp");
+      const txt=el("banner-terminal-imp-text");
+      if(banner){
+        if(txt) txt.textContent="Terminal "+tid+" não configurado para impressão.";
+        banner.style.display="block";
+      }
+    }catch(_e){}
+  }
+
+  // ===================== WhatsApp (uazapi) =====================
+  let waRecursos={ativo:false,notif_delivery_copia:false,notif_balcao_pronto:false,notif_mesa_conta:false,loja:{}};
+  async function carregarWhatsappRecursos(){
+    try{
+      const r=await fetch("/api/whatsapp/recursos",{headers:{"X-Requested-With":"XMLHttpRequest"}});
+      const d=await r.json().catch(()=>({}));
+      if(d&&d.sucesso){ waRecursos={ativo:!!d.ativo,notif_delivery_copia:!!d.notif_delivery_copia,notif_balcao_pronto:!!d.notif_balcao_pronto,notif_mesa_conta:!!d.notif_mesa_conta,loja:(d.loja||{})}; }
+    }catch(e){ /* recurso opcional: nunca quebra o PDV */ }
+  }
+  function formatarTelefoneLoja(loja){
+    loja=loja||{};
+    let d=onlyDigits(loja.telefone||"");
+    const ddd=onlyDigits(loja.ddd||"");
+    if(d && ddd && d.length<=9) d=ddd+d;
+    if(!d) return "";
+    if(d.length===11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+    if(d.length===10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
+    return d;
+  }
+  function montarMensagemWhatsappPedido(){
+    const loja=waRecursos.loja||{};
+    const linhas=[];
+    const nomeLoja=(loja.nome||"").trim();
+    if(nomeLoja) linhas.push(`🧾 *${nomeLoja}*`);
+    const cliente=(nomeClienteAtual()||"").trim();
+    linhas.push(cliente ? `Olá, ${cliente}! Recebemos seu pedido 😊` : `Recebemos seu pedido 😊`);
+    linhas.push("");
+    linhas.push(`*Pedido #${state.pedidoId}*`);
+    linhas.push("");
+    linhas.push("🛍️ *Itens*");
+    el("itens-list").querySelectorAll(".item").forEach((row)=>{
+      const nm=row.querySelector(".item-name");
+      const q=row.querySelector("[data-qtd-input]");
+      const qg=row.querySelector("[data-qtd-input-group]");
+      const lv=row.querySelector(".item-v");
+      const qtd=(q&&q.value)?Number(q.value)||1:((qg&&qg.value)?Number(qg.value)||1:1);
+      const nome=(nm?nm.textContent:"").trim();
+      const linha=(lv?lv.textContent:"").trim();
+      if(nome) linhas.push(`• ${qtd}x ${nome}${linha?` — ${linha}`:""}`);
+    });
+    linhas.push("");
+    if(state.modo==="delivery"){
+      const end=(`${(el("cli-end").value||"").trim()} ${(el("cli-nrocasa").value||"").trim()}`).trim();
+      const bairro=(el("cli-bairro").value||"").trim();
+      const endFull=[end,bairro].filter(Boolean).join(" - ");
+      if(endFull) linhas.push(`🏍️ *Entrega:* ${endFull}`);
+    }
+    const forma=String(state.formaPagamento||"").trim();
+    if(forma) linhas.push(`💳 *Pagamento:* ${forma}`);
+    linhas.push(`💰 *Total: ${el("total").textContent}*`);
+    const tel=formatarTelefoneLoja(loja);
+    const endLoja=[ (loja.endereco||"").trim(), (loja.cidade||"").trim() ].filter(Boolean).join(", ");
+    if(tel||endLoja){
+      linhas.push("");
+      if(tel) linhas.push(`📞 *Fale com a loja:* ${tel}`);
+      if(endLoja) linhas.push(`📍 ${endLoja}`);
+    }
+    linhas.push("");
+    linhas.push("Obrigado pela preferência! 🙏");
+    return linhas.join("\n");
+  }
+  function atualizarBotaoWhatsapp(){
+    const btn=el("btn-enviar-whatsapp"); if(!btn) return;
+    const mostrar = state.modo==="delivery" && waRecursos.ativo && waRecursos.notif_delivery_copia;
+    btn.style.display = mostrar ? "" : "none";
+  }
+  async function enviarPedidoWhatsapp(){
+    const btn=el("btn-enviar-whatsapp"); if(!btn) return;
+    const tel=telefoneComDdd((el("cli-fone")?.value||"").trim());
+    if(!tel){ alert("Informe o telefone do cliente para enviar no WhatsApp."); return; }
+    const conteudo=(montarMensagemWhatsappPedido()||"").trim();
+    if(!conteudo){ alert("Conteúdo do pedido vazio."); return; }
+    const prev=btn.textContent; btn.disabled=true; btn.textContent="Enviando...";
+    try{
+      const r=await fetch("/api/whatsapp/enviar-pedido",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefone:tel,conteudo,nropedido:Number(state.pedidoId)||0})});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok||d.sucesso===false){ alert("Falha ao enviar no WhatsApp: "+(d.erro||("HTTP "+r.status))); return; }
+      alert("Cópia do pedido enviada no WhatsApp.");
+    }catch(e){
+      alert("Falha ao enviar no WhatsApp: "+String(e&&e.message?e.message:e));
+    }finally{
+      btn.disabled=false; btn.textContent=prev||"Enviar no WhatsApp";
+    }
+  }
+  function itensAtuaisParaZoom(){
+    const out=[];
+    el("itens-list").querySelectorAll(".item").forEach((row)=>{
+      const nomeEl=row.querySelector(".item-name");
+      const nome=(nomeEl?nomeEl.textContent:"").trim()||"-";
+      const isFracionado=row.classList.contains("fracionado");
+      if(isFracionado){
+        const qtdEl=row.querySelector("[data-qtd-input-group]");
+        const lanc=(qtdEl&&qtdEl.getAttribute("data-qtd-input-group"))||"";
+        if(!lanc) return;
+        const obsPartes=[];
+        row.querySelectorAll("[data-obs-item-group]").forEach((ip)=>{
+          const id=String(ip.getAttribute("data-obs-item-group")||"");
+          if(!id) return;
+          const wrap=ip.closest(".item-obs");
+          const labelEl=wrap?wrap.querySelector(".item-obs-label"):null;
+          obsPartes.push({
+            id,
+            nome:(labelEl?labelEl.textContent:"").trim()||"Sabor",
+            obs:(ip.value||"").trim()
+          });
+        });
+        out.push({
+          tipo:"grupo",
+          lanc:String(lanc),
+          nome,
+          qtd:Math.max(1,Math.floor(Number(qtdEl&&qtdEl.value)||1)),
+          obsPartes,
+          dados: state.grupoDadosMap[String(lanc)||""] || ""
+        });
+        return;
+      }
+      const qtdEl=row.querySelector("[data-qtd-input]");
+      const obsEl=row.querySelector("[data-obs-item]");
+      const id=(qtdEl&&qtdEl.getAttribute("data-qtd-input"))||(obsEl&&obsEl.getAttribute("data-obs-item"))||"";
+      if(!id) return;
+      out.push({
+        tipo:"simples",
+        id:String(id),
+        nome,
+        qtd:Math.max(1,Math.floor(Number(qtdEl&&qtdEl.value)||1)),
+        obs:((obsEl&&obsEl.value)||"").trim(),
+        dados: state.itemDadosMap[String(id)||""] || ""
+      });
+    });
+    return out;
+  }
+  function _parseImprenros(raw){
+    const m=String(raw||"").match(/\d+/g) || [];
+    const out=[];
+    const seen={};
+    m.forEach((x)=>{
+      const n=parseInt(x,10);
+      if(!Number.isFinite(n) || n<0) return;
+      const k=String(n);
+      if(seen[k]) return;
+      seen[k]=true;
+      out.push(n);
+    });
+    return out;
+  }
+  function _stripMoneyText(txt){
+    const t=String(txt||"").replace(/R\$\s*[-+]?\d[\d\.\s]*,?\d*/gi,"");
+    return t.replace(/\s{2,}/g," ").trim();
+  }
+  async function _carregarImpressorasCadastro(){
+    const r=await fetch("/api/impressoras-cadastro",{credentials:"same-origin"});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d || d.sucesso===false) throw new Error((d&&d.erro)||`Erro ao carregar impressoras (HTTP ${r.status}).`);
+    return Array.isArray(d.impressoras)?d.impressoras:[];
+  }
+  function _mapImpressorasPorNro(rows){
+    const map={};
+    (rows||[]).forEach((row)=>{
+      const n=Number(row&&row.imprenro);
+      if(!Number.isFinite(n)) return;
+      map[String(n)]=row;
+    });
+    return map;
+  }
+  function _fallbackImpressoraPreparo(rows){
+    const list=Array.isArray(rows)?rows:[];
+    for(const row of list){ if(_flagSimImp(row.comanda_delivery)) return row; }
+    return list[0]||null;
+  }
+  function _preparoPendentesIds(){
+    const itens=itensAtuaisParaZoom();
+    const ids=[];
+    itens.forEach((it)=>{
+      if(it.tipo==="grupo"){
+        (it.obsPartes||[]).forEach((p)=>{
+          const id=String(p.id||"").trim();
+          if(!id) return;
+          const meta=state.preparoMetaById[id];
+          if(meta && String(meta.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO") return;
+          if(meta && !_flagSimImp(meta.imp_preparo)) ids.push(id);
+        });
+        return;
+      }
+      const id=String(it.id||"").trim();
+      if(!id) return;
+      const meta=state.preparoMetaById[id];
+      if(meta && String(meta.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO") return;
+      if(meta && !_flagSimImp(meta.imp_preparo)) ids.push(id);
+    });
+    return Array.from(new Set(ids));
+  }
+  function updateDistribuirPreparoUiCasa(){
+    const btn=el("btn-distribuir-preparo");
+    if(!btn) return;
+    const id=Number(state.pedidoId)||0;
+    if(id<=0 || !pedidoAtualTemItens()){ btn.style.display="none"; return; }
+    const pend=_preparoPendentesIds().length;
+    if(pend>0){
+      btn.style.display="";
+      btn.textContent=`Distribuir preparo (${pend})`;
+    }else{
+      btn.style.display="none";
+    }
+  }
+  function _preparoItemLine(txt){
+    const ESC="\x1b";
+    return ESC+"E"+String.fromCharCode(1)+ESC+"!"+String.fromCharCode(0x10)+String(txt||"")+ESC+"!"+String.fromCharCode(0x00)+ESC+"E"+String.fromCharCode(0);
+  }
+  function _montarTextoPreparoCasa(titulo, itens, feedLines){
+    const F=window.lojaPrintFmt;
+    const W=(F&&F.width)?F.width(48):48;
+    const out=[];
+    const ESC="\x1b";
+    const hr=(ch)=> (F&&F.hr)?F.hr(ch,W):String(ch||"-").slice(0,1).repeat(W);
+    const wrap=(s,indent)=> (F&&F.wrap)?F.wrap(s,W,indent||0):[String(s||"")];
+    out.push(ESC+"a"+String.fromCharCode(1));
+    out.push((ESC+"!"+String.fromCharCode(0x30))+String(titulo||"")+(ESC+"!"+String.fromCharCode(0x00)));
+    out.push(ESC+"a"+String.fromCharCode(0));
+    out.push(hr("-"));
+    (itens||[]).forEach((it)=>{
+      const qtd=Math.max(1,Math.floor(Number(it.qtd)||1));
+      const nome=String(it.nome||"-").trim();
+      out.push(_preparoItemLine(`${qtd}x ${nome}`));
+      const detRaw=it.dados?formatDadosItem(it.dados):"";
+      const det=_stripMoneyText(detRaw);
+      if(det){
+        det.split("\n").forEach((ln)=>{
+          const t=_stripMoneyText(ln);
+          if(!t) return;
+          wrap(t,2).forEach((wln)=>{ if(String(wln||"").trim()) out.push(wln); });
+        });
+      }
+      if(it.tipo==="grupo" && Array.isArray(it.partes)){
+        it.partes.forEach((p)=>{
+          const nm=_stripMoneyText(p.nome);
+          if(nm) wrap(nm,2).forEach((wln)=>{ if(String(wln||"").trim()) out.push(wln); });
+          const ob=_stripMoneyText(p.obs);
+          if(ob) wrap(`Obs: ${ob}`,2).forEach((wln)=>{ if(String(wln||"").trim()) out.push(wln); });
+        });
+      }
+      const ob=_stripMoneyText(it.obs);
+      if(ob) wrap(`Obs: ${ob}`,2).forEach((wln)=>{ if(String(wln||"").trim()) out.push(wln); });
+      out.push("");
+    });
+    const feed = Math.max(0, Math.min(20, Math.floor(Number(feedLines)||0)));
+    if(feed>0) out.push(ESC+"d"+String.fromCharCode(feed));
+    out.push("");
+    out.push("");
+    out.push("");
+    return `\n${out.join("\n")}\n`;
+  }
+  async function distribuirPreparoCasa(opts){
+    opts = opts || {};
+    const auto = !!opts.auto;
+    const silent = (opts.silent!==undefined && opts.silent!==null) ? !!opts.silent : auto;
+    const btn=el("btn-distribuir-preparo");
+    const prevLabel=btn?btn.textContent:"";
+    const fail=(msg)=>{
+      if(!silent) alert(String(msg||"Erro na distribuição."));
+      return {ok:false,message:String(msg||"Erro na distribuição.")};
+    };
+    const pendIds=_preparoPendentesIds();
+    if(!pendIds.length){
+      updateDistribuirPreparoUiCasa();
+      if(!silent) alert("Nenhum item pendente de distribuição.");
+      return {ok:true,skipped:true};
+    }
+    if(btn){ btn.disabled=true; btn.textContent="Distribuindo..."; }
+    try{
+      let rows=[];
+      try{
+        rows = await _carregarImpressorasCadastro();
+      }catch(e){
+        return fail(e && e.message ? e.message : "Erro ao carregar impressoras.");
+      }
+      const mapByNro=_mapImpressorasPorNro(rows);
+      const fallback=_fallbackImpressoraPreparo(rows);
+      if(!fallback && !Object.keys(mapByNro).length){ return fail("Nenhuma impressora cadastrada para distribuir."); }
+
+      const pendSet=new Set(pendIds);
+      const itens=itensAtuaisParaZoom();
+      const grupos={};
+      const idsToMark=[];
+      const missingSetor=[];
+      itens.forEach((it)=>{
+        if(it.tipo==="grupo"){
+          const partesAll=Array.isArray(it.obsPartes)?it.obsPartes:[];
+          const partes=partesAll.map((p)=>({id:String(p.id||""),nome:String(p.nome||"Sabor"),obs:String(p.obs||"")})).filter((p)=>p.id && pendSet.has(p.id));
+          if(!partes.length) return;
+          const nros=new Set();
+          partes.forEach((p)=>{
+            const meta=state.preparoMetaById[p.id]||{};
+            const cod=String(meta.codigoproduto||"").toUpperCase();
+            if(cod==="AJUSTE_TECNICO") return;
+            const ns=_parseImprenros(meta.impressoras);
+            if(!ns.length){
+              missingSetor.push({nome:`(grupo) ${p.nome}`, codigoproduto:String(meta.codigoproduto||"")});
+              return;
+            }
+            ns.forEach((n)=>nros.add(n));
+          });
+          const nrosArr=Array.from(nros);
+          if(!nrosArr.length) return;
+          nrosArr.forEach((nro)=>{
+            const key=String(nro);
+            if(!grupos[key]) grupos[key]=[];
+            grupos[key].push({tipo:"grupo",nome:String(it.nome||"Pizza fracionada"),qtd:it.qtd,partes,dados:it.dados});
+          });
+          partes.forEach((p)=>idsToMark.push(p.id));
+          return;
+        }
+        const id=String(it.id||"");
+        if(!id || !pendSet.has(id)) return;
+        const meta=state.preparoMetaById[id]||{};
+        if(String(meta.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO") return;
+        const nros=_parseImprenros(meta.impressoras);
+        if(!nros.length){
+          missingSetor.push({nome:String(it.nome||"-"), codigoproduto:String(meta.codigoproduto||"")});
+          return;
+        }
+        const nrosArr=nros;
+        nrosArr.forEach((nro)=>{
+          const key=String(nro);
+          if(!grupos[key]) grupos[key]=[];
+          grupos[key].push({tipo:"simples",nome:it.nome,qtd:it.qtd,obs:it.obs,dados:it.dados});
+        });
+        idsToMark.push(id);
+      });
+      if(missingSetor.length){
+        const lista=missingSetor.slice(0,25).map((x)=>`- ${x.nome}${x.codigoproduto?` (cód ${x.codigoproduto})`:""}`).join("\n");
+        const mais=missingSetor.length>25?`\n... +${missingSetor.length-25}`:"";
+        return fail("Existem itens sem setor/impressora no cadastro do produto (campo produtos.impressora / impressoras) OU o código do item no pedido não está batendo com produtos.chave.\n\nRevise o cadastro do produto e tente novamente:\n"+lista+mais);
+      }
+
+      const keys=Object.keys(grupos);
+      if(!keys.length){
+        updateDistribuirPreparoUiCasa();
+        if(!silent) alert("Nenhum item pendente de distribuição.");
+        return {ok:true,skipped:true};
+      }
+      const missing=[];
+      const plans=keys.map((k)=>{
+        const row=mapByNro[k]||null;
+        if(!row) missing.push(k);
+        return {key:k,row};
+      });
+      if(missing.length){
+        return fail("Falta cadastro de impressora para imprenro: "+missing.join(", ")+"\nCadastre na tela de impressoras e informe o Nro (imprenro).");
+      }
+      for(const p of plans){
+        const row=p.row;
+        if(!row || row.id==null){ return fail("Impressora inválida no cadastro para distribuição."); }
+        const titulo=`PEDIDO #${Number(state.pedidoId)||0}`;
+        const conteudo=_montarTextoPreparoCasa(titulo, grupos[p.key]||[], _feedFromImpRow(row));
+        const imp=await (window.lojaImprimir?window.lojaImprimir({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0,skip_confirm:true}):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0})}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j}))));
+        if(!imp.ok){
+          const d=imp.data||{};
+          return fail("Falha ao imprimir preparo: "+(d.erro||d.mensagem||"impressão"));
+        }
+      }
+      const idsUniq=Array.from(new Set(idsToMark)).map((x)=>Number(x)).filter((n)=>Number.isFinite(n)&&n>0);
+      const r=await fetch("/api/preparo/marcar",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({ids:idsUniq})});
+      const ct=(r.headers.get("content-type")||"").toLowerCase();
+      if(ct.indexOf("application/json")===-1){
+        return fail(`Erro ao marcar distribuição (resposta não-JSON / sessão expirada). HTTP ${r.status}.`);
+      }
+      const d=await r.json().catch(()=>null);
+      if(!r.ok || !d || d.sucesso!==true){
+        return fail((d&&d.erro)||`Erro ao marcar distribuição (HTTP ${r.status}).`);
+      }
+      const total = Number(d.total)||0;
+      const atualizados = Number(d.atualizados)||0;
+      const ja = Number(d.ja_marcados)||0;
+      if(total <= 0){
+        return fail("Erro: servidor não encontrou os itens para marcar (ids não batem com pedido_diarios).");
+      }
+      if(atualizados <= 0 && ja < total){
+        return fail("Não foi possível marcar os itens como distribuídos. Verifique login/sessão e tente novamente.");
+      }
+      await loadItens(state.emRecuperacao?"recuperacao":"normal");
+      updateDistribuirPreparoUiCasa();
+      if(!silent) alert("Distribuição enviada para preparo.");
+      return {ok:true,total,atualizados,ja,impresso_em:Number(plans.length)||0};
+    } finally {
+      if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Distribuir preparo"; }
+      updateDistribuirPreparoUiCasa();
+    }
+  }
+  function renderResumoZoom(){
+    const host=el("conferencia-zoom-resumo");
+    if(!host) return;
+    const taxa=state.modo==="delivery"?el("taxa-entrega").textContent:"R$ 0,00";
+    const forma=String(state.formaPagamento||"").trim()||"-";
+    host.innerHTML=`<div class="zoom-resumo-row"><span>Subtotal</span><strong>${el("subtotal").textContent}</strong></div><div class="zoom-resumo-row"><span>Taxa entrega</span><strong>${taxa}</strong></div><div class="zoom-resumo-row"><span>Forma de pagamento</span><strong>${escapeHtml(forma)}</strong></div><div class="zoom-resumo-row"><span>Total</span><strong>${el("total").textContent}</strong></div>`;
+  }
+  function renderEditorZoom(){
+    const host=el("conferencia-zoom-editor-list");
+    if(!host) return;
+    const itens=itensAtuaisParaZoom();
+    state.zoomEditorOriginal=itens;
+    if(!itens.length){
+      host.innerHTML='<p class="muted">Nenhum item no pedido para editar.</p>';
+      return;
+    }
+    host.innerHTML="";
+    itens.forEach((it)=>{
+      const row=document.createElement("div");
+      row.className="zoom-editor-item";
+      const det=it.dados?formatDadosItem(it.dados):"";
+      if(it.tipo==="grupo"){
+        const sabores=(it.obsPartes||[]).map((p)=>String(p.nome||"Sabor")).join(" | ");
+        const obsHtml=(it.obsPartes||[]).map((p)=>`<div class="zoom-group-part"><span class="zoom-group-label">${escapeHtml(p.nome||"Sabor")}</span><input type="text" data-zoom-obs-group="${p.id}" placeholder="Observação do sabor" value="${escapeHtml(p.obs||"")}"></div>`).join("");
+        row.innerHTML=`<div class="zoom-editor-name">Item fracionado</div>${det?`<div class="muted" style="white-space:pre-wrap;margin:6px 0 2px;">${escapeHtml(det)}</div>`:""}<div class="zoom-fracionado-sabores">${escapeHtml(sabores)}</div><div class="zoom-editor-fields"><input type="number" min="1" step="1" data-zoom-qtd-group="${it.lanc}" value="${it.qtd}"><div>${obsHtml}</div></div>`;
+      }else{
+        row.innerHTML=`<div class="zoom-editor-name">${escapeHtml(it.nome)}</div>${det?`<div class="muted" style="white-space:pre-wrap;margin:6px 0 2px;">${escapeHtml(det)}</div>`:""}<div class="zoom-editor-fields"><input type="number" min="1" step="1" data-zoom-qtd="${it.id}" value="${it.qtd}"><input type="text" data-zoom-obs="${it.id}" placeholder="Observação do item" value="${escapeHtml(it.obs)}"></div>`;
+      }
+      host.appendChild(row);
+    });
+  }
+  async function aplicarAlteracoesZoom(){
+    const btn=el("btn-zoom-aplicar");
+    const original=Array.isArray(state.zoomEditorOriginal)?state.zoomEditorOriginal:[];
+    const ops=[];
+    original.forEach((it)=>{
+      if(it.tipo==="grupo"){
+        const qtdEl=document.querySelector(`[data-zoom-qtd-group="${it.lanc}"]`);
+        const qtdNovo=Math.max(1,Math.floor(Number(qtdEl&&qtdEl.value)||1));
+        const partes=Array.isArray(it.obsPartes)?it.obsPartes:[];
+        if(qtdNovo!==Number(it.qtd||1)){
+          partes.forEach((p)=>{ if(p.id) ops.push({id:p.id,payload:{qtd:qtdNovo}}); });
+        }
+        partes.forEach((p)=>{
+          const obsEl=document.querySelector(`[data-zoom-obs-group="${p.id}"]`);
+          const obsNovo=((obsEl&&obsEl.value)||"").trim();
+          if(obsNovo!==String(p.obs||"")) ops.push({id:p.id,payload:{obs_item:obsNovo}});
+        });
+        return;
+      }
+      const qtdEl=document.querySelector(`[data-zoom-qtd="${it.id}"]`);
+      const obsEl=document.querySelector(`[data-zoom-obs="${it.id}"]`);
+      const qtdNovo=Math.max(1,Math.floor(Number(qtdEl&&qtdEl.value)||1));
+      const obsNovo=((obsEl&&obsEl.value)||"").trim();
+      if(qtdNovo!==Number(it.qtd||1)) ops.push({id:it.id,payload:{qtd:qtdNovo}});
+      if(obsNovo!==String(it.obs||"")) ops.push({id:it.id,payload:{obs_item:obsNovo}});
+    });
+    if(!ops.length){ alert("Nenhuma alteração para aplicar."); return; }
+    const prevLabel=btn?btn.textContent:"";
+    if(btn){ btn.disabled=true; btn.textContent="Aplicando..."; }
+    try{
+      for(const op of ops){
+        const r=await fetch(`/api/casa/${state.pedidoId}/item/${op.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(op.payload)});
+        if(!r.ok) throw new Error(`Falha ao atualizar item ${op.id}`);
+      }
+      await loadItens("normal");
+      preencherConferencias();
+      renderResumoZoom();
+      renderEditorZoom();
+      alert("Alterações aplicadas com sucesso.");
+    }catch(e){
+      console.error(e);
+      alert("Não foi possível aplicar todas as alterações. Revise e tente novamente.");
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Aplicar alterações"; }
+    }
+  }
+  function abrirConferencia(){ const detalhes=el("detalhes-pedido"); if(detalhes) detalhes.open=false; preencherConferencias(); atualizarBotaoWhatsapp(); openModal("modal-conferencia"); }
+  function abrirConferenciaZoom(){ const detalhes=el("detalhes-pedido"); if(detalhes) detalhes.open=false; preencherConferencias(); renderResumoZoom(); renderEditorZoom(); openModal("modal-conferencia-zoom"); }
+  async function salvarPedidoTxtInterno(fechar=true, formaOverride=null){ const conteudo=(state.conferenciaConteudo||textoImpressao()||"").trim(); if(!conteudo){ alert("Conteúdo vazio para salvar."); return null; } const formaEnv = (formaOverride!==null && formaOverride!==undefined) ? String(formaOverride||"") : String(state.formaPagamento||""); const r=await fetch("/api/casa/salvar-txt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nropedido:Number(state.pedidoId),conteudo,forma_pagamento:formaEnv||""})}); const ct=(r.headers.get("content-type")||"").toLowerCase(); const d=ct.includes("application/json")?await r.json().catch(()=>({})):{}; if(!r.ok||d.sucesso===false){ if(r.status===404){ alert("Endpoint não encontrado (404). Reinicie o servidor para carregar a rota /api/casa/salvar-txt."); return null; } const txt=!ct.includes("application/json")?await r.text().catch(()=>""):""; alert(d.erro||`Falha ao salvar arquivo .txt (HTTP ${r.status}). ${txt?txt.slice(0,180):""}`); return null; } alert("Pedido salvo em: "+(d.caminho||"-")+(d.aviso?"\n\n"+d.aviso:"")); if(fechar) closeModals(); return {conteudo,arquivo:d.arquivo,caminho:d.caminho}; }
+  async function salvarPedidoTxt(){ await salvarPedidoTxtInterno(true); }
+  function totalAtualCasa(){
+    const serv=0;
+    const taxa=state.modo==="delivery"?numOrZero(state.taxaEntrega):0;
+    const ajuste=numOrZero(state.ajusteValor);
+    return Math.round((numOrZero(state.subtotal)+serv+taxa+ajuste)*100)/100;
+  }
+  function _resolverBaixaBalcaoSeAberto(recebido){
+    const bb=state.baixaBalcao;
+    if(bb && bb.resolve){
+      const r=bb.resolve;
+      state.baixaBalcao=null;
+      r(!!recebido);
+    }
+  }
+  function updateBalcaoPagamentoMomentoUi(){
+    const host=el("balcao-pagamento-momento");
+    if(!host) return;
+    host.querySelectorAll("[data-balcao-pag]").forEach((b)=>{
+      const v=String(b.getAttribute("data-balcao-pag")||"");
+      b.classList.toggle("active", v===String(state.balcaoPagamentoMomento||"agora"));
+    });
+    const bp=el("btn-pagamento-trigger");
+    const showRetirada = state.modo==="balcao" && String(state.balcaoPagamentoMomento||"agora")==="retirada";
+    const hideEscolherPag = state.modo==="balcao" && String(state.balcaoPagamentoMomento||"agora")==="agora";
+    if(bp) bp.style.display = hideEscolherPag ? "none" : "";
+    if(showRetirada){
+      if(bp){
+        const forma = String(state.formaPagamento||"").trim();
+        bp.textContent = forma ? `Pagamento: ${forma}` : "Pagamento: NA RETIRADA";
+        bp.classList.add("selected");
+      }
+      refreshFormaPagamentoUi();
+    }else{
+      if(bp){
+        const forma = String(state.formaPagamento||"").trim();
+        bp.textContent = forma ? `Pagamento: ${forma}` : "Escolher pagamento";
+        bp.classList.toggle("selected", !!forma);
+      }
+      refreshFormaPagamentoUi();
+    }
+  }
+  async function openBaixaBalcaoModal(nropedido, printerName){
+    const total = totalAtualCasa();
+    const bbTotal=el("bb-total"), bbSomado=el("bb-somado"), bbRest=el("bb-restante"), bbTroco=el("bb-troco");
+    const bbTit=el("bb-titulo"), bbSub=el("bb-sub"), bbFormas=el("bb-formas");
+    if(bbTit) bbTit.textContent = `${LABEL_PEDIDO} #${Number(nropedido)||0}`;
+    if(bbSub) bbSub.textContent = `BALCÃO • Impressora: ${String(printerName||impressoraCasaLabel)}`;
+    if(bbFormas) bbFormas.innerHTML = "";
+    if(bbTroco){ bbTroco.style.display="none"; bbTroco.textContent="Troco: "+money(0); }
+    if(bbTotal) bbTotal.textContent = "Total: "+money(total);
+    if(bbSomado) bbSomado.textContent = "Somado: "+money(0);
+    if(bbRest) bbRest.textContent = "Restante: "+money(total);
+
+    const formas = await fetch("/api/formas-pagamento").then((r)=>r.json().catch(()=>({}))).then((d)=>Array.isArray(d.formas)?d.formas:[]);
+    const vals = {};
+    const prefer = String(state.formaPagamento||"").trim();
+    if(prefer) vals[prefer] = total;
+    function render(){
+      if(!bbFormas) return;
+      bbFormas.innerHTML="";
+      formas.forEach((f)=>{
+        const nome = String((f.forma||f.nome||"")||"").trim();
+        if(!nome) return;
+        const row=document.createElement("div");
+        row.style.display="grid";
+        row.style.gridTemplateColumns="1fr 120px";
+        row.style.gap="10px";
+        row.style.alignItems="center";
+        row.style.padding="8px 10px";
+        row.style.border="0.5px solid var(--line)";
+        row.style.borderRadius="12px";
+        row.style.background="var(--surface)";
+        const lab=document.createElement("div");
+        lab.textContent=nome;
+        lab.style.fontWeight="900";
+        const ip=document.createElement("input");
+        ip.type="text";
+        ip.inputMode="decimal";
+        ip.placeholder="0,00";
+        ip.value = vals[nome] ? String(vals[nome]).replace(".",",") : "";
+        ip.style.minHeight="var(--ui-touch-sm)";
+        ip.style.padding="10px 12px";
+        ip.style.borderRadius="12px";
+        ip.style.border="0.5px solid var(--line)";
+        ip.style.background="var(--bg)";
+        ip.style.color="var(--text)";
+        ip.style.fontFamily="inherit";
+        ip.style.fontSize="14px";
+        ip.style.fontWeight="900";
+        ip.style.textAlign="right";
+        ip.addEventListener("input",()=>{
+          const v=Math.max(0, parseMoneyInput(ip.value||""));
+          if(v>0) vals[nome]=Math.round(v*100)/100;
+          else delete vals[nome];
+          recalc();
+        });
+        row.appendChild(lab); row.appendChild(ip);
+        bbFormas.appendChild(row);
+      });
+      recalc();
+    }
+    function recalc(){
+      const somado = Object.keys(vals).reduce((acc,k)=>acc+numOrZero(vals[k]),0);
+      const soma = Math.round(somado*100)/100;
+      const restante = Math.round((total - soma)*100)/100;
+      const troco = Math.round(Math.max(0, soma-total)*100)/100;
+      if(bbSomado) bbSomado.textContent = "Somado: "+money(soma);
+      if(bbRest) bbRest.textContent = "Restante: "+money(Math.max(0,restante));
+      if(bbTroco){
+        if(troco>0){ bbTroco.style.display=""; bbTroco.textContent = "Troco: "+money(troco); }
+        else{ bbTroco.style.display="none"; bbTroco.textContent = "Troco: "+money(0); }
+      }
+      const btn=el("btn-bb-receber");
+      if(btn) btn.disabled = (restante>0.01) || Object.keys(vals).length===0;
+    }
+    render();
+
+    return await new Promise((resolve)=>{
+      state.baixaBalcao = { nropedido:Number(nropedido)||0, total, vals, formas, resolve };
+      openModal("modal-baixa-balcao");
+    });
+  }
+  async function receberBaixaBalcao(){
+    const bb=state.baixaBalcao;
+    if(!bb) return;
+    const nropedido = Number(bb.nropedido)||0;
+    if(!nropedido) return;
+    const pagamentos = Object.keys(bb.vals||{}).map((k)=>({forma:String(k||"").trim(),valor:numOrZero(bb.vals[k])})).filter((p)=>p.forma && p.valor>0);
+    if(!pagamentos.length){ alert("Informe pelo menos uma forma de pagamento com valor."); return; }
+    const btn=el("btn-bb-receber");
+    const btn2=el("btn-bb-depois");
+    const prev=btn?btn.textContent:"";
+    if(btn){ btn.disabled=true; btn.textContent="Processando..."; }
+    if(btn2) btn2.disabled=true;
+    try{
+      const r=await fetch("/api/baixa/receber",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({origem:"BALCAO",nropedido,pagamentos})});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok || !d || d.sucesso===false){
+        const extra = (d && d.total!=null && d.somado!=null && d.restante!=null) ? `\nTotal: ${money(d.total)} | Somado: ${money(d.somado)} | Restante: ${money(d.restante)}` : "";
+        throw new Error((d && (d.erro||d.mensagem)) || `Falha ao dar baixa (HTTP ${r.status}).` + extra);
+      }
+      _resolverBaixaBalcaoSeAberto(true);
+      closeModals();
+    }catch(e){
+      alert(String(e && e.message ? e.message : e));
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent=prev||"Marcar RECEBIDO"; }
+      if(btn2) btn2.disabled=false;
+    }
+  }
+  async function salvarEImprimir(){
+    const btn=el("btn-salvar-imprimir");
+    const btnTxt=el("btn-salvar-txt");
+    const prev=btn?btn.textContent:"";
+    if(btn && btn.disabled) return;
+    if(btn){ btn.disabled=true; btn.textContent="Salvando, imprimindo e distribuindo..."; }
+    if(btnTxt) btnTxt.disabled=true;
+    try{
+    if(state.modo==="delivery"){
+      if(!state.clienteLocalizado){ alert("Localize o cliente antes de imprimir."); return; }
+      if(!(el("cli-fone").value||"").trim()){ alert("Informe o telefone antes de imprimir."); return; }
+    }
+    if(state.modo==="delivery" && !String(state.formaPagamento||"").trim()){ alert("Selecione a forma de pagamento antes de imprimir."); return; }
+    const formaToUse = state.modo==="delivery" ? String(state.formaPagamento||"").trim() : (String(state.formaPagamento||"").trim() || "PENDENTE");
+    const ok=await salvarPedidoTxtInterno(false, formaToUse);
+    if(!ok) return;
+    const body={conteudo:ok.conteudo,copias:1,origem:"casa",forma_pagamento:formaToUse,nropedido:Number(state.pedidoId)};
+    if(state.modo==="balcao"){
+      const balcaoPayload=clienteCasaPayload();
+      if(balcaoPayload.telefone && String(balcaoPayload.telefone).toUpperCase()!=="BALCAO"){
+        body.telefone=balcaoPayload.telefone;
+        const bn=(el("balcao-nome")?.value||"").trim();
+        if(bn){ body.nome=bn; body.cliente=bn; }
+      }
+    }
+    const imp=await (window.lojaImprimir?window.lojaImprimir(body):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json().then(d=>({ok:r.ok&&d.sucesso!==false,data:d}))));
+    const d=imp.data||{};
+    if(!imp.ok){
+      const lista=Array.isArray(d.impressoras_disponiveis)&&d.impressoras_disponiveis.length?`\nDisponíveis: ${d.impressoras_disponiveis.join(" | ")}`:"";
+      alert("Falha na impressão: "+(d.erro||d.mensagem||("HTTP "+(imp.status||"?")))+lista);
+      return;
+    }
+    const printerUsed = d.printer_windows || d.printer || impressoraCasaLabel;
+    let preparoRes=null;
+    try{
+      preparoRes = await distribuirPreparoCasa({auto:true});
+    }catch(e){
+      preparoRes = {ok:false,message:String(e && e.message ? e.message : e)};
+    }
+    const preparoMsg = (preparoRes && preparoRes.ok===false)
+      ? `\n\nAtenção: preparo NÃO foi distribuído.\n${String(preparoRes.message||"")}`
+      : ((preparoRes && preparoRes.ok===true && !preparoRes.skipped) ? `\n\nPreparo distribuído.` : "");
+    if(state.modo==="balcao" && String(state.balcaoPagamentoMomento||"agora")==="agora"){
+      const pedidoNro = Number(state.pedidoId)||0;
+      const recebido = await openBaixaBalcaoModal(pedidoNro, printerUsed);
+      await avancarParaProximoPedido();
+      await resetPedidoRapido(false);
+      alert(recebido ? `Pedido impresso e recebido.\nImpressora: ${printerUsed}${preparoMsg}` : `Pedido impresso.\nBaixa pendente.\nImpressora: ${printerUsed}${preparoMsg}`);
+      return;
+    }
+    await avancarParaProximoPedido();
+    const pw = d.printer_windows && d.printer && d.printer_windows !== d.printer
+      ? `${d.printer_windows} (cadastro: ${d.printer})` : printerUsed;
+    alert(`Pedido enviado para impressão.\nImpressora: ${pw}${preparoMsg}`);
+    await resetPedidoRapido(false);
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent=prev||"Salvar e imprimir"; }
+      if(btnTxt) btnTxt.disabled=false;
+    }
+  }
+  function isTypingContext(target){
+    if(!target) return false;
+    const tag=(target.tagName||"").toLowerCase();
+    return target.isContentEditable || tag==="input" || tag==="textarea" || tag==="select";
+  }
+  function bindHotkeys(){
+    // Checklist cirúrgico: atalhos sem impacto em digitação e sem alterar contrato backend.
+    document.addEventListener("keydown",(ev)=>{
+      if(isTypingContext(ev.target)) return;
+      if(ev.key==="F7"){ ev.preventDefault(); recuperarComanda(); }
+      if(ev.key==="F6"){ ev.preventDefault(); ajustarTaxaOuDesconto(); }
+    });
+  }
+
+  function openModal(id){ document.querySelectorAll(".modal").forEach((m)=>m.classList.remove("open")); const m=document.getElementById(id); if(m)m.classList.add("open"); }
+  function closeModals(){ _resolverBaixaBalcaoSeAberto(false); document.querySelectorAll(".modal").forEach((m)=>m.classList.remove("open")); }
+
+  function _resolverFracionadoSeAberto(){ if(state.fracionadoDraftInline&&state.fracionadoDraftInline.resolve){ state.fracionadoDraftInline.resolve(null); state.fracionadoDraftInline=null; renderProdutos(); } }
+  function _resolverOpcoesSeAberto(){ if(state.opcoesDraft&&state.opcoesDraft.resolve){ const r=state.opcoesDraft.resolve; state.opcoesDraft=null; r({sel:null,acrescimo:0,obs:"",cancelado:true}); } }
+  document.addEventListener("click",(e)=>{ const tgt=e.target; const open=tgt.closest?tgt.closest("[data-open-modal]"):null; if(open){ e.preventDefault(); const id=open.getAttribute("data-open-modal"); if(id==="modal-pag") loadFormasPagamento(); openModal(id); return; } const close=tgt.closest?tgt.closest("[data-close-modal]"):null; if(close){ e.preventDefault(); _resolverOpcoesSeAberto(); _resolverFracionadoSeAberto(); closeModals(); return; } if(tgt.classList&&tgt.classList.contains("modal")){ _resolverOpcoesSeAberto(); _resolverFracionadoSeAberto(); closeModals(); } });
+  document.querySelectorAll(".toggle [data-modo]").forEach((b)=>{ b.onclick=()=>setModo(b.dataset.modo); });
+  el("btn-localizar").onclick=()=>localizarCliente(true);
+  el("cli-fone").addEventListener("input",()=>{ state.ultimoTelefoneLocalizado = ""; state.clienteLocalizado=false; state.editandoCliente=false; applyClienteFieldsLock(); renderHistoricoClienteResumo(); updateClienteLocalizadoBadge(); updatePrintState(); updateSaveClienteState(); loadItens("normal"); });
+  el("cli-fone").addEventListener("keydown",async(e)=>{ if(e.key==="Enter"){ e.preventDefault(); const localizado=await localizarCliente(); if(!localizado){ const c=el("cli-cep"); if(c) c.focus(); } } });
+  el("cli-fone").addEventListener("blur",(e)=>{ if(e.relatedTarget && e.relatedTarget.id==="btn-localizar") return; if(state.modo==="delivery" && (el("cli-fone").value||"").trim()) localizarCliente(); });
+  el("btn-salvar-cliente").onclick=salvarClienteEntrega;
+  el("btn-salvar-obs-geral").onclick=salvarObsGeral;
+  el("busca-produto").addEventListener("input",renderProdutos);
+  el("busca-produto").addEventListener("keydown",async(e)=>{
+    if(e.key!=="Enter") return;
+    const q=(e.target.value||"").trim();
+    if(!q) return;
+    const exact=state.produtos.find((p)=>String(p.chave||"")===q||String(p.barcode||"")===q);
+    if(exact){ e.preventDefault(); await addItem(exact,null); e.target.value=""; renderProdutos(); }
+  });
+  el("btn-recuperar-comanda").onclick=recuperarComanda;
+  el("btn-ajuste-extra").onclick=ajustarTaxaOuDesconto;
+  el("btn-conferencia-zoom").onclick=abrirConferenciaZoom;
+  el("btn-zoom-aplicar").onclick=aplicarAlteracoesZoom;
+  el("btn-historico-cliente").onclick=abrirHistoricoCliente;
+  const btnFracCancelar=el("btn-frac-inline-cancelar");
+  if(btnFracCancelar) btnFracCancelar.onclick=()=>resetFracionadoInline(true);
+  const btnFracDesfazer=el("btn-frac-inline-desfazer");
+  if(btnFracDesfazer) btnFracDesfazer.onclick=()=>{
+    const d=state.fracionadoDraftInline;
+    if(!d || d.partes.length<=1) return;
+    d.partes.pop();
+    renderProdutos();
+  };
+  const btnFracConfirmar=el("btn-frac-inline-confirmar");
+  if(btnFracConfirmar) btnFracConfirmar.onclick=()=>{
+    const d=state.fracionadoDraftInline;
+    if(!d || d.partes.length<1) return;
+    const {partes,meta,maxPartes,resolve}=d;
+    state.fracionadoDraftInline=null;
+    renderProdutos();
+    resolve({partes,meta,maxPartes,formadecobrar:String(meta.formadecobrar||"").trim(),quantidadepartes:(Array.isArray(partes)?partes.length:1)});
+  };
+  el("btn-imprimir").onclick=abrirConferencia;
+  const btnPreparo=el("btn-distribuir-preparo");
+  if(btnPreparo) btnPreparo.onclick=distribuirPreparoCasa;
+  el("btn-salvar-txt").onclick=salvarPedidoTxt;
+  el("btn-salvar-imprimir").onclick=salvarEImprimir;
+  el("btn-enviar-whatsapp").onclick=enviarPedidoWhatsapp;
+  carregarWhatsappRecursos();
+  checarTerminalImpressao();
+  const balcaoPag=el("balcao-pagamento-momento");
+  if(balcaoPag){
+    balcaoPag.querySelectorAll("[data-balcao-pag]").forEach((b)=>{
+      b.addEventListener("click",()=>{
+        const v=String(b.getAttribute("data-balcao-pag")||"agora");
+        state.balcaoPagamentoMomento = (v==="retirada") ? "retirada" : "agora";
+        updateBalcaoPagamentoMomentoUi();
+        updatePrintState();
+      });
+    });
+  }
+  const btnBbReceber=el("btn-bb-receber");
+  if(btnBbReceber) btnBbReceber.addEventListener("click",()=>{ receberBaixaBalcao(); });
+  const btnBbDepois=el("btn-bb-depois");
+  if(btnBbDepois) btnBbDepois.addEventListener("click",()=>{ _resolverBaixaBalcaoSeAberto(false); closeModals(); });
+
+  function focoCampo(id){
+    const node=el(id);
+    if(node && !node.disabled){ node.focus(); return true; }
+    return false;
+  }
+  function avancarFluxoCadastro(origem){
+    const ordem=["cli-fone","cli-cep","cli-nrocasa","cli-complemento","cli-ref","cli-nome","btn-salvar-cliente"];
+    const idx=ordem.indexOf(origem);
+    if(idx<0) return;
+    for(let i=idx+1;i<ordem.length;i++){
+      if(focoCampo(ordem[i])) break;
+    }
+  }
+  ["cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-ref","cli-bairro","cli-cidade","cli-uf","cli-cep"].forEach((id)=>{ const node=el(id); if(node) node.addEventListener("input",updateSaveClienteState); });
+  el("cli-cep").addEventListener("input",()=>{ const v=el("cli-cep").value||""; const fmt=formatarCep(v); if(fmt!==v) el("cli-cep").value=fmt; const s=el("cep-status"); if(s) s.textContent=""; updateSaveClienteState(); });
+  el("cli-cep").addEventListener("keydown",async(e)=>{ if(e.key==="Enter"){ e.preventDefault(); await buscarEnderecoPorCep(); } });
+  ["cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-bairro","cli-cidade","cli-uf"].forEach((id)=>{
+    const node=el(id);
+    if(!node) return;
+    node.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); avancarFluxoCadastro(id); } });
+  });
+  const ref=el("cli-ref");
+  if(ref){
+    ref.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter" && !e.shiftKey){
+        e.preventDefault();
+        avancarFluxoCadastro("cli-ref");
+      }
+    });
+  }
+  const btnSalvarCli=el("btn-salvar-cliente");
+  if(btnSalvarCli){
+    btnSalvarCli.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter" || e.key===" "){
+        e.preventDefault();
+        btnSalvarCli.click();
+      }
+    });
+  }
+  const btnEditarCli=el("btn-editar-cliente");
+  if(btnEditarCli){
+    btnEditarCli.addEventListener("click",()=>{
+      state.editandoCliente=!state.editandoCliente;
+      applyClienteFieldsLock();
+      updateSaveClienteState();
+      if(state.editandoCliente){
+        if(state.clienteLocalizado){ if(!focoCampo("cli-cep")) focoCampo("cli-end"); }
+        else focoCampo("cli-cep");
+      }
+    });
+  }
+  document.addEventListener("DOMContentLoaded",async()=>{ window.applyRetailUi(); bindHotkeys(); refreshImpressoraCasaLabel(); if(!IS_RETAIL) await carregarDddPadrao(); const params=new URLSearchParams(window.location.search); const modoParam=params.get("modo"); if(IS_RETAIL){ state.modo="balcao"; }else{ state.modo=(modoParam==="balcao"||modoParam==="delivery")?modoParam:"delivery"; } const pedidoParam=Number(String(params.get("pedido")||"").replace(/[^\d]/g,""))||0; const telParam=String(params.get("tel")||"").replace(/\D/g,""); const recParam=params.get("rec")==="1"; if(pedidoParam>0 && recParam){ state.pedidoId=pedidoParam; state.pedidoReservado=true; state.pedidoPreview=state.pedidoId; state.emRecuperacao=true; updatePedidoBadge(); if(state.modo==="delivery" && telParam){ const local=telParam.length>9?telParam.slice(-9):telParam; if(el("cli-fone")) el("cli-fone").value=local; } } await syncPedidoAtual(); syncModeUi(); captureClienteSnapshot(); applyInitialUiState(); if(!IS_RETAIL) setClienteStatus("Pedidos anteriores: -"); await refreshTaxaServico(); await loadClassTabs(); const _ldMode=pedidoParam>0 && recParam ? "recuperacao" : "normal"; const _ldOk=await loadItens(_ldMode); if(pedidoParam>0 && recParam && _ldOk===false){ state.emRecuperacao=false; state.pedidoId=0; state.pedidoReservado=false; await syncPedidoAtual(); await loadItens("normal"); updatePedidoBadge(); } if(!IS_RETAIL){ await refreshPendentesAguarde(); const btnPend=el("btn-pend-aguarde"); if(btnPend) btnPend.onclick=async()=>{ await refreshPendentesAguarde(); renderAguardePendentesModal(); openModal("modal-aguarde-pendentes"); }; } if(IS_RETAIL){ history.replaceState({},"",lojaUrl("/casa?modo=balcao")); await resetPedidoRapido(true); syncModeUi(); } lucide.createIcons(); });
+})();
+</script>
+{% if not IS_RETAIL %}
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,262 @@
+/* UI moderna — telas /configuracoes (independente de /casa e /mesa) */
+
+body.cfg-body {
+  --cfg-ui-ink: #111827;
+  --cfg-ui-label: #374151;
+  --cfg-ui-muted: #6b7280;
+  --cfg-ui-line: #e5e7eb;
+  --cfg-ui-input-border: #d1d5db;
+  --cfg-ui-primary: #4f46e5;
+  --cfg-ui-primary-hover: #4338ca;
+  --cfg-ui-focus: rgba(99, 102, 241, 0.15);
+  --cfg-ui-danger: #ef4444;
+  --cfg-ui-ok-bg: #d1fae5;
+  --cfg-ui-ok-text: #065f46;
+  --cfg-ui-err-bg: #fee2e2;
+  --cfg-ui-err-text: #991b1b;
+  --cfg-ui-card-bg: var(--surface);
+  --cfg-ui-input-bg: #fff;
+}
+
+html[data-theme="dark"] body.cfg-body {
+  --cfg-ui-ink: var(--text);
+  --cfg-ui-label: color-mix(in srgb, var(--text) 88%, var(--muted));
+  --cfg-ui-muted: var(--muted);
+  --cfg-ui-line: var(--line);
+  --cfg-ui-input-border: var(--line);
+  --cfg-ui-primary: var(--purple);
+  --cfg-ui-primary-hover: color-mix(in srgb, var(--purple) 85%, #000);
+  --cfg-ui-focus: rgba(124, 58, 237, 0.22);
+  --cfg-ui-ok-bg: rgba(16, 185, 129, 0.18);
+  --cfg-ui-ok-text: color-mix(in srgb, var(--text) 70%, var(--green));
+  --cfg-ui-err-bg: rgba(248, 113, 113, 0.16);
+  --cfg-ui-err-text: color-mix(in srgb, var(--text) 65%, var(--danger));
+  --cfg-ui-card-bg: var(--surface);
+  --cfg-ui-input-bg: var(--bg);
+}
+
+body.cfg-body .cfg-content {
+  padding: 16px 20px 28px;
+}
+
+body.cfg-body .cfg-wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+body.cfg-body .cfg-section-card,
+body.cfg-body .cfg-panel {
+  border-radius: 12px;
+  border: 1px solid var(--cfg-ui-line);
+  background: var(--cfg-ui-card-bg);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+body.cfg-body .cfg-section-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cfg-ui-ink);
+}
+
+body.cfg-body .cfg-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cfg-ui-label);
+  margin-bottom: 6px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+body.cfg-body .cfg-required::after {
+  content: " *";
+  color: var(--cfg-ui-danger);
+  font-weight: 600;
+}
+
+body.cfg-body .cfg-help {
+  font-size: 12px;
+  color: var(--cfg-ui-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+body.cfg-body .cfg-grid-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+body.cfg-body .cfg-input,
+body.cfg-body .cfg-select,
+body.cfg-body .cfg-textarea,
+body.cfg-body .form input,
+body.cfg-body .form select,
+body.cfg-body .form textarea,
+body.cfg-body .form-group input,
+body.cfg-body .form-group select,
+body.cfg-body .form-group textarea {
+  height: 40px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--cfg-ui-input-border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--cfg-ui-input-bg);
+  color: var(--text);
+}
+
+body.cfg-body .cfg-textarea,
+body.cfg-body .form textarea,
+body.cfg-body .form-group textarea {
+  height: auto;
+  min-height: 88px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+body.cfg-body .cfg-input:focus,
+body.cfg-body .cfg-select:focus,
+body.cfg-body .cfg-textarea:focus,
+body.cfg-body .cfg-input:focus-visible,
+body.cfg-body .cfg-select:focus-visible,
+body.cfg-body .cfg-textarea:focus-visible,
+body.cfg-body .form input:focus,
+body.cfg-body .form select:focus,
+body.cfg-body .form textarea:focus,
+body.cfg-body .form input:focus-visible,
+body.cfg-body .form select:focus-visible,
+body.cfg-body .form textarea:focus-visible {
+  outline: none;
+  border-color: var(--cfg-ui-primary);
+  box-shadow: 0 0 0 3px var(--cfg-ui-focus);
+}
+
+body.cfg-body .cfg-input.is-error,
+body.cfg-body .cfg-input:invalid:not(:placeholder-shown) {
+  border-color: var(--cfg-ui-danger);
+}
+
+body.cfg-body .cfg-btn-primary,
+body.cfg-body .btn-green,
+body.cfg-body .btn-purple {
+  background: var(--cfg-ui-primary) !important;
+  border-color: var(--cfg-ui-primary) !important;
+  color: #fff !important;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 500;
+  min-height: 40px;
+}
+
+body.cfg-body .cfg-btn-primary:hover,
+body.cfg-body .btn-green:hover,
+body.cfg-body .btn-purple:hover {
+  background: var(--cfg-ui-primary-hover) !important;
+  border-color: var(--cfg-ui-primary-hover) !important;
+}
+
+body.cfg-body .cfg-btn-ghost,
+body.cfg-body .btn-outline {
+  background: transparent !important;
+  border: 1px solid var(--cfg-ui-input-border) !important;
+  color: var(--text) !important;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 500;
+}
+
+body.cfg-body .cfg-btn-danger,
+body.cfg-body .btn-danger {
+  background: var(--cfg-ui-danger) !important;
+  border-color: var(--cfg-ui-danger) !important;
+  color: #fff !important;
+}
+
+body.cfg-body .cfg-flash {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  border: 1px solid transparent;
+}
+
+body.cfg-body .cfg-flash--ok {
+  background: var(--cfg-ui-ok-bg);
+  color: var(--cfg-ui-ok-text);
+  border-color: color-mix(in srgb, var(--cfg-ui-ok-text) 25%, transparent);
+}
+
+body.cfg-body .cfg-flash--err {
+  background: var(--cfg-ui-err-bg);
+  color: var(--cfg-ui-err-text);
+  border-color: color-mix(in srgb, var(--cfg-ui-danger) 35%, transparent);
+}
+
+body.cfg-body .cfg-flash-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+body.cfg-body a.cfg-card {
+  border-radius: 12px;
+  border: 1px solid var(--cfg-ui-line);
+  padding: 16px;
+}
+
+body.cfg-body a.cfg-card:hover {
+  border-color: var(--cfg-ui-primary);
+  box-shadow: 0 0 0 3px var(--cfg-ui-focus);
+}
+
+body.cfg-body .cfg-card h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cfg-ui-ink);
+}
+
+body.cfg-body .cfg-card p {
+  font-size: 12px;
+  color: var(--cfg-ui-muted);
+}
+
+body.cfg-body .cfg-mesa-legacy {
+  display: none !important;
+}
+
+body.cfg-body .cfg-alert-api {
+  font-size: 12px;
+  color: var(--cfg-ui-muted);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--cfg-ui-line);
+  margin-bottom: 16px;
+  line-height: 1.45;
+}
+
+body.cfg-body .cfg-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+@media (max-width: 639px) {
+  body.cfg-body .cfg-content {
+    padding: 12px 14px 24px;
+  }
+  body.cfg-body .cfg-section-card,
+  body.cfg-body .cfg-panel {
+    padding: 18px;
+  }
+}

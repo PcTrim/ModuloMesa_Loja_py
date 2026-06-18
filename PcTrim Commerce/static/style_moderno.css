@@ -1,0 +1,64 @@
+.btn-foto {
+	min-width: 180px;
+}
+.btn-foto span, .btn-foto div, .btn-foto {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+/* Estilo de botão igual ao da página /casa */
+.btn-foto, .btn-foto:link, .btn-foto:visited, .btn-foto:hover, .btn-foto:active, .btn-foto:focus {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 90px;
+	padding: 22px 0 14px 0;
+	font-size: 1.15em;
+	background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+	color: #fff;
+	border: none;
+	border-radius: 12px;
+	box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+	text-decoration: none !important;
+	outline: none !important;
+	transition: background 0.2s, box-shadow 0.2s;
+	cursor: pointer;
+}
+.btn-foto img {
+	width: 38px;
+	height: 38px;
+	object-fit: contain;
+	margin-bottom: 8px;
+	filter: drop-shadow(0 2px 6px rgba(0,0,0,0.10));
+}
+.btn-foto:hover {
+	background: linear-gradient(135deg, #ffb300 0%, #ff9800 100%);
+	box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+.btn {
+	text-decoration: none !important;
+	outline: none !important;
+	color: #fff;
+	border-radius: 12px;
+	border: none;
+	padding: 14px 32px;
+	font-size: 1.15em;
+	font-weight: 700;
+	background: linear-gradient(135deg, #0077ff 0%, #0055aa 100%);
+	box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+	cursor: pointer;
+	transition: background 0.2s, box-shadow 0.2s;
+}
+.btn:hover {
+	background: linear-gradient(135deg, #0055aa 0%, #0077ff 100%);
+	box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+
+/* Remover sublinhado de todos os links, inclusive dentro de botões */
+a, a:link, a:visited, a:hover, a:active, a:focus,
+.btn a, .btn-foto a {
+    text-decoration: none !important;
+    outline: none !important;
+    color: inherit;
+}

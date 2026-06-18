@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxas de Entrega</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    {% include 'partials/topbar_meta_assets.html' %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+{% set papel = (session.get('funcao') or 'gerente')|lower %}
+{% if papel != 'gerente' %}
+    <main class="cfg-content"><div class="cfg-wrap">
+      <div class="cfg-flash cfg-flash--err" role="alert">
+        <span class="cfg-flash-icon">X</span>
+        <span>Acesso restrito a gerentes. <a href="{{ url_prefix }}/configuracoes">Voltar</a></span>
+      </div>
+    </div></main>
+{% else %}
+
+    <div class="pdv">
+    <header class="topbar">
+        <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
+        <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+        <div class="brand">Taxas de entrega</div>
+        {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+            <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+            <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+        </button>
+    </header>
+
+    <div class="shell">
+        <section class="center">
+            <div class="field-group">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <p class="title" style="margin:0;">Dados da loja</p>
+                    <a href="{{ url_prefix }}/dados-loja" class="btn-mini" style="width:auto; text-decoration:none;">Editar</a>
+                </div>
+                <div class="help" id="lojaInfoNome" style="margin-top:6px;">Dados da Loja</div>
+
+                <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div><p class="title">Endereço</p><div id="lojaInfoEndereco" class="help">-</div></div>
+                    <div><p class="title">Bairro</p><div id="lojaInfoBairro" class="help">-</div></div>
+                    <div><p class="title">Cidade</p><div id="lojaInfoCidade" class="help">-</div></div>
+                    <div><p class="title">CEP</p><div id="lojaInfoCep" class="help">-</div></div>
+                    <div><p class="title">DDD</p><div id="lojaInfoDdd" class="help">-</div></div>
+                    <div><p class="title">Coordenadas</p><div id="lojaInfoCoordenadas" class="help">-</div></div>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <p class="title">Taxas configuradas</p>
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th style="width: 130px;">Faixa</th>
+                            <th style="text-align:center; width: 120px;">De (km)</th>
+                            <th style="text-align:center; width: 120px;">Até (km)</th>
+                            <th style="text-align:center; width: 140px;">Valor (R$)</th>
+                            <th style="text-align:center; width: 220px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyTaxas">
+                        <tr><td colspan="5" class="empty">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <aside class="right">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+
+            <div class="field-group" id="taxaFormPanel">
+                <p class="title">Cadastro</p>
+                <form id="formTaxa" class="form">
+                    <input type="hidden" id="chave" value="1">
+                    <div class="row-split">
+                        <select id="faixa_num">
+                            <option value="1">Faixa 1</option>
+                            <option value="2">Faixa 2</option>
+                            <option value="3">Faixa 3</option>
+                            <option value="4">Faixa 4</option>
+                            <option value="5">Faixa 5</option>
+                            <option value="6">Faixa 6</option>
+                            <option value="7">Faixa 7</option>
+                            <option value="8">Faixa 8</option>
+                            <option value="9">Faixa 9</option>
+                            <option value="10">Faixa 10</option>
+                        </select>
+                        <input type="number" step="0.01" id="faixa_d" placeholder="Até (km)">
+                    </div>
+                    <input type="number" step="0.01" id="faixa_v" placeholder="Valor (R$)">
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <span class="pill" id="faixa_de_pill">De 0,00 km</span>
+                    </div>
+                    <div class="actions">
+                        <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
+                        <button type="submit" class="btn-green" id="btnSalvarTaxa">Salvar</button>
+                        <button type="button" class="btn-modal" id="btnCancelarTaxa" onclick="cancelarEdicaoTaxa()" style="display:none;">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </aside>
+    </div>
+    </div>
+    
+    <script>
+        const TAXA_MAX = 10;
+        let taxaState = null;
+        let faixaSelecionada = 1;
+
+        function makeEmptyTaxaState() {
+            const obj = { chave: 1 };
+            for (let i = 1; i <= TAXA_MAX; i++) {
+                obj[`faixa${i}_d`] = null;
+                obj[`faixa${i}_v`] = null;
+            }
+            return obj;
+        }
+
+        function numOrNull(v) {
+            const s = String(v ?? '').trim();
+            if (!s) return null;
+            const n = Number(s);
+            return Number.isFinite(n) ? n : null;
+        }
+
+        function kmTxt(v) {
+            const n = Number(v);
+            if (!Number.isFinite(n)) return '-';
+            return n.toFixed(2).replace('.', ',');
+        }
+
+        function moneyTxt(v) {
+            const n = Number(v);
+            if (!Number.isFinite(n)) return '-';
+            return n.toFixed(2).replace('.', ',');
+        }
+
+        function showMsg(texto, tipo) {
+            const el = document.getElementById('mensagem');
+            el.className = `mensagem ${tipo}`;
+            el.textContent = texto;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 4000);
+        }
+
+        async function carregarDadosLoja() {
+            try {
+                const res = await fetch('/api/dados-loja-info');
+                const data = await res.json();
+                if (!data?.sucesso || !data?.dados) return;
+                const loja = data.dados;
+                document.getElementById('lojaInfoNome').textContent = loja.nome || 'Minha Loja';
+                document.getElementById('lojaInfoEndereco').textContent = loja.endereco || '-';
+                document.getElementById('lojaInfoBairro').textContent = loja.bairro || '-';
+                document.getElementById('lojaInfoCidade').textContent = loja.cidade || '-';
+                document.getElementById('lojaInfoCep').textContent = loja.cep || '-';
+                document.getElementById('lojaInfoDdd').textContent = loja.ddd || '-';
+                const lat = (loja.latitude ?? '').toString().trim();
+                const lon = (loja.longitude ?? '').toString().trim();
+                document.getElementById('lojaInfoCoordenadas').textContent = (lat && lon) ? `${lat}, ${lon}` : '-';
+            } catch (e) {
+                console.error('Erro ao carregar dados da loja:', e);
+            }
+        }
+
+        async function carregarTaxaState() {
+            const tbody = document.getElementById('tbodyTaxas');
+            try {
+                const res = await fetch('/api/obter-taxa');
+                const data = await res.json();
+                taxaState = data?.sucesso && data?.taxa ? { ...makeEmptyTaxaState(), ...data.taxa } : makeEmptyTaxaState();
+            } catch (e) {
+                console.error('Erro ao carregar taxa:', e);
+                taxaState = makeEmptyTaxaState();
+                tbody.innerHTML = '<tr><td colspan="5" class="empty">Erro ao carregar dados</td></tr>';
+            }
+        }
+
+        function getFaixaFromKm(i) {
+            let prev = 0;
+            for (let j = 1; j < i; j++) {
+                const d = Number(taxaState?.[`faixa${j}_d`]);
+                if (Number.isFinite(d)) prev = d;
+            }
+            return prev;
+        }
+
+        function renderTabela() {
+            const tbody = document.getElementById('tbodyTaxas');
+            if (!taxaState) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty">Carregando...</td></tr>';
+                return;
+            }
+            let html = '';
+            for (let i = 1; i <= TAXA_MAX; i++) {
+                const fromKm = getFaixaFromKm(i);
+                const toKm = taxaState[`faixa${i}_d`];
+                const val = taxaState[`faixa${i}_v`];
+                const toTxt = (toKm === null || toKm === undefined || toKm === '') ? '-' : `${kmTxt(toKm)} km`;
+                const valTxt = (val === null || val === undefined || val === '') ? '-' : `R$ ${moneyTxt(val)}`;
+
+                html += `
+                    <tr>
+                        <td class="kcell">Faixa ${i}</td>
+                        <td style="text-align:center;">${kmTxt(fromKm)} km</td>
+                        <td style="text-align:center;">${toTxt}</td>
+                        <td style="text-align:center;">${valTxt}</td>
+                        <td style="text-align:center;">
+                            <div class="tbl-actions">
+                                <button type="button" class="btn-mini" onclick="editarFaixa(${i})">Editar</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = html;
+        }
+
+        function updatePill() {
+            const fromKm = getFaixaFromKm(faixaSelecionada);
+            document.getElementById('faixa_de_pill').textContent = `De ${kmTxt(fromKm)} km`;
+        }
+
+        function preencherFormDaFaixa(i) {
+            faixaSelecionada = Number(i) || 1;
+            document.getElementById('faixa_num').value = String(faixaSelecionada);
+            document.getElementById('faixa_d').value = (taxaState?.[`faixa${faixaSelecionada}_d`] ?? '') ?? '';
+            document.getElementById('faixa_v').value = (taxaState?.[`faixa${faixaSelecionada}_v`] ?? '') ?? '';
+            updatePill();
+        }
+
+        function validateTaxaState(nextState) {
+            let last = null;
+            for (let i = 1; i <= TAXA_MAX; i++) {
+                const d = nextState[`faixa${i}_d`];
+                const v = nextState[`faixa${i}_v`];
+                const dNum = d === null ? null : Number(d);
+                const vNum = v === null ? null : Number(v);
+
+                if ((d === null) !== (v === null)) {
+                    return `Preencha "Até (km)" e "Valor" juntos na Faixa ${i} (ou deixe ambos vazios).`;
+                }
+                if (dNum !== null && (!Number.isFinite(dNum) || dNum < 0)) {
+                    return `A distância da Faixa ${i} é inválida.`;
+                }
+                if (vNum !== null && (!Number.isFinite(vNum) || vNum < 0)) {
+                    return `O valor da Faixa ${i} é inválido.`;
+                }
+                if (dNum !== null) {
+                    if (last !== null && dNum < last) {
+                        return `A distância da Faixa ${i} precisa ser maior ou igual à faixa anterior.`;
+                    }
+                    last = dNum;
+                }
+            }
+            return null;
+        }
+
+        async function salvarTaxas() {
+            const err = validateTaxaState(taxaState);
+            if (err) {
+                showMsg(err, 'erro');
+                return;
+            }
+
+            const payload = { chave: 1 };
+            for (let i = 1; i <= TAXA_MAX; i++) {
+                payload[`faixa${i}_d`] = taxaState[`faixa${i}_d`];
+                payload[`faixa${i}_v`] = taxaState[`faixa${i}_v`];
+            }
+
+            const btn = document.getElementById('btnSalvarTaxa');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/salvar-taxa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data?.sucesso) {
+                    showMsg('Taxas de entrega salvas com sucesso!', 'sucesso');
+                    await carregarTaxaState();
+                    renderTabela();
+                    preencherFormDaFaixa(faixaSelecionada);
+                } else {
+                    showMsg(data?.erro || 'Erro ao salvar taxas.', 'erro');
+                }
+            } catch (e) {
+                console.error('Erro ao salvar taxas:', e);
+                showMsg('Erro ao conectar com o servidor.', 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function editarFaixa(i) {
+            preencherFormDaFaixa(i);
+            document.getElementById('btnSalvarTaxa').textContent = 'Atualizar';
+            document.getElementById('btnCancelarTaxa').style.display = 'block';
+            document.getElementById('taxaFormPanel')?.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('faixa_d')?.focus();
+        }
+
+        function cancelarEdicaoTaxa() {
+            document.getElementById('btnSalvarTaxa').textContent = 'Salvar';
+            document.getElementById('btnCancelarTaxa').style.display = 'none';
+            preencherFormDaFaixa(faixaSelecionada);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('faixa_num').addEventListener('change', (e) => {
+                preencherFormDaFaixa(e.target.value);
+            });
+
+            document.getElementById('formTaxa').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!taxaState) taxaState = makeEmptyTaxaState();
+
+                const d = numOrNull(document.getElementById('faixa_d').value);
+                const v = numOrNull(document.getElementById('faixa_v').value);
+
+                taxaState[`faixa${faixaSelecionada}_d`] = d;
+                taxaState[`faixa${faixaSelecionada}_v`] = v;
+
+                const err = validateTaxaState(taxaState);
+                if (err) {
+                    showMsg(err, 'erro');
+                    return;
+                }
+
+                await salvarTaxas();
+            });
+
+            await carregarDadosLoja();
+            await carregarTaxaState();
+            renderTabela();
+            preencherFormDaFaixa(1);
+        });
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+<script>try { lucide.createIcons(); } catch (e) {}</script>
+
+{% endif %}
+</body>
+</html>

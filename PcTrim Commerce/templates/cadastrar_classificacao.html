@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Classificação</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    {% include 'partials/topbar_meta_assets.html' %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+    <div class="pdv">
+    <header class="topbar">
+        <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
+        <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+        <div class="brand">Classificações</div>
+        {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+            <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+            <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+        </button>
+    </header>
+
+    <div class="shell">
+        <section class="center">
+            <details class="details" id="mesaLegacyDetails">
+                <summary>Mesa (opcional)</summary>
+                <div style="display:grid; gap:10px; margin-top:10px;">
+                    <div id="registrosMesa" style="display:none;"></div>
+                    <div id="mesaValoresAcoes"></div>
+                    <div id="itensEnviadosMesa" style="display:none;"></div>
+                </div>
+            </details>
+
+            <div class="field-group">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <p class="title" style="margin:0;">Classificações cadastradas</p>
+                    <button type="button" class="btn-purple" style="width:auto; padding:8px 12px;" onclick="novaClassificacao()">Nova</button>
+                </div>
+            </div>
+
+            <table class="tbl" id="tabelaListaClassificacoes">
+                <thead>
+                    <tr>
+                        <th style="width: 90px;">Código</th>
+                        <th>Nome</th>
+                        <th style="width: 140px;">Qtd. partes</th>
+                        <th style="width: 110px;">Nº foto</th>
+                        <th style="width: 150px;">Forma</th>
+                        <th style="width: 220px; text-align:center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaClassificacoes">
+                    <tr><td colspan="6" class="empty">Carregando...</td></tr>
+                </tbody>
+            </table>
+
+            <script>
+
+        // Buscar registros da mesa ao digitar, sair do campo ou clicar no botão
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputMesa = document.getElementById('numeroMesa');
+            const btnEnviarMesa = document.getElementById('btnEnviarMesa');
+            if (!inputMesa) {
+
+                return;
+            }
+            if (!btnEnviarMesa) {
+
+                return;
+            }
+            inputMesa.addEventListener('input', function() {
+                console.log('[DEBUG] Evento input no campo número da mesa');
+
+                buscarRegistrosMesa();
+            });
+            inputMesa.addEventListener('blur', function() {
+                console.log('[DEBUG] Evento blur no campo número da mesa');
+
+                buscarRegistrosMesa();
+            });
+            btnEnviarMesa.addEventListener('click', function() {
+                console.log('[DEBUG] Clique no botão Enviar Mesa');
+
+                enviarMesa();
+            });
+            // Buscar registros da mesa automaticamente ao carregar a página, se já houver valor
+            if (inputMesa.value && inputMesa.value.trim() !== '') {
+
+                buscarRegistrosMesa();
+            }
+        });
+
+        // Função para enviar mesa (faz um select semelhante ao buscarRegistrosMesa)
+        async function enviarMesa() {
+            const numeroMesa = document.getElementById('numeroMesa').value;
+            const divRegistros = document.getElementById('registrosMesa');
+            const divItensEnviados = document.getElementById('itensEnviadosMesa');
+            if (!numeroMesa) {
+                mostrarMensagem('Digite o número da mesa para enviar.', 'erro');
+                divRegistros.style.display = 'none';
+                divRegistros.innerHTML = '';
+                divItensEnviados.style.display = 'none';
+                divItensEnviados.innerHTML = '';
+                return;
+            }
+            // Após enviar, atualizar a tabela de registros da mesa, mesmo em caso de erro
+            const refreshGrid = () => setTimeout(() => buscarRegistrosMesa(), 300);
+            try {
+                const resp = await fetch(`/api/mesa/${numeroMesa}`);
+                if (!resp.ok) throw new Error('Erro ao buscar registros da mesa');
+                const dados = await resp.json();
+                divRegistros.style.display = 'block';
+                divItensEnviados.style.display = 'block';
+                // ...existing code...
+            } catch (e) {
+                divRegistros.style.display = 'block';
+                divRegistros.innerHTML = '<span style="color:red;">Erro ao buscar registros da mesa.</span>';
+                divItensEnviados.style.display = 'block';
+                divItensEnviados.innerHTML = '<span style="color:red;">Erro ao buscar itens enviados para a mesa.</span>';
+                mostrarMensagem('Erro ao enviar mesa.', 'erro');
+            } finally {
+                refreshGrid();
+            }
+        }
+
+        async function buscarRegistrosMesa() {
+
+            // console.log removido
+            const numeroMesa = document.getElementById('numeroMesa').value;
+            const divRegistros = document.getElementById('registrosMesa');
+            if (!numeroMesa) {
+                divRegistros.style.display = 'none';
+                divRegistros.innerHTML = '';
+                divRegistros.style.border = '';
+                return;
+            }
+            try {
+                const resp = await fetch(`/api/mesa/${numeroMesa}`);
+                if (!resp.ok) throw new Error('Erro ao buscar registros da mesa');
+                const dados = await resp.json();
+                divRegistros.style.display = 'block';
+                let registros = [];
+                if (Array.isArray(dados)) {
+                    registros = [...dados];
+                } else if (dados && dados.registros) {
+                    registros = [...dados.registros];
+                }
+                if (!registros || registros.length === 0) {
+                    document.getElementById('mesaValoresAcoes').innerHTML = '';
+                    divRegistros.innerHTML = '<span style="color:#666;">Nenhum registro encontrado para esta mesa.</span>';
+                    divRegistros.style.border = '';
+                } else {
+                    // Debug: verificar IDs dos registros
+                    console.log('[DEBUG] Registros da mesa:', registros.map(r => ({id: r.id, chave: r.chave, produto: r.produto || r.nome_produto})));
+                    
+                    let html = `<b>Registros da Mesa:</b><table style="width:100%;margin-top:10px;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.07);"><thead><tr style='background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;'><th style='padding:8px;'>ID</th><th style='padding:8px;'>Qtd</th><th style='padding:8px;'>Produto</th><th style='padding:8px;'>Preço</th></tr></thead><tbody>`;
+                    registros.forEach((r, idx, arr) => {
+                        let qtd = (Number(r.preco) > 0 && r.quantidade !== undefined) ? r.quantidade : 0;
+                        let border = 'border-bottom:none;';
+                        if (idx < arr.length - 1 && Number(arr[idx + 1].preco) > 0) {
+                            border = 'border-bottom:1px solid #e0e0e0;';
+                        }
+                        // Usar ID único - preferir 'id', caso contrário 'chave'
+                        const itemId = r.id || r.chave;
+                        const nomeProduto = (r.produto || r.nome_produto || '-').replace(/'/g, "\\'");
+                        
+                        // Adiciona cursor pointer e evento onclick para remover o item
+                        html += `<tr style='${border}cursor:pointer;transition:background-color 0.2s;' 
+                                    onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                    onmouseout="this.style.backgroundColor=''" 
+                                    onclick="removerItemMesa(${itemId}, '${nomeProduto}', ${numeroMesa})" 
+                                    title="Clique para remover (ID: ${itemId})">` +
+                            `<td style='padding:8px;text-align:center;font-size:11px;color:#888;'>${itemId}</td>` +
+                            `<td style='padding:8px;text-align:center;'>${qtd}</td>` +
+                            `<td style='padding:8px;'>${r.produto || r.nome_produto || '-'}</td>` +
+                            `<td style='padding:8px;'>R$ ${r.preco ? Number(r.preco).toFixed(2) : '-'}</td>` +
+                            `</tr>`;
+                    });
+                    html += '</tbody></table>';
+                    divRegistros.innerHTML = html;
+                    // Adiciona borda vermelha se houver conteúdo
+                    divRegistros.style.border = '2px solid red';
+
+                    // Calcula subtotal
+                    let subtotal = registros.reduce((acc, r) => acc + (Number(r.preco) * (Number(r.quantidade) || 0)), 0);
+                    // Busca taxa de serviço da configuração
+                    let taxaServico = 0;
+                    try {
+                        const respConfig = await fetch('/api/buscar-configuracao');
+                        if (respConfig.ok) {
+                            const configResp = await respConfig.json();
+                            if (configResp && configResp.sucesso && configResp.config) {
+                                taxaServico = Number(configResp.config.servicomesa) || 0;
+                            }
+                        }
+                    } catch (e) { /* ignora erro */ }
+                    let valorServico = subtotal * (taxaServico / 100);
+                    let total = subtotal + valorServico;
+                    let htmlValores = `
+                        <div style="margin-top:16px;display:block;width:100%;text-align:center;">
+                            <div style='font-size:16px;color:#333;text-align:right;max-width:400px;margin:0 auto;'><b>Subtotal:</b> R$ ${subtotal.toFixed(2)}</div>
+                            <div style='font-size:16px;color:#333;text-align:right;max-width:400px;margin:0 auto;'><b>Taxa de Serviço (${taxaServico}%):</b> R$ ${valorServico.toFixed(2)}</div>
+                            <div style='font-size:18px;color:#222;text-align:right;max-width:400px;margin:0 auto;'><b>Total:</b> R$ ${total.toFixed(2)}</div>
+                            <div style="display:flex;justify-content:center;gap:24px;margin-top:18px;width:100%;max-width:600px;margin-left:auto;margin-right:auto;">
+                                <button type="button" class="btn-novo" style="flex:1 1 0;min-width:0;font-size:18px;box-shadow:0 2px 8px #bbb;width:100%;max-width:none;height:56px;" onclick="imprimirMesa()">Imprimir</button>
+                                <button type="button" class="btn-salvar" style="flex:1 1 0;min-width:0;font-size:18px;box-shadow:0 2px 8px #bbb;width:100%;max-width:none;height:56px;" onclick="confirmarMesa()">Confirmar</button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('mesaValoresAcoes').innerHTML = htmlValores;
+                }
+            } catch (e) {
+                divRegistros.style.display = 'block';
+                divRegistros.innerHTML = '<span style="color:red;">Erro ao buscar registros da mesa.</span>';
+                divRegistros.style.border = '';
+            }
+        }
+
+        // Funções dos botões
+        function imprimirMesa() {
+
+        }
+        function confirmarMesa() {
+
+        }
+
+        // Função para remover item da mesa
+        async function removerItemMesa(itemId, nomeProduto, numeroMesa) {
+            const idNum = Number(itemId);
+            if (!Number.isInteger(idNum) || idNum <= 0) {
+                mostrarMensagem('ID do item inválido.', 'erro');
+                console.error('[DEBUG] ID inválido:', itemId);
+                return;
+            }
+            
+            // Mensagem padrão - o backend já identifica se é múltipla escolha pelo codigoproduto
+            if (!confirm(`Deseja realmente remover "${nomeProduto}" da mesa ${numeroMesa}?\n\n(Se for produto de múltipla escolha, todas as partes serão removidas)`)) {
+                return;
+            }
+
+            try {
+                const url = `/api/mesa/${numeroMesa}/item/${idNum}`;
+                console.log('[DEBUG] Fazendo DELETE para:', url);
+
+                const resp = await fetch(url, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                console.log('[DEBUG] Status da resposta:', resp.status);
+
+                if (!resp.ok) {
+                    let detalhe = '';
+                    try { detalhe = await resp.text(); } catch {}
+                    throw new Error(`Erro ao remover item - Status: ${resp.status}${detalhe ? ' - ' + detalhe : ''}`);
+                }
+
+                const resultado = await resp.json();
+                console.log('[DEBUG] Resultado:', resultado);
+
+                if (resultado.sucesso) {
+                    mostrarMensagem('Item removido com sucesso!', 'sucesso');
+                    await buscarRegistrosMesa();
+                } else {
+                    mostrarMensagem(resultado.mensagem || 'Erro ao remover item.', 'erro');
+                }
+            } catch (e) {
+                console.error('Erro ao remover item:', e);
+                mostrarMensagem('Erro ao remover item da mesa. ' + (e.message || ''), 'erro');
+            }
+        }
+
+        // Removido } extra que causava erro de sintaxe
+    </script>
+        </section>
+
+        <aside class="right">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+
+            <div class="field-group" id="classificacaoFormPanel">
+                <p class="title">Cadastro</p>
+                <form id="formClassificacao" class="form">
+                    <input type="hidden" id="chave" name="chave">
+                    <input type="hidden" id="classe" name="classe">
+
+                    <div class="row-split main-fields">
+                        <input type="text" id="nomeclassificacao" name="nomeclassificacao" required placeholder="Nome da classificação">
+                        <input type="number" id="quantidadepartes" name="quantidadepartes" min="0" placeholder="Qtd. partes">
+                    </div>
+
+                    <div class="row-split main-fields">
+                        <input type="number" id="nrofoto" name="nrofoto" min="0" placeholder="Número da foto">
+                        <select id="formadecobrar" name="formadecobrar">
+                            <option value="">Forma de cobrar...</option>
+                            <option value="MEDIA">MEDIA</option>
+                            <option value="MAIOR">MAIOR</option>
+                        </select>
+                    </div>
+
+                    <div class="details" style="margin-top:6px;">
+                        <summary>Produtos desta classificação</summary>
+                        <div style="margin-top:10px; display:grid; gap:8px;">
+                            <select id="produtos" name="produtos" multiple style="min-height: 170px;">
+                                <option disabled>Carregando produtos...</option>
+                            </select>
+                            <div class="help">Segure Ctrl (ou Cmd) para selecionar múltiplos produtos.</div>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <p class="title">Tamanhos</p>
+                        <div class="opt-tools">
+                            <input type="text" id="op_tamanhos_name" placeholder="Nome (ex: BROTO)">
+                            <input type="text" id="op_tamanhos_val" placeholder="Valor (ex: 0)">
+                            <button type="button" class="btn-mini" onclick="addOpItem('op_tamanhos')">Adicionar</button>
+                        </div>
+                        <div class="opt-list" id="op_tamanhos_list"></div>
+                        <details class="details" style="margin-top:6px;">
+                            <summary>Editar texto</summary>
+                            <textarea id="op_tamanhos" placeholder="1 por linha. Ex: BROTO=0"></textarea>
+                        </details>
+                    </div>
+
+                    <div class="field-group">
+                        <p class="title">Tipo de massa</p>
+                        <div class="opt-tools">
+                            <input type="text" id="op_massas_name" placeholder="Nome (ex: FINA)">
+                            <input type="text" id="op_massas_val" placeholder="Valor (ex: 0)">
+                            <button type="button" class="btn-mini" onclick="addOpItem('op_massas')">Adicionar</button>
+                        </div>
+                        <div class="opt-list" id="op_massas_list"></div>
+                        <details class="details" style="margin-top:6px;">
+                            <summary>Editar texto</summary>
+                            <textarea id="op_massas" placeholder="1 por linha. Ex: FINA=0"></textarea>
+                        </details>
+                    </div>
+
+                    <div class="field-group">
+                        <p class="title">Borda</p>
+                        <div class="opt-tools">
+                            <input type="text" id="op_bordas_name" placeholder="Nome (ex: CATUPIRY)">
+                            <input type="text" id="op_bordas_val" placeholder="Valor (ex: 5)">
+                            <button type="button" class="btn-mini" onclick="addOpItem('op_bordas')">Adicionar</button>
+                        </div>
+                        <div class="opt-list" id="op_bordas_list"></div>
+                        <details class="details" style="margin-top:6px;">
+                            <summary>Editar texto</summary>
+                            <textarea id="op_bordas" placeholder="1 por linha. Ex: CATUPIRY=5"></textarea>
+                        </details>
+                    </div>
+
+                    <div class="field-group">
+                        <p class="title">Cobertura</p>
+                        <div class="opt-tools">
+                            <input type="text" id="op_coberturas_name" placeholder="Nome (ex: CHOCOLATE)">
+                            <input type="text" id="op_coberturas_val" placeholder="Valor (ex: 3)">
+                            <button type="button" class="btn-mini" onclick="addOpItem('op_coberturas')">Adicionar</button>
+                        </div>
+                        <div class="opt-list" id="op_coberturas_list"></div>
+                        <details class="details" style="margin-top:6px;">
+                            <summary>Editar texto</summary>
+                            <textarea id="op_coberturas" placeholder="1 por linha. Ex: CHOCOLATE=3"></textarea>
+                        </details>
+                    </div>
+
+                    <div class="field-group">
+                        <p class="title">Adicionais (multi)</p>
+                        <div class="opt-tools">
+                            <input type="text" id="op_adicionais_name" placeholder="Nome (ex: BACON)">
+                            <input type="text" id="op_adicionais_val" placeholder="Valor (ex: 3)">
+                            <button type="button" class="btn-mini" onclick="addOpItem('op_adicionais')">Adicionar</button>
+                        </div>
+                        <div class="opt-list" id="op_adicionais_list"></div>
+                        <details class="details" style="margin-top:6px;">
+                            <summary>Editar texto</summary>
+                            <textarea id="op_adicionais" placeholder="1 por linha. Ex: BACON=3"></textarea>
+                        </details>
+                        <div class="help">Para múltipla escolha, use “Quantidade de partes” e configure os adicionais aqui.</div>
+                    </div>
+
+                    <div class="actions">
+                        <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
+                        <button type="submit" class="btn-green" id="btnSalvarClassificacao">Salvar</button>
+                        <button type="button" class="btn-modal" onclick="limparFormulario()">Limpar</button>
+                    </div>
+                </form>
+            </div>
+        </aside>
+    </div>
+    </div>
+
+    <script>
+        function normalizarListaProdutos(payload) {
+            if (!payload) return [];
+            if (Array.isArray(payload)) return payload;
+            if (Array.isArray(payload.produtos)) return payload.produtos;
+            if (Array.isArray(payload.data)) return payload.data;
+            return [];
+        }
+
+        // Carregar produtos para o select (padrão: todos)
+        async function carregarProdutos() {
+            try {
+                const response = await fetch('/api/listar-produtos');
+                if (!response.ok) throw new Error('Erro ao buscar produtos');
+                const payload = await response.json();
+                const produtos = normalizarListaProdutos(payload);
+                preencherSelectProdutos(produtos);
+            } catch (error) {
+                console.error('Erro ao carregar produtos:', error);
+                preencherSelectProdutos([]);
+            }
+        }
+
+        // Carregar produtos por classificação
+        async function carregarProdutosPorClassificacao(nomeClassificacao) {
+            if (!nomeClassificacao) {
+                carregarProdutos();
+                return;
+            }
+            try {
+                const response = await fetch(`/produtos_por_classificacao/${encodeURIComponent(nomeClassificacao)}`);
+                if (!response.ok) throw new Error('Erro ao buscar produtos por classificação');
+                const payload = await response.json();
+                const produtos = normalizarListaProdutos(payload);
+                preencherSelectProdutos(produtos);
+            } catch (error) {
+                console.error('Erro ao carregar produtos por classificação:', error);
+                preencherSelectProdutos([]);
+            }
+        }
+
+        // Função auxiliar para preencher o select
+        function preencherSelectProdutos(produtos) {
+            const select = document.getElementById('produtos');
+            if (!produtos || produtos.length === 0) {
+                select.innerHTML = '<option disabled>Nenhum produto encontrado</option>';
+                return;
+            }
+            select.innerHTML = produtos.map(p => `<option value="${p.chave || p.id}" data-preco="${p.preco}">${p.nome || p.produto} (R$ ${Number(p.preco).toFixed(2)})</option>`).join('');
+        }
+
+        const OP_BASE_IDS = ['op_tamanhos', 'op_massas', 'op_bordas', 'op_coberturas', 'op_adicionais'];
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function parseOpTextarea(value) {
+            return String(value || '')
+                .split(/\r?\n/)
+                .map(l => l.trim())
+                .filter(Boolean)
+                .map(line => {
+                    const eq = line.indexOf('=');
+                    const col = line.indexOf(':');
+                    const idx = eq !== -1 ? eq : (col !== -1 ? col : -1);
+                    if (idx === -1) return { name: line.trim(), val: '' };
+                    return { name: line.slice(0, idx).trim(), val: line.slice(idx + 1).trim() };
+                })
+                .filter(it => it.name);
+        }
+
+        function serializeOpItems(items) {
+            return (items || []).map(it => `${String(it.name || '').trim()}=${String(it.val || '').trim()}`.trim()).filter(Boolean).join('\n');
+        }
+
+        function renderOpList(baseId) {
+            const listEl = document.getElementById(`${baseId}_list`);
+            const textarea = document.getElementById(baseId);
+            if (!listEl || !textarea) return;
+
+            const items = parseOpTextarea(textarea.value);
+            if (items.length === 0) {
+                listEl.innerHTML = '<div class="empty">Nenhum item.</div>';
+                return;
+            }
+
+            listEl.innerHTML = items.map((it, idx) => {
+                const label = it.val ? `${escapeHtml(it.name)} <span class="help">= ${escapeHtml(it.val)}</span>` : escapeHtml(it.name);
+                return (
+                    `<div class="opt-item">` +
+                    `<div>${label}</div>` +
+                    `<button type="button" class="btn-mini btn-mini-danger" onclick="removeOpItem('${baseId}', ${idx})">Remover</button>` +
+                    `</div>`
+                );
+            }).join('');
+        }
+
+        function renderAllOpLists() {
+            OP_BASE_IDS.forEach(renderOpList);
+        }
+
+        function addOpItem(baseId) {
+            const nameEl = document.getElementById(`${baseId}_name`);
+            const valEl = document.getElementById(`${baseId}_val`);
+            const textarea = document.getElementById(baseId);
+            if (!nameEl || !valEl || !textarea) return;
+
+            const name = String(nameEl.value || '').trim().toUpperCase();
+            const val = String(valEl.value || '').trim();
+            if (!name) {
+                if (typeof mostrarMensagem === 'function') mostrarMensagem('Informe um nome para adicionar.', 'erro');
+                nameEl.focus();
+                return;
+            }
+
+            const items = parseOpTextarea(textarea.value);
+            const idx = items.findIndex(it => String(it.name || '').trim().toUpperCase() === name);
+            if (idx >= 0) items[idx] = { name, val };
+            else items.push({ name, val });
+
+            textarea.value = serializeOpItems(items);
+            renderOpList(baseId);
+
+            nameEl.value = '';
+            valEl.value = '';
+            nameEl.focus();
+        }
+
+        function removeOpItem(baseId, index) {
+            const textarea = document.getElementById(baseId);
+            if (!textarea) return;
+            const items = parseOpTextarea(textarea.value);
+            const idx = Number(index);
+            if (!Number.isFinite(idx) || idx < 0 || idx >= items.length) return;
+            items.splice(idx, 1);
+            textarea.value = serializeOpItems(items);
+            renderOpList(baseId);
+        }
+
+        function initOpEditors() {
+            OP_BASE_IDS.forEach(baseId => {
+                const nameEl = document.getElementById(`${baseId}_name`);
+                const valEl = document.getElementById(`${baseId}_val`);
+                const textarea = document.getElementById(baseId);
+                if (!nameEl || !valEl || !textarea) return;
+
+                nameEl.addEventListener('input', function() {
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.toUpperCase();
+                    this.setSelectionRange(start, end);
+                });
+
+                [nameEl, valEl].forEach(el => {
+                    el.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addOpItem(baseId);
+                        }
+                    });
+                });
+
+                textarea.addEventListener('input', function() {
+                    renderOpList(baseId);
+                });
+            });
+
+            renderAllOpLists();
+        }
+
+        let editandoId = null;
+
+        // Carregar classificações ao iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarClassificacoes();
+            carregarProdutos();
+            initOpEditors();
+            // Configurar navegação com Enter e converter para maiúsculo
+            const inputs = document.querySelectorAll('#formClassificacao .main-fields input, #formClassificacao .main-fields select');
+            inputs.forEach((input, index) => {
+                // Converter para maiúsculo enquanto digita (apenas campos de texto)
+                if (input.type === 'text') {
+                    input.addEventListener('input', function(e) {
+                        const start = this.selectionStart;
+                        const end = this.selectionEnd;
+                        this.value = this.value.toUpperCase();
+                        this.setSelectionRange(start, end);
+                    });
+                }
+                // Navegação com Enter
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && input.type !== 'submit') {
+                        e.preventDefault();
+                        if (index < inputs.length - 1) {
+                            inputs[index + 1].focus();
+                        }
+                    }
+                });
+            });
+
+            // Atualizar produtos ao sair do campo Nome da Classificação
+            const inputNomeClassificacao = document.getElementById('nomeclassificacao');
+            if (inputNomeClassificacao) {
+                inputNomeClassificacao.addEventListener('blur', function() {
+                    carregarProdutosPorClassificacao(this.value.trim().toUpperCase());
+                });
+                inputNomeClassificacao.addEventListener('change', function() {
+                    carregarProdutosPorClassificacao(this.value.trim().toUpperCase());
+                });
+            }
+        });
+
+        // Submeter formulário
+        document.getElementById('formClassificacao').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await salvarClassificacao();
+        });
+
+        function novaClassificacao() {
+            limparFormulario();
+            // Pega o valor da label de classificação no topo da div cor de rosa
+            const labelClassificacao = document.querySelector('label[for="nomeclassificacao"]');
+
+            document.getElementById('nomeclassificacao').focus();
+        }
+
+        function limparFormulario() {
+            document.getElementById('formClassificacao').reset();
+            document.getElementById('chave').value = '';
+            editandoId = null;
+            renderAllOpLists();
+        }
+
+        async function salvarClassificacao() {
+            const chave = document.getElementById('chave').value;
+            const nomeclassificacao = document.getElementById('nomeclassificacao').value.trim().toUpperCase();
+            const quantidadepartes = document.getElementById('quantidadepartes').value;
+            const nrofoto = document.getElementById('nrofoto').value;
+            const formadecobrar = document.getElementById('formadecobrar').value;
+            const op_tamanhos = (document.getElementById('op_tamanhos')?.value || '').trim();
+            const op_massas = (document.getElementById('op_massas')?.value || '').trim();
+            const op_bordas = (document.getElementById('op_bordas')?.value || '').trim();
+            const op_coberturas = (document.getElementById('op_coberturas')?.value || '').trim();
+            const op_adicionais = (document.getElementById('op_adicionais')?.value || '').trim();
+            const produtosSelect = document.getElementById('produtos');
+            const produtosSelecionados = Array.from(produtosSelect.selectedOptions).map(opt => opt.value);
+            // Pega o valor da label de classificação no topo da div cor de rosa
+            let classe = '';
+            const labelClassificacao = document.querySelector('label[for="nomeclassificacao"]');
+            if (labelClassificacao) {
+                classe = labelClassificacao.textContent.trim();
+            }
+            document.getElementById('classe').value = classe;
+
+            if (!nomeclassificacao) {
+                mostrarMensagem('Nome da classificação é obrigatório!', 'erro');
+                return;
+            }
+
+            // Lógica para garantir quantidades iguais para múltipla escolha
+            // Se quantidadepartes > 1 e mais de um produto selecionado, todos recebem a mesma quantidade
+            let produtosComQuantidade = [];
+            if (produtosSelecionados.length > 1) {
+                let qtd = quantidadepartes && Number(quantidadepartes) > 0 ? Number(quantidadepartes) : 1;
+                produtosComQuantidade = produtosSelecionados.map(pid => ({ id: pid, quantidade: qtd }));
+            } else {
+                produtosComQuantidade = produtosSelecionados.map(pid => ({ id: pid, quantidade: 1 }));
+            }
+
+            const dados = {
+                nomeclassificacao: nomeclassificacao,
+                quantidadepartes: quantidadepartes || null,
+                nrofoto: nrofoto || null,
+                formadecobrar: formadecobrar || null,
+                op_tamanhos: op_tamanhos || null,
+                op_massas: op_massas || null,
+                op_bordas: op_bordas || null,
+                op_coberturas: op_coberturas || null,
+                op_adicionais: op_adicionais || null,
+                produtos: produtosComQuantidade,
+                classe: classe
+            };
+
+            try {
+                let response;
+                if (chave) {
+                    // Editando
+                    response = await fetch(`/api/editar-classificacao/${chave}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                } else {
+                    // Salvando novo
+                    response = await fetch('/api/salvar-classificacao', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                }
+
+                const result = await response.json();
+                
+                if (result.sucesso) {
+                    limparFormulario();
+                    carregarClassificacoes();
+                } else {
+                    mostrarMensagem(result.mensagem || 'Erro ao salvar classificação', 'erro');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarMensagem('Erro ao salvar classificação', 'erro');
+            }
+        }
+
+        async function carregarClassificacoes() {
+            try {
+                const response = await fetch('/api/listar-classificacoes');
+                const classificacoes = await response.json();
+                const tbody = document.getElementById('tabelaClassificacoes');
+                if (classificacoes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma classificação cadastrada.</td></tr>';
+                    return;
+                }
+                
+                // Renderiza uma linha por classificação
+                tbody.innerHTML = classificacoes.map(c => {
+                    const nome = JSON.stringify(c.nomeclassificacao || '');
+                    return (
+                        `<tr>` +
+                        `<td>${c.chave || ''}</td>` +
+                        `<td>${c.nomeclassificacao || ''}</td>` +
+                        `<td>${c.quantidadepartes || ''}</td>` +
+                        `<td>${c.nrofoto || ''}</td>` +
+                        `<td>${c.formadecobrar || ''}</td>` +
+                        `<td style="text-align:center;">` +
+                        `<div class="tbl-actions">` +
+                        `<button type="button" class="btn-mini" onclick="editarClassificacao(${c.chave})">Editar</button>` +
+                        `<button type="button" class="btn-mini btn-mini-danger" onclick="excluirClassificacao(${c.chave}, ${nome})">Excluir</button>` +
+                        `</div>` +
+                        `</td>` +
+                        `</tr>`
+                    );
+                }).join('');
+            } catch (error) {
+                console.error('Erro ao carregar classificações:', error);
+                document.getElementById('tabelaClassificacoes').innerHTML = 
+                    '<tr><td colspan="6" class="empty">Erro ao carregar classificações</td></tr>';
+            }
+        }
+
+        async function editarClassificacao(id) {
+            try {
+                const response = await fetch(`/api/obter-classificacao/${id}`);
+                const classificacao = await response.json();
+                
+                document.getElementById('chave').value = classificacao.chave;
+                document.getElementById('nomeclassificacao').value = classificacao.nomeclassificacao;
+                document.getElementById('quantidadepartes').value = classificacao.quantidadepartes || '';
+                document.getElementById('nrofoto').value = classificacao.nrofoto || '';
+                document.getElementById('formadecobrar').value = classificacao.formadecobrar || '';
+                if (document.getElementById('op_tamanhos')) document.getElementById('op_tamanhos').value = classificacao.op_tamanhos || '';
+                if (document.getElementById('op_massas')) document.getElementById('op_massas').value = classificacao.op_massas || '';
+                if (document.getElementById('op_bordas')) document.getElementById('op_bordas').value = classificacao.op_bordas || '';
+                if (document.getElementById('op_coberturas')) document.getElementById('op_coberturas').value = classificacao.op_coberturas || '';
+                if (document.getElementById('op_adicionais')) document.getElementById('op_adicionais').value = classificacao.op_adicionais || '';
+                
+                editandoId = id;
+                renderAllOpLists();
+                
+                // Scroll para o formulário
+                document.getElementById('classificacaoFormPanel')?.scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('nomeclassificacao').focus();
+            } catch (error) {
+                console.error('Erro ao carregar classificação:', error);
+                mostrarMensagem('Erro ao carregar classificação', 'erro');
+            }
+        }
+
+        async function excluirClassificacao(id, nome) {
+            const nomeTxt = String(nome || '').trim();
+            if (!confirm(`Excluir a classificação "${nomeTxt || id}"?`)) return;
+
+            try {
+                const response = await fetch(`/api/excluir-classificacao/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.sucesso) {
+                    carregarClassificacoes();
+                    // Se estava editando esta classificação, limpar o formulário
+                    if (editandoId === id) {
+                        limparFormulario();
+                    }
+                } else {
+                    mostrarMensagem(result.mensagem || 'Erro ao excluir classificação', 'erro');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarMensagem('Erro ao excluir classificação', 'erro');
+            }
+        }
+
+        function mostrarMensagem(texto, tipo) {
+            const mensagem = document.getElementById('mensagem');
+            mensagem.textContent = texto;
+            mensagem.className = `mensagem ${tipo}`;
+            mensagem.style.display = 'block';
+            
+            setTimeout(() => {
+                mensagem.style.display = 'none';
+            }, 4000);
+        }
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+<script>try { lucide.createIcons(); } catch (e) {}</script>
+</body>
+</html>

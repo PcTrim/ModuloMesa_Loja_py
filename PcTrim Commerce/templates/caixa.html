@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caixa - Novaloja</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .voltar {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+        
+        .voltar:hover {
+            background: #764ba2;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 30px;
+        }
+        
+        .info-box h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .info-box p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .card-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .card-label {
+            color: #999;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        #mensagem {
+            margin-bottom: 20px;
+        }
+        
+        .sucesso {
+            background: #efe;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #3c3;
+        }
+        
+        .erro {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #c33;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-style: italic;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .content {
+                padding: 15px;
+            }
+            
+            .cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div style="position: absolute; top: 8px; left: 8px; z-index: 99999; background: #fffbe6; color: #ff9800; font-size: 2.2em; font-weight: bold; border-radius: 10px; padding: 2px 18px 2px 12px; box-shadow: 0 2px 8px #ff980055; border: 2px solid #ff9800;">5</div>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Caixa</h1>
+            <p>Sistema de gerenciamento de caixa e receitas</p>
+        </div>
+        
+        <div class="content">
+            <a href="/" class="voltar">← Voltar</a>
+            
+            <div class="info-box">
+                <h2>📊 Resumo de Receitas</h2>
+                <p>Acompanhe o resumo de receitas de pedidos fechados e cancelados.</p>
+            </div>
+            
+            <div id="mensagem"></div>
+            
+            <div class="cards">
+                <div class="card">
+                    <h3>📦 Comandas Fechadas</h3>
+                    <div class="card-value" id="totalComandas">R$ 0,00</div>
+                    <div class="card-label">Total de receita</div>
+                    <p style="color: #999; font-size: 12px; margin-top: 10px;">
+                        <span id="qtdComandas">0</span> pedidos
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3>✗ Pedidos Cancelados</h3>
+                    <div class="card-value" id="totalCancelados">R$ 0,00</div>
+                    <div class="card-label">Perda de receita</div>
+                    <p style="color: #999; font-size: 12px; margin-top: 10px;">
+                        <span id="qtdCancelados">0</span> pedidos
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3>💵 Total Líquido</h3>
+                    <div class="card-value" id="totalLiquido">R$ 0,00</div>
+                    <div class="card-label">Receita efetiva</div>
+                    <p style="color: #999; font-size: 12px; margin-top: 10px;">
+                        Comandas - Cancelados
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function carregarDadosCaixa() {
+            const mensagemEl = document.getElementById('mensagem');
+            mensagemEl.innerHTML = '';
+            
+            Promise.all([
+                fetch('/api/comandas').then(res => res.json()),
+                fetch('/api/canceladas').then(res => res.json())
+            ])
+            .then(([comandas, canceladas]) => {
+                if (!comandas.sucesso || !canceladas.sucesso) {
+                    mensagemEl.innerHTML = `<div class="erro">Erro ao carregar dados</div>`;
+                    return;
+                }
+                
+                // Calcula totais para comandas
+                let totalComandas = 0;
+                const pedidosUnicos = {};
+                
+                comandas.registros.forEach(reg => {
+                    if (!pedidosUnicos[reg.nropedido]) {
+                        pedidosUnicos[reg.nropedido] = 0;
+                    }
+                    pedidosUnicos[reg.nropedido] += parseFloat(reg.preco) || 0;
+                });
+                
+                totalComandas = Object.values(pedidosUnicos).reduce((sum, val) => sum + val, 0);
+                
+                // Calcula totais para cancelados
+                let totalCancelados = 0;
+                const pedidosCancelados = {};
+                
+                canceladas.registros.forEach(reg => {
+                    if (!pedidosCancelados[reg.nropedido]) {
+                        pedidosCancelados[reg.nropedido] = 0;
+                    }
+                    pedidosCancelados[reg.nropedido] += parseFloat(reg.preco) || 0;
+                });
+                
+                totalCancelados = Object.values(pedidosCancelados).reduce((sum, val) => sum + val, 0);
+                
+                // Calcula total líquido
+                const totalLiquido = totalComandas - totalCancelados;
+                
+                // Atualiza DOM
+                document.getElementById('totalComandas').textContent = `R$ ${totalComandas.toFixed(2).replace('.', ',')}`;
+                document.getElementById('qtdComandas').textContent = Object.keys(pedidosUnicos).length;
+                
+                document.getElementById('totalCancelados').textContent = `R$ ${totalCancelados.toFixed(2).replace('.', ',')}`;
+                document.getElementById('qtdCancelados').textContent = Object.keys(pedidosCancelados).length;
+                
+                document.getElementById('totalLiquido').textContent = `R$ ${totalLiquido.toFixed(2).replace('.', ',')}`;
+                
+                // Muda cor do total líquido conforme positivo/negativo
+                const totalLiquidoEl = document.getElementById('totalLiquido');
+                if (totalLiquido >= 0) {
+                    totalLiquidoEl.style.color = '#28a745';
+                } else {
+                    totalLiquidoEl.style.color = '#dc3545';
+                }
+                
+                mensagemEl.innerHTML = `<div class="sucesso">✓ Dados carregados com sucesso</div>`;
+            })
+            .catch(err => {
+                console.error('Erro:', err);
+                mensagemEl.innerHTML = `<div class="erro">Erro ao conectar com o servidor: ${err}</div>`;
+            });
+        }
+        
+        window.onload = () => {
+            carregarDadosCaixa();
+            setInterval(carregarDadosCaixa, 30000);
+        };
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+</body>
+</html>

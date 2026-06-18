@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Produto - Novaloja</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    {% include 'partials/topbar_meta_assets.html' %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+    <div class="cfg-page">
+    <header class="topbar">
+        <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
+        <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+        <div class="brand">Produtos</div>
+        {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+            <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+            <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+        </button>
+    </header>
+
+    <div class="shell">
+        <section class="center">
+            <div class="field-group">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <p class="title" style="margin:0;">Produtos cadastrados</p>
+                    <button type="button" class="btn-purple" style="width:auto; padding:8px 12px;" onclick="novoRegistro()">Novo</button>
+                </div>
+            </div>
+
+            <table class="tbl" id="tabelaProdutos">
+                <thead>
+                    <tr>
+                        <th style="width: 90px;">Código</th>
+                        <th>Produto</th>
+                        <th style="width: 110px;">Preço</th>
+                        <th style="width: 130px;">Classe</th>
+                        <th style="width: 110px;">Por kilo</th>
+                        <th style="width: 120px;">Venda</th>
+                        <th style="width: 220px; text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela">
+                    <tr><td colspan="7" class="empty">Carregando produtos...</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <aside class="right">
+            <div id="mensagem" class="mensagem" style="display: none;"></div>
+
+            <div class="field-group" id="produtoFormPanel">
+                <p class="title">Cadastro de produto</p>
+                <form id="formProduto" class="form" onsubmit="salvarProduto(event)">
+                    <input type="text" id="nome" required placeholder="Nome do produto">
+                    <input type="text" id="barcode" maxlength="50" placeholder="Código de barras (opcional)">
+
+                    <div class="row-split">
+                        <input type="number" id="preco" step="0.01" required placeholder="Preço (R$)">
+                        <select id="classificacaoSelect">
+                            <option value="">Classificação...</option>
+                        </select>
+                    </div>
+
+                    <input type="text" id="classe" required placeholder="Classe (preenchida pela classificação)" readonly>
+
+                    <div class="row-split">
+                        <select id="porkilo">
+                            <option value="Nao">Por kilo: Não</option>
+                            <option value="Sim">Por kilo: Sim</option>
+                        </select>
+
+                        <select id="vendaliberada">
+                            <option value="Sim">Venda: Sim</option>
+                            <option value="Nao">Venda: Não</option>
+                        </select>
+                    </div>
+
+                    <div class="row-split">
+                        <select id="impressora">
+                            <option value="1">Impressora (padrão)</option>
+                        </select>
+                        <input type="number" id="display" value="0" placeholder="Display">
+                    </div>
+
+                    {% set papel = (session.get('funcao') or 'gerente')|lower %}
+                    {% if papel == 'gerente' %}
+                    <div class="row-split">
+                        <input type="text" id="cfop" value="5102" maxlength="4" placeholder="CFOP">
+                        <input type="text" id="ncm" maxlength="20" placeholder="NCM">
+                    </div>
+                    {% else %}
+                    <input type="hidden" id="cfop" value="5102">
+                    <input type="hidden" id="ncm" value="">
+                    {% endif %}
+
+                    <textarea id="descricao" rows="3" maxlength="250" placeholder="Descrição (opcional)"></textarea>
+
+                    <input type="hidden" id="chaveEdicao" value="">
+
+                    <div class="actions">
+                        <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
+                        <button type="submit" class="btn-green" id="btnSalvar">Salvar</button>
+                        <button type="button" class="btn-modal" id="btnCancelar" onclick="cancelarEdicao()" style="display: none;">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </aside>
+    </div>
+    </div>
+
+    <script>
+        // Inicialização ao carregar a página
+        document.addEventListener('DOMContentLoaded', () => {
+            // Configurar navegação por Enter
+            const ordemCampos = [
+                'nome',
+                'barcode',
+                'preco',
+                'classificacaoSelect',
+                'classe',
+                'porkilo',
+                'vendaliberada',
+                'impressora',
+                'display',
+                'cfop',
+                'ncm',
+                'descricao'
+            ];
+
+            const avancar = (e) => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                const idAtual = e.target.id;
+                const idx = ordemCampos.indexOf(idAtual);
+                if (idx === -1) return;
+                const proximoId = ordemCampos[idx + 1];
+                if (proximoId) {
+                    const el = document.getElementById(proximoId);
+                    if (el) el.focus();
+                } else {
+                    document.getElementById('btnSalvar')?.focus();
+                }
+            };
+
+            ordemCampos.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('keydown', avancar);
+            });
+
+            // Carrega classificações e preenche select
+            fetch('/carrossel-imagens')
+                .then(r => r.json())
+                .then(lista => {
+                    const select = document.getElementById('classificacaoSelect');
+                    if (!select || !Array.isArray(lista)) return;
+                    lista.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.nome?.toUpperCase() || '';
+                        opt.textContent = item.nome || '';
+                        select.appendChild(opt);
+                    });
+                })
+                .catch(err => console.error('Erro ao carregar classificações:', err));
+
+            // Ao escolher classificação, preencher classe
+            const selClass = document.getElementById('classificacaoSelect');
+            if (selClass) {
+                selClass.addEventListener('change', () => {
+                    const classe = document.getElementById('classe');
+                    if (classe) {
+                        classe.value = (selClass.value || '').toUpperCase();
+                    }
+                });
+            }
+
+            carregarImpressorasParaProduto().finally(() => {
+                carregarProdutos();
+            });
+        });
+
+        async function carregarImpressorasParaProduto() {
+            const select = document.getElementById('impressora');
+            if (!select) return;
+            const currentValue = String(select.value || '1');
+            try {
+                const resp = await fetch('/api/impressoras-cadastro');
+                const data = await resp.json();
+                if (!resp.ok || !data?.sucesso) throw new Error(data?.erro || 'Falha ao carregar impressoras');
+                const rows = Array.isArray(data.impressoras) ? data.impressoras : [];
+                const items = [];
+                const seen = new Set();
+                rows.forEach(r => {
+                    const nome = String(r.nomedaimpressora || '').trim() || String(r.caminho || '').trim();
+                    const nro = Number(r.imprenro);
+                    if (!nome) return;
+                    if (!Number.isFinite(nro) || nro < 0) return;
+                    const key = String(nro);
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    items.push({ value: key, label: nome });
+                });
+
+                let html = '<option value="1">Impressora (padrão)</option>';
+                items.forEach(it => {
+                    html += `<option value="${it.value}">${it.label}</option>`;
+                });
+                select.innerHTML = html;
+
+                const want = currentValue;
+                const exists = Array.from(select.options).some(o => o.value === String(want));
+                if (!exists && want) {
+                    const opt = document.createElement('option');
+                    opt.value = String(want);
+                    opt.textContent = `Impressora ${want}`;
+                    select.appendChild(opt);
+                }
+                select.value = String(want || '1');
+            } catch (e) {
+                console.error('Erro ao carregar impressoras:', e);
+                select.innerHTML = '<option value="1">Impressora (padrão)</option>';
+                select.value = '1';
+            }
+        }
+
+        // Carrega lista de produtos
+        async function carregarProdutos() {
+            try {
+                const response = await fetch('/api/listar-produtos');
+                const result = await response.json();
+                
+                const tbody = document.getElementById('corpoTabela');
+                tbody.innerHTML = '';
+                
+                if (result.sucesso && result.produtos.length > 0) {
+                    result.produtos.forEach(produto => {
+                        const tr = document.createElement('tr');
+                        const porkiloBadge = produto.porkilo === 'Sim' ? 
+                            '<span class="pill ok">Sim</span>' : 
+                            '<span class="pill bad">Não</span>';
+                        const vendaBadge = produto.vendaliberada === 'Sim' ? 
+                            '<span class="pill ok">Sim</span>' : 
+                            '<span class="pill bad">Não</span>';
+                        
+                        tr.innerHTML = `
+                            <td class="kcell">#${produto.chave}</td>
+                            <td>${produto.produto}</td>
+                            <td>R$ ${parseFloat(produto.preco).toFixed(2)}</td>
+                            <td><span class="pill">${produto.classe}</span></td>
+                            <td>${porkiloBadge}</td>
+                            <td>${vendaBadge}</td>
+                            <td style="text-align: center;">
+                                <span class="tbl-actions">
+                                    <button class="btn-mini" onclick="editarProduto(${produto.chave})">Editar</button>
+                                    <button class="btn-mini btn-mini-danger" onclick="excluirProduto(${produto.chave}, '${produto.produto.replace(/'/g, "\\'")}')">Excluir</button>
+                                </span>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum produto cadastrado.</td></tr>';
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar produtos:', erro);
+                const tbody = document.getElementById('corpoTabela');
+                tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar produtos</td></tr>';
+            }
+        }
+        
+        // Editar produto
+        async function editarProduto(chave) {
+            try {
+                const response = await fetch(`/api/obter-produto/${chave}`);
+                const result = await response.json();
+                
+                if (result.sucesso && result.produto) {
+                    const p = result.produto;
+                    document.getElementById('chaveEdicao').value = p.chave;
+                    document.getElementById('nome').value = p.produto;
+                    document.getElementById('barcode').value = p.barcode || '';
+                    document.getElementById('preco').value = p.preco;
+                    document.getElementById('classe').value = p.classe;
+                    document.getElementById('porkilo').value = p.porkilo;
+                    document.getElementById('vendaliberada').value = p.vendaliberada;
+                    document.getElementById('impressora').value = p.impressora;
+                    document.getElementById('display').value = p.display;
+                    document.getElementById('cfop').value = p.cfop;
+                    document.getElementById('ncm').value = p.ncm || '';
+                    document.getElementById('descricao').value = p.descricao || '';
+                    
+                    // Busca a classificação correspondente
+                    const selectClass = document.getElementById('classificacaoSelect');
+                    if (selectClass) {
+                        const options = selectClass.options;
+                        for (let i = 0; i < options.length; i++) {
+                            if (options[i].value.toUpperCase() === p.classe.toUpperCase()) {
+                                selectClass.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    document.getElementById('btnSalvar').textContent = 'Atualizar';
+                    document.getElementById('btnCancelar').style.display = 'block';
+                    
+                    // Scroll para o formulário
+                    document.getElementById('produtoFormPanel')?.scrollIntoView({ behavior: 'smooth' });
+                    document.getElementById('nome').focus();
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar produto:', erro);
+                alert('Erro ao carregar dados do produto');
+            }
+        }
+        
+        // Excluir produto
+        async function excluirProduto(chave, nome) {
+            if (!confirm(`Tem certeza que deseja excluir o produto "${nome}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/excluir-produto/${chave}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                const mensagemDiv = document.getElementById('mensagem');
+                
+                if (result.sucesso) {
+                    mensagemDiv.className = 'mensagem sucesso';
+                    mensagemDiv.textContent = result.mensagem;
+                    mensagemDiv.style.display = 'block';
+                    
+                    carregarProdutos();
+                    
+                    setTimeout(() => {
+                        mensagemDiv.style.display = 'none';
+                    }, 3000);
+                } else {
+                    mensagemDiv.className = 'mensagem erro';
+                    mensagemDiv.textContent = (result.erro || 'Erro ao excluir produto');
+                    mensagemDiv.style.display = 'block';
+                }
+            } catch (erro) {
+                console.error('Erro ao excluir produto:', erro);
+                alert('Erro ao excluir produto');
+            }
+        }
+        
+        // Novo registro
+        function novoRegistro() {
+            cancelarEdicao();
+            document.getElementById('produtoFormPanel')?.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('nome').focus();
+        }
+        
+        // Cancelar edição
+        function cancelarEdicao() {
+            document.getElementById('formProduto').reset();
+            document.getElementById('chaveEdicao').value = '';
+            document.getElementById('btnSalvar').textContent = 'Salvar';
+            document.getElementById('btnCancelar').style.display = 'none';
+            document.getElementById('nome').focus();
+        }
+        
+        async function salvarProduto(event) {
+            event.preventDefault();
+            
+            const chaveEdicao = document.getElementById('chaveEdicao').value;
+            const dados = {
+                produto: document.getElementById('nome').value.trim().toUpperCase(),
+                barcode: document.getElementById('barcode').value.trim() || null,
+                preco: parseFloat(document.getElementById('preco').value),
+                classe: document.getElementById('classe').value.trim().toUpperCase(),
+                porkilo: document.getElementById('porkilo').value.toUpperCase(),
+                vendaliberada: document.getElementById('vendaliberada').value.toUpperCase(),
+                impressora: parseInt(document.getElementById('impressora').value) || 1,
+                display: parseInt(document.getElementById('display').value) || 0,
+                cfop: document.getElementById('cfop').value.trim().toUpperCase() || '5102',
+                ncm: document.getElementById('ncm').value.trim().toUpperCase() || '',
+                descricao: document.getElementById('descricao').value.trim().toUpperCase() || ''
+            };
+            
+            try {
+                let url = '/api/salvar-produto';
+                let method = 'POST';
+                
+                // Se tem chave de edição, usa rota de atualização
+                if (chaveEdicao) {
+                    url = `/api/editar-produto/${chaveEdicao}`;
+                    method = 'PUT';
+                }
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                
+                const result = await response.json();
+                const mensagemDiv = document.getElementById('mensagem');
+                
+                if (result.sucesso) {
+                    mensagemDiv.className = 'mensagem sucesso';
+                    mensagemDiv.textContent = result.mensagem;
+                    mensagemDiv.style.display = 'block';
+                    
+                    // Limpa o formulário
+                    cancelarEdicao();
+                    
+                    // Recarrega a lista
+                    carregarProdutos();
+                    
+                    // Esconde a mensagem após 3 segundos
+                    setTimeout(() => {
+                        mensagemDiv.style.display = 'none';
+                    }, 3000);
+                } else {
+                    mensagemDiv.className = 'mensagem erro';
+                    mensagemDiv.textContent = (result.erro || 'Erro ao salvar produto');
+                    mensagemDiv.style.display = 'block';
+                }
+            } catch (erro) {
+                console.error('Erro ao salvar produto:', erro);
+                const mensagemDiv = document.getElementById('mensagem');
+                mensagemDiv.className = 'mensagem erro';
+                mensagemDiv.textContent = 'Erro ao conectar com o servidor';
+                mensagemDiv.style.display = 'block';
+            }
+        }
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+<script>try { lucide.createIcons(); } catch (e) {}</script>
+</body>
+</html>

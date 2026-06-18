@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formas de Pagamento</title>
+    <link rel="stylesheet" href="/static/style_moderno.css?v=20260114">
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+            padding: 32px 24px;
+        }
+        .titulo {
+            text-align: center;
+            color: #3b4cca;
+            font-size: 2em;
+            font-weight: 800;
+            margin-bottom: 24px;
+        }
+        .formas-lista {
+            margin-bottom: 32px;
+        }
+        .forma-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f6f7ff;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+        .forma-nome {
+            font-weight: 600;
+            color: #333;
+        }
+        .btn-excluir {
+            background: #f56565;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+        }
+        .adicionar-forma {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .adicionar-forma input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        .btn-adicionar {
+            background: linear-gradient(135deg, #43c6ac 0%, #3bb77e 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1em;
+        }
+        .voltar {
+            display: inline-block;
+            margin-top: 24px;
+            background: linear-gradient(135deg, #0077ff 0%, #0055aa 100%);
+            color: #fff;
+            border-radius: 8px;
+            padding: 12px 32px;
+            text-decoration: none !important;
+            font-weight: 600;
+        }
+        .voltar:hover, .voltar:visited, .voltar:active, .voltar:focus {
+            text-decoration: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="titulo">Formas de Pagamento</h1>
+        <form class="adicionar-forma" onsubmit="adicionarFormaPagamento(event)">
+            <input type="text" id="novaForma" placeholder="Nova forma de pagamento" required>
+            <button type="submit" class="btn-adicionar">Adicionar</button>
+        </form>
+        <div class="formas-lista" id="formasLista">
+            <!-- Formas de pagamento serão listadas aqui -->
+        </div>
+        <a href="/configuracoes" class="voltar">Voltar</a>
+    </div>
+    <script>
+        function carregarFormasPagamento() {
+            fetch('/api/formas-pagamento')
+                .then(res => res.json())
+                .then(data => {
+                    const lista = document.getElementById('formasLista');
+                    lista.innerHTML = '';
+                    if (data.sucesso && Array.isArray(data.formas)) {
+                        data.formas.forEach(f => {
+                            const item = document.createElement('div');
+                            item.className = 'forma-item';
+                            item.innerHTML = `<span class='forma-nome'>${f.forma}</span> <button class='btn-excluir' onclick='excluirFormaPagamento(${f.chave})'>Excluir</button>`;
+                            lista.appendChild(item);
+                        });
+                    } else {
+                        lista.innerHTML = '<p style="color:#999;text-align:center;">Nenhuma forma cadastrada.</p>';
+                    }
+                });
+        }
+        function adicionarFormaPagamento(e) {
+            e.preventDefault();
+            const nome = document.getElementById('novaForma').value.trim();
+            if (!nome) return;
+            fetch('/api/salvar-forma-pagamento', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ forma: nome })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.sucesso) {
+                    document.getElementById('novaForma').value = '';
+                    carregarFormasPagamento();
+                } else {
+                    alert('Erro ao adicionar forma: ' + (data.erro || '')); 
+                }
+            });
+        }
+        function excluirFormaPagamento(chave) {
+            if (!confirm('Excluir esta forma de pagamento?')) return;
+            fetch('/api/excluir-forma-pagamento/' + chave, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.sucesso) {
+                    carregarFormasPagamento();
+                } else {
+                    alert('Erro ao excluir forma: ' + (data.erro || ''));
+                }
+            });
+        }
+        window.onload = carregarFormasPagamento;
+    </script>
+</body>
+</html>

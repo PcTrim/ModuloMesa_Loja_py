@@ -1,0 +1,38 @@
+{# Deve vir no <head> antes de outros scripts que chamam fetch ou redirecionam. #}
+<script>
+(function () {
+  var base = {{ url_prefix|tojson }};
+  if (!base && typeof location !== "undefined") {
+    var m = (location.pathname || "").match(/^(\/LojaOnline)/i);
+    if (m) base = m[1];
+  }
+  window.LOJA_BASE = base || "";
+  window.lojaUrl = function (p) {
+    var b = window.LOJA_BASE || "";
+    if (!b && typeof location !== "undefined") {
+      var m2 = (location.pathname || "").match(/^(\/LojaOnline)/i);
+      if (m2) b = m2[1];
+    }
+    if (!p) return b || "/";
+    if (/^https?:\/\//i.test(p)) return p;
+    if (p.charAt(0) !== "/") p = "/" + p;
+    if (b) {
+      var bp = b.charAt(0) === "/" ? b : "/" + b;
+      if (p === bp || p.indexOf(bp + "/") === 0) return p;
+    }
+    return (b || "") + p;
+  };
+  window.lojaGo = function (p) {
+    window.location.assign(window.lojaUrl(p));
+  };
+  var _fetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    if (typeof input === "string") {
+      input = window.lojaUrl(input);
+    } else if (input && input.url) {
+      input = new Request(window.lojaUrl(input.url), input);
+    }
+    return _fetch(input, init);
+  };
+})();
+</script>

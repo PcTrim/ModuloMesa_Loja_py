@@ -1,0 +1,3 @@
+{# Modo varejo: expõe IS_RETAIL ao JS via retail-mode.js #}
+<script>window.__LOJA_RETAIL={{ 'true' if IS_RETAIL else 'false' }};</script>
+<script src="{{ url_for('static', filename='retail-mode.js') }}?v=1"></script>

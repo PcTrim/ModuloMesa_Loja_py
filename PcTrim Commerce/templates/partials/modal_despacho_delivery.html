@@ -1,0 +1,230 @@
+{# Modal global: despachar pedido DELIVERY (ABERTO → ROTA) + código entregador #}
+<style>
+  .despacho-fab {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    z-index: 9990;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--green, #059669) 78%, #ffffff 22%),
+      var(--green, #059669) 42%,
+      color-mix(in srgb, var(--green, #059669) 72%, #0f172a 28%)
+    );
+    color: #fff;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 0 0 1px rgba(0, 0, 0, 0.14),
+      0 12px 34px rgba(0, 0, 0, 0.34),
+      0 3px 10px rgba(0, 0, 0, 0.2);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .despacho-fab .despacho-fab-icon {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: block;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.28));
+  }
+  @supports not (color: color-mix(in srgb, red 50%, blue)) {
+    .despacho-fab {
+      background: linear-gradient(165deg, #34d399, var(--green, #059669), #047857);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .despacho-fab {
+      transition: none;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .despacho-fab:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.26),
+        0 0 0 1px rgba(0, 0, 0, 0.12),
+        0 16px 40px rgba(0, 0, 0, 0.38),
+        0 4px 12px rgba(0, 0, 0, 0.22);
+    }
+    .despacho-fab:active {
+      transform: translateY(0);
+    }
+  }
+  .despacho-fab:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 3px;
+  }
+  #despacho-delivery-modal[hidden] { display: none !important; }
+  #despacho-delivery-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+  .despacho-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+  }
+  .despacho-panel {
+    position: relative;
+    width: min(520px, 100%);
+    max-height: min(86vh, 640px);
+    overflow: auto;
+    background: var(--surface, #1a1a28);
+    color: var(--text, #e8e8f0);
+    border-radius: 16px;
+    border: 0.5px solid var(--line, #2a2a40);
+    padding: 16px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+  }
+  .despacho-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .despacho-head h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .despacho-close {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+  .despacho-close:hover { background: rgba(255, 255, 255, 0.08); }
+  .despacho-msg {
+    min-height: 22px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #fca5a5;
+  }
+  .despacho-msg.ok { color: #86efac; }
+  .despacho-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted, #888fa0);
+    margin: 10px 0 6px;
+  }
+  .despacho-list {
+    max-height: 220px;
+    overflow: auto;
+    border: 0.5px solid var(--line, #2a2a40);
+    border-radius: 12px;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.12);
+  }
+  .despacho-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .despacho-row:hover { background: rgba(255, 255, 255, 0.06); }
+  .despacho-row input { margin-top: 4px; }
+  .despacho-row strong { font-size: 15px; }
+  .despacho-row small { display: block; color: var(--muted, #888fa0); font-size: 12px; margin-top: 2px; }
+  .despacho-select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 0.5px solid var(--line, #2a2a40);
+    background: var(--bg, #0f0f14);
+    color: inherit;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .despacho-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .despacho-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 15px;
+  }
+  .despacho-btn-primary { background: #16a34a; color: #fff; }
+  .despacho-btn-ghost {
+    background: transparent;
+    color: inherit;
+    border: 0.5px solid var(--line, #2a2a40);
+  }
+</style>
+
+<button type="button" class="despacho-fab" data-despacho-open aria-label="Despachar pedido delivery">
+  <svg class="despacho-fab-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
+    <path d="M15 18H9" />
+    <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
+    <circle cx="17" cy="18" r="2" />
+    <circle cx="7" cy="18" r="2" />
+  </svg>
+  <span>Despacho</span>
+</button>
+
+<div id="despacho-delivery-modal" hidden role="dialog" aria-modal="true" aria-labelledby="despacho-delivery-title">
+  <div class="despacho-backdrop" data-despacho-close tabindex="-1"></div>
+  <div class="despacho-panel" role="document">
+    <div class="despacho-head">
+      <h2 id="despacho-delivery-title">Despachar delivery</h2>
+      <button type="button" class="despacho-close" data-despacho-close aria-label="Fechar">&times;</button>
+    </div>
+    <p style="margin:0 0 8px;font-size:13px;color:var(--muted,#888);line-height:1.4;">
+      Pedidos em <strong>ABERTO</strong> passam para <strong>ROTA</strong> e ficam com o código do entregador na base.
+    </p>
+    <div id="despacho-msg" class="despacho-msg" role="status"></div>
+
+    <span class="despacho-label">Pedido</span>
+    <div id="despacho-pedidos-list" class="despacho-list">Carregando…</div>
+
+    <label class="despacho-label" for="despacho-select-entregador">Entregador (código)</label>
+    <select id="despacho-select-entregador" class="despacho-select">
+      <option value="">— Carregando —</option>
+    </select>
+
+    <div class="despacho-actions">
+      <button type="button" class="despacho-btn despacho-btn-ghost" data-despacho-close>Cancelar</button>
+      <button type="button" class="despacho-btn despacho-btn-primary" id="despacho-btn-confirmar">Confirmar despacho</button>
+    </div>
+  </div>
+</div>

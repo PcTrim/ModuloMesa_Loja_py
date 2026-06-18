@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dados da Loja</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    {% include 'partials/topbar_meta_assets.html' %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+    <style>
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="cfg-body">
+    <div class="cfg-page">
+    <header class="topbar">
+        <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
+        <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+        <div class="brand">Dados da loja</div>
+        {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+            <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+            <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+        </button>
+    </header>
+
+    <main class="cfg-content">
+    <form id="formDadosLoja" class="cfg-wrap" autocomplete="off">
+        <div id="mensagem" class="mensagem" style="display:none" role="status"></div>
+
+        <section class="cfg-section-card">
+            <h2 class="cfg-section-title">Loja</h2>
+            <div class="cfg-grid-fields">
+                <div class="cfg-field">
+                    <label class="cfg-label cfg-required" for="nome">Nome fantasia</label>
+                    <input class="cfg-input" type="text" id="nome" name="nome" required placeholder="Nome da loja">
+                </div>
+                <div class="cfg-field">
+                    <label class="cfg-label" for="cnpj">CNPJ/CPF</label>
+                    <input class="cfg-input" type="text" id="cnpj" name="cnpj" placeholder="CNPJ ou CPF">
+                </div>
+            </div>
+        </section>
+
+        <section class="cfg-section-card">
+            <h2 class="cfg-section-title">Endereço</h2>
+            <div class="cfg-grid-fields">
+                <div class="cfg-field">
+                    <label class="cfg-label cfg-required" for="cep">CEP</label>
+                    <input class="cfg-input" type="text" id="cep" name="cep" required placeholder="00000-000" maxlength="10">
+                    <p class="cfg-help">Ao completar o CEP, endereço e DDD são preenchidos automaticamente.</p>
+                </div>
+                <div class="cfg-field" style="grid-column: 1 / -1;">
+                    <label class="cfg-label cfg-required" for="endereco">Endereço</label>
+                    <input class="cfg-input" type="text" id="endereco" name="endereco" required placeholder="Rua, número">
+                </div>
+                <div class="cfg-field">
+                    <label class="cfg-label" for="bairro">Bairro</label>
+                    <input class="cfg-input" type="text" id="bairro" name="bairro" placeholder="Bairro">
+                </div>
+                <div class="cfg-field">
+                    <label class="cfg-label cfg-required" for="cidade">Cidade - UF</label>
+                    <input class="cfg-input" type="text" id="cidade" name="cidade" required placeholder="Cidade - UF">
+                </div>
+            </div>
+        </section>
+
+        <section class="cfg-section-card">
+            <h2 class="cfg-section-title">Contato</h2>
+            <div class="cfg-grid-fields">
+                <div class="cfg-field">
+                    <label class="cfg-label cfg-required" for="telefone">Telefone / WhatsApp</label>
+                    <input class="cfg-input" type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000">
+                </div>
+                <div class="cfg-field">
+                    <label class="cfg-label cfg-required" for="ddd">DDD</label>
+                    <input class="cfg-input" type="text" id="ddd" name="ddd" required placeholder="00" maxlength="3">
+                </div>
+            </div>
+        </section>
+
+        <section class="cfg-section-card">
+            <h2 class="cfg-section-title">Coordenadas</h2>
+            <p class="cfg-help" style="margin-top:0;margin-bottom:12px;">Se não encontrar automaticamente, a tela libera edição manual.</p>
+            <button type="button" class="cfg-btn cfg-btn-primary" id="btnGeocode" onclick="buscarCoordenadas(event)" style="margin-bottom:16px;width:100%;max-width:280px;">Buscar coordenadas</button>
+            <div class="cfg-grid-fields">
+                <div class="cfg-field">
+                    <label class="cfg-label cfg-required" for="latitude">Latitude</label>
+                    <input class="cfg-input" type="text" id="latitude" name="latitude" required placeholder="Latitude" readonly>
+                </div>
+                <div class="cfg-field">
+                    <label class="cfg-label cfg-required" for="longitude">Longitude</label>
+                    <input class="cfg-input" type="text" id="longitude" name="longitude" required placeholder="Longitude" readonly>
+                </div>
+            </div>
+        </section>
+
+        <div class="cfg-actions-bar">
+            <button type="button" class="cfg-btn cfg-btn-ghost" onclick="lojaGo('/configuracoes')">Voltar</button>
+            <button type="submit" class="cfg-btn cfg-btn-primary">Salvar</button>
+        </div>
+    </form>
+    </main>
+    </div>
+
+    <script>
+                // Impede submit do formulário ao pressionar Enter em qualquer campo
+                document.getElementById('formDadosLoja').addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        // Permite Enter apenas em textarea (se houver)
+                        if (e.target.tagName.toLowerCase() !== 'textarea') {
+                            e.preventDefault();
+                            return false;
+                        }
+                    }
+                });
+        // Carrega os dados existentes ao abrir a página
+        window.addEventListener('DOMContentLoaded', carregarDados);
+
+        // Buscar dados por CEP
+        async function buscarPorCep(cep) {
+            const cepLimpo = cep.replace(/\D/g, '');
+            
+            if (cepLimpo.length !== 8) return;
+
+            try {
+                // Busca dados do CEP via ViaCEP
+                const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+                const dados = await response.json();
+
+                if (dados.erro) {
+                    console.log('CEP não encontrado');
+                    return;
+                }
+
+                // Preenche os campos com os dados do CEP
+                if (dados.logradouro) {
+                    document.getElementById('endereco').value = dados.logradouro;
+                }
+                if (dados.bairro) {
+                    document.getElementById('bairro').value = dados.bairro;
+                }
+                if (dados.localidade && dados.uf) {
+                    document.getElementById('cidade').value = dados.localidade + ' - ' + dados.uf;
+                }
+                if (dados.ddd) {
+                    document.getElementById('ddd').value = dados.ddd;
+                }
+
+                // Busca as coordenadas automaticamente
+                const enderecoCompleto = `${dados.logradouro}, ${dados.bairro}, ${dados.localidade} - ${dados.uf}, ${cep}`;
+                await buscarCoordenadasPorEndereco(enderecoCompleto);
+
+                const mensagemDiv = document.getElementById('mensagem');
+                mensagemDiv.className = 'mensagem sucesso';
+                mensagemDiv.textContent = 'Dados preenchidos automaticamente pelo CEP.';
+                mensagemDiv.style.display = 'block';
+                
+                setTimeout(() => {
+                    mensagemDiv.style.display = 'none';
+                }, 3000);
+
+            } catch (erro) {
+                console.error('Erro ao buscar CEP:', erro);
+            }
+        }
+
+        // Buscar coordenadas por endereço completo
+        async function buscarCoordenadasPorEndereco(enderecoCompleto) {
+            try {
+                const url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(enderecoCompleto);
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'NovaLojaApp/1.0'
+                    }
+                });
+
+                const resultados = await response.json();
+
+                if (resultados && resultados.length > 0) {
+                    document.getElementById('latitude').value = resultados[0].lat;
+                    document.getElementById('longitude').value = resultados[0].lon;
+                }
+            } catch (erro) {
+                console.error('Erro ao buscar coordenadas:', erro);
+            }
+        }
+
+        // Buscar coordenadas manualmente
+        async function buscarCoordenadas(ev) {
+            const endereco = document.getElementById('endereco').value.trim();
+            const bairro = document.getElementById('bairro').value.trim();
+            const cidade = document.getElementById('cidade').value.trim();
+            const cep = document.getElementById('cep').value.trim();
+
+            if (!endereco || !cidade) {
+                alert('Preencha pelo menos o endereço e a cidade para buscar as coordenadas.');
+                return;
+            }
+
+            const btnGeo = ev?.target || document.getElementById('btnGeocode');
+            btnGeo.disabled = true;
+            btnGeo.innerHTML = '<span class="loading"></span> Buscando coordenadas...';
+
+            try {
+                // Monta o endereço completo para geocodificação
+                let enderecoCompleto = endereco;
+                if (bairro) enderecoCompleto += ', ' + bairro;
+                enderecoCompleto += ', ' + cidade;
+                if (cep) enderecoCompleto += ', ' + cep;
+
+                // Chama a API do Nominatim para geocodificar
+                const url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(enderecoCompleto);
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'NovaLojaApp/1.0'
+                    }
+                });
+
+                const resultados = await response.json();
+
+                if (resultados && resultados.length > 0) {
+                    const lat = resultados[0].lat;
+                    const lon = resultados[0].lon;
+
+                    document.getElementById('latitude').value = lat;
+                    document.getElementById('longitude').value = lon;
+
+                    const mensagemDiv = document.getElementById('mensagem');
+                    mensagemDiv.className = 'mensagem sucesso';
+                    mensagemDiv.textContent = 'Coordenadas encontradas com sucesso.';
+                    mensagemDiv.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        mensagemDiv.style.display = 'none';
+                    }, 3000);
+                } else {
+                    alert('Não foi possível encontrar as coordenadas para este endereço. Verifique os dados ou digite manualmente.');
+                    // Permite edição manual se não encontrar
+                    document.getElementById('latitude').removeAttribute('readonly');
+                    document.getElementById('longitude').removeAttribute('readonly');
+                }
+            } catch (erro) {
+                console.error('Erro ao buscar coordenadas:', erro);
+                alert('Erro ao buscar coordenadas. Tente novamente ou preencha manualmente.');
+                // Permite edição manual em caso de erro
+                document.getElementById('latitude').removeAttribute('readonly');
+                document.getElementById('longitude').removeAttribute('readonly');
+            } finally {
+                btnGeo.disabled = false;
+                btnGeo.innerHTML = 'Buscar coordenadas';
+            }
+        }
+
+        async function carregarDados() {
+            try {
+                const response = await fetch('/api/buscar-dados-loja');
+                const resultado = await response.json();
+                
+                if (resultado.sucesso && resultado.dados) {
+                    const dados = resultado.dados;
+                    document.getElementById('nome').value = dados.nome || '';
+                    document.getElementById('endereco').value = dados.endereco || '';
+                    document.getElementById('bairro').value = dados.bairro || '';
+                    document.getElementById('cidade').value = dados.cidade || '';
+                    document.getElementById('cep').value = dados.cep || '';
+                    document.getElementById('telefone').value = dados.telefone || '';
+                    document.getElementById('cnpj').value = dados.cnpj || '';
+                    document.getElementById('latitude').value = dados.latitude || '';
+                    document.getElementById('longitude').value = dados.longitude || '';
+                    document.getElementById('ddd').value = dados.ddd || '';
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar dados:', erro);
+            }
+        }
+
+        // Salva os dados do formulário
+        document.getElementById('formDadosLoja').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Verifica se as coordenadas estão preenchidas
+            const lat = document.getElementById('latitude').value.trim();
+            const lon = document.getElementById('longitude').value.trim();
+
+            if (!lat || !lon) {
+                const confirmar = confirm('As coordenadas não foram preenchidas. Deseja buscar automaticamente antes de salvar?');
+                if (confirmar) {
+                    await buscarCoordenadas();
+                    // Verifica novamente após buscar
+                    if (!document.getElementById('latitude').value || !document.getElementById('longitude').value) {
+                        alert('Não foi possível obter as coordenadas. Preencha manualmente antes de salvar.');
+                        return;
+                    }
+                } else {
+                    return;
+                }
+            }
+            
+            // Impede submit do formulário ao pressionar Enter
+            document.getElementById('formDadosLoja').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    // Permite Enter apenas no botão Salvar Dados
+                    if (e.target.tagName.toLowerCase() !== 'textarea') {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            });
+            
+            const dados = {
+                chave: 1,
+                nome: document.getElementById('nome').value,
+                endereco: document.getElementById('endereco').value,
+                bairro: document.getElementById('bairro').value,
+                cidade: document.getElementById('cidade').value,
+                cep: document.getElementById('cep').value,
+                telefone: document.getElementById('telefone').value,
+                cnpj: document.getElementById('cnpj').value,
+                latitude: document.getElementById('latitude').value,
+                longitude: document.getElementById('longitude').value,
+                ddd: document.getElementById('ddd').value
+            };
+
+            try {
+                const response = await fetch('/api/salvar-dados-loja', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+
+                const resultado = await response.json();
+                const mensagemDiv = document.getElementById('mensagem');
+
+                if (resultado.sucesso) {
+                    mensagemDiv.className = 'mensagem sucesso';
+                    mensagemDiv.textContent = resultado.mensagem;
+                    mensagemDiv.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        mensagemDiv.style.display = 'none';
+                    }, 3000);
+                } else {
+                    mensagemDiv.className = 'mensagem erro';
+                    mensagemDiv.textContent = 'Erro ao salvar: ' + (resultado.erro || 'Erro desconhecido');
+                    mensagemDiv.style.display = 'block';
+                }
+            } catch (erro) {
+                const mensagemDiv = document.getElementById('mensagem');
+                mensagemDiv.className = 'mensagem erro';
+                mensagemDiv.textContent = 'Erro ao salvar dados: ' + erro.message;
+                mensagemDiv.style.display = 'block';
+            }
+        });
+
+        // Máscaras para formatação e busca automática por CEP
+        document.getElementById('cep').addEventListener('input', function(e) {
+            let valor = e.target.value.replace(/\D/g, '');
+            if (valor.length <= 8) {
+                valor = valor.replace(/^(\d{5})(\d)/, '$1-$2');
+            }
+            e.target.value = valor;
+
+            // Busca automática quando CEP estiver completo (8 dígitos)
+            if (valor.replace(/\D/g, '').length === 8) {
+                buscarPorCep(valor);
+            }
+        });
+
+        document.getElementById('ddd').addEventListener('input', function(e) {
+            let valor = e.target.value.replace(/\D/g, '');
+            e.target.value = valor.substring(0, 3);
+        });
+
+        document.getElementById('telefone').addEventListener('input', function(e) {
+            let valor = e.target.value.replace(/\D/g, '');
+            if (valor.length <= 11) {
+                valor = valor.replace(/^(\d{2})(\d)/g, '($1) $2');
+                valor = valor.replace(/(\d)(\d{4})$/, '$1-$2');
+            }
+            e.target.value = valor;
+        });
+
+        document.getElementById('cnpj').addEventListener('input', function(e) {
+            let valor = e.target.value.replace(/\D/g, '');
+            if (valor.length <= 11) {
+                // CPF
+                valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            } else {
+                // CNPJ
+                valor = valor.replace(/^(\d{2})(\d)/, '$1.$2');
+                valor = valor.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                valor = valor.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                valor = valor.replace(/(\d{4})(\d)/, '$1-$2');
+            }
+            e.target.value = valor;
+        });
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+<script>try { lucide.createIcons(); } catch (e) {}</script>
+</body>
+</html>

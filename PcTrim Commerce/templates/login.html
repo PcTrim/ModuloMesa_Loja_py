@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar | PcTrim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_touch.css') }}">
+  {% include 'partials/topbar_meta_assets.html' %}
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #0f0f14;
+      --surface: #1a1a28;
+      --line: #2a2a40;
+      --text: #e8e8f0;
+      --muted: #888;
+      --purple: #7c3aed;
+      --danger: #dc2626;
+      --foot: #666;
+      --shadow: 0 22px 60px rgba(0,0,0,.45);
+    }
+    html[data-theme="light"] {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --line: #c8d0e0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --purple: #6d28d9;
+      --danger: #dc2626;
+      --foot: #64748b;
+      --shadow: 0 18px 55px rgba(2,6,23,.12);
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Outfit", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at top right, rgba(124, 58, 237, 0.16) 0%, transparent 42%),
+        radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.10) 0%, transparent 38%),
+        var(--bg);
+    }
+    .login-card {
+      position: relative;
+      width: min(440px, calc(100vw - 24px));
+      max-width: calc(100vw - 24px);
+      background: var(--surface);
+      border: 0.5px solid var(--line);
+      border-radius: 18px;
+      padding: 30px 26px 24px;
+      box-shadow: var(--shadow);
+    }
+    .theme-login-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 12px;
+      border: 0.5px solid var(--line);
+      background: var(--bg);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .theme-login-btn:hover {
+      color: var(--text);
+      border-color: var(--purple);
+    }
+    .theme-login-btn:focus-visible {
+      outline: none;
+      border-color: var(--purple);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+      color: var(--text);
+    }
+    html[data-theme="dark"] .theme-login-btn .icon-dark { display: none; }
+    html[data-theme="light"] .theme-login-btn .icon-light { display: none; }
+    .login-logo {
+      display: block;
+      width: min(260px, 100%);
+      height: auto;
+      margin: 0 auto 16px;
+      object-fit: contain;
+    }
+    .login-title {
+      margin: 0 0 24px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      text-align: center;
+    }
+    .login-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .login-field-wrap { margin-bottom: 16px; }
+    .login-input {
+      width: 100%;
+      background: var(--bg);
+      border: 0.5px solid var(--line);
+      border-radius: 12px;
+      color: var(--text);
+      min-height: 54px;
+      padding: 12px 14px;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 600;
+      transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+    }
+    .login-input:focus {
+      outline: none;
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22);
+      background: color-mix(in srgb, var(--bg) 55%, var(--surface));
+    }
+    .login-input.invalid { border-color: var(--danger); }
+    .senha-row {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      border: 0.5px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+    .senha-row .login-input {
+      border: none;
+      flex: 1;
+      border-radius: 0;
+    }
+    .senha-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      flex-shrink: 0;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .senha-toggle:hover { color: var(--text); }
+    .senha-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.28); }
+    .senha-toggle i { width: 20px; height: 20px; }
+    .login-msg {
+      display: none;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      border: 0.5px solid var(--line);
+    }
+    .login-msg.show { display: block; }
+    .login-msg.erro { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+    html[data-theme="dark"] .login-msg.erro { color: #fca5a5; }
+    .login-msg.sucesso { background: rgba(16, 185, 129, 0.12); color: #047857; }
+    html[data-theme="dark"] .login-msg.sucesso { color: #6ee7b7; }
+    .login-submit {
+      width: 100%;
+      margin-top: 8px;
+      min-height: 56px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 14px;
+      background: var(--purple);
+      color: #fff;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: filter 0.15s, transform .06s ease;
+    }
+    .login-submit:hover:not(:disabled) { filter: brightness(1.08); }
+    .login-submit:active:not(:disabled) { transform: translateY(1px); }
+    .login-submit:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.28); }
+    .login-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+    .login-foot {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--foot);
+    }
+    @media (max-width: 420px) {
+      .login-card { padding: 26px 18px 20px; border-radius: 16px; }
+      .theme-login-btn { top: 10px; right: 10px; }
+      .login-title { font-size: 19px; margin-bottom: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card ui-card">
+    <div class="top-meta-login" aria-hidden="false">
+      <span class="top-meta-badge app-version-badge" title="Versão da aplicação">v{{ app_version }}</span>
+    </div>
+    <button type="button" class="theme-login-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro"><i data-lucide="sun" class="icon-light" width="18" height="18"></i><i data-lucide="moon" class="icon-dark" width="18" height="18"></i></button>
+    <img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt="PcTrim Tecnologia" class="login-logo" width="260">
+    <h1 class="login-title">Entrar</h1>
+
+    <div id="mensagem" class="login-msg" role="alert" aria-live="polite"></div>
+
+    <form id="loginForm" novalidate>
+      <input type="hidden" id="csrf_token" value="{{ csrf_token or '' }}">
+
+      <div class="login-field-wrap">
+        <label for="usuario" class="login-label">Usuário</label>
+        <input type="text" class="login-input" id="usuario" name="usuario" autocomplete="username" required>
+      </div>
+
+      <div class="login-field-wrap">
+        <label for="senha" class="login-label">Senha</label>
+        <div class="senha-row">
+          <input type="password" class="login-input" id="senha" name="senha" autocomplete="current-password" required>
+          <button type="button" class="senha-toggle" id="togglePassword" aria-label="Mostrar senha" title="Mostrar senha">
+            <i data-lucide="eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn" class="login-submit">Entrar</button>
+      <p class="login-foot">Protegido com token CSRF.</p>
+    </form>
+  </div>
+
+  <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
+  <script>try { lucide.createIcons(); } catch (e) {}</script>
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const usuarioInput = document.getElementById('usuario');
+    const senhaInput = document.getElementById('senha');
+    const csrfInput = document.getElementById('csrf_token');
+    const mensagemEl = document.getElementById('mensagem');
+    const submitBtn = document.getElementById('submitBtn');
+    const togglePasswordBtn = document.getElementById('togglePassword');
+
+    function showMessage(type, text) {
+      mensagemEl.textContent = text;
+      mensagemEl.className = 'login-msg show ' + (type === 'erro' ? 'erro' : 'sucesso');
+    }
+
+    function clearMessage() {
+      mensagemEl.className = 'login-msg';
+      mensagemEl.textContent = '';
+    }
+
+    function validateFields() {
+      let valid = true;
+      [usuarioInput, senhaInput].forEach((el) => el.classList.remove('invalid'));
+
+      if (!usuarioInput.value.trim()) {
+        usuarioInput.classList.add('invalid');
+        valid = false;
+      }
+      if (!senhaInput.value.trim()) {
+        senhaInput.classList.add('invalid');
+        valid = false;
+      }
+      if (!valid) {
+        showMessage('erro', 'Preencha usuário e senha para continuar.');
+      }
+      return valid;
+    }
+
+    usuarioInput.addEventListener('input', () => usuarioInput.classList.remove('invalid'));
+    senhaInput.addEventListener('input', () => senhaInput.classList.remove('invalid'));
+
+    togglePasswordBtn.addEventListener('click', () => {
+      const isPassword = senhaInput.type === 'password';
+      senhaInput.type = isPassword ? 'text' : 'password';
+      togglePasswordBtn.innerHTML = isPassword
+        ? '<i data-lucide="eye-off"></i>'
+        : '<i data-lucide="eye"></i>';
+      togglePasswordBtn.setAttribute('aria-label', isPassword ? 'Esconder senha' : 'Mostrar senha');
+      togglePasswordBtn.setAttribute('title', isPassword ? 'Esconder senha' : 'Mostrar senha');
+      lucide.createIcons();
+    });
+
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearMessage();
+      if (!validateFields()) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Entrando...';
+
+      try {
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            usuario: usuarioInput.value.trim(),
+            senha: senhaInput.value.trim(),
+            csrf_token: csrfInput.value
+          })
+        });
+        const data = await response.json();
+
+        if (data.sucesso) {
+          showMessage('sucesso', 'Login realizado com sucesso.');
+          setTimeout(() => {
+            lojaGo(data.redirecionar || '/');
+          }, 500);
+          return;
+        }
+
+        if (Array.isArray(data.campos_invalidos)) {
+          if (data.campos_invalidos.includes('usuario')) usuarioInput.classList.add('invalid');
+          if (data.campos_invalidos.includes('senha')) senhaInput.classList.add('invalid');
+        }
+        showMessage('erro', data.erro || 'Não foi possível autenticar.');
+      } catch (error) {
+        showMessage('erro', 'Erro de comunicação com o servidor.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Entrar';
+      }
+    });
+  </script>
+</body>
+</html>

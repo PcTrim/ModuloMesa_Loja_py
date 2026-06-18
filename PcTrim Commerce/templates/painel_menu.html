@@ -1,0 +1,2925 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Início | {{ nome_fantasia or 'Loja' }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_touch.css') }}">
+  {% include 'partials/topbar_meta_assets.html' %}
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #0f0f14;
+      --surface: #1a1a28;
+      --side: #13131f;
+      --line: #2a2a40;
+      --text: #e8e8f0;
+      --muted: #888fa0;
+      --purple: #7c3aed;
+      --badge-fg: #c4b5fd;
+      --tile-ico-fg: #ddd6fe;
+      --link-support: #a78bfa;
+      --support-muted: #64748b;
+      --sair-fg: #fca5a5;
+      --sair-line: #7f1d1d;
+      --sair-bg: rgba(127, 29, 29, 0.2);
+    }
+    html[data-theme="light"] {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --side: #eef2f7;
+      --line: #c8d0e0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --purple: #6d28d9;
+      --badge-fg: #5b21b6;
+      --tile-ico-fg: #5b21b6;
+      --link-support: #6d28d9;
+      --support-muted: #64748b;
+      --sair-fg: #b91c1c;
+      --sair-line: #fecaca;
+      --sair-bg: rgba(254, 202, 202, 0.35);
+    }
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: Outfit, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .page {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .topbar {
+      min-height: 56px;
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      font-weight: 800;
+      font-size: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      text-align: left;
+      flex: 1;
+      min-width: 0;
+    }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .theme-top-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 12px;
+      border: 0.5px solid var(--line);
+      background: var(--bg);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .theme-top-btn:hover {
+      color: var(--text);
+      border-color: var(--purple);
+    }
+    .theme-top-btn:focus-visible {
+      outline: none;
+      border-color: var(--purple);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+    }
+    html[data-theme="dark"] .theme-top-btn .icon-dark { display: none; }
+    html[data-theme="light"] .theme-top-btn .icon-light { display: none; }
+    .badge-id {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--badge-fg);
+      border: 0.5px solid var(--purple);
+      background: rgba(124, 58, 237, 0.18);
+      padding: 7px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    main {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      padding: 14px 14px 16px;
+      overscroll-behavior: contain;
+    }
+    .content-wrap {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      align-items: start;
+      text-align: center;
+      gap: 12px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+    .title-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .title-row h1 {
+      margin: 0;
+      text-align: center;
+    }
+    .title-main {
+      justify-self: center;
+    }
+    .title-spacer {
+      width: min(122px, 34vw);
+      height: 1px;
+      visibility: hidden;
+    }
+    .sub {
+      margin: 0;
+      font-size: 15px;
+      color: var(--muted);
+      max-width: 560px;
+      justify-self: center;
+    }
+    .brand-logo {
+      display: flex;
+      margin: 0;
+      pointer-events: none;
+    }
+    .brand-logo img {
+      width: min(110px, 30vw);
+      height: auto;
+      opacity: 1;
+      filter: grayscale(20%);
+      user-select: none;
+    }
+    .grid {
+      display: grid;
+      width: 100%;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+      align-content: start;
+      min-height: 0;
+    }
+    a.tile {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      text-decoration: none;
+      color: inherit;
+      padding: 14px 14px;
+      border-radius: 16px;
+      background: var(--side);
+      border: 0.5px solid var(--line);
+      transition: transform 0.08s, border-color 0.15s, background 0.15s;
+      min-height: 96px;
+      text-align: left;
+    }
+    .tile-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 100%;
+    }
+    a.tile:hover {
+      transform: translateY(-2px);
+      border-color: var(--purple);
+      background: var(--surface);
+    }
+    a.tile:focus-visible {
+      outline: none;
+      border-color: var(--purple);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.22);
+      background: var(--surface);
+    }
+    a.tile .ico {
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: rgba(124, 58, 237, 0.15);
+      color: var(--tile-ico-fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    a.tile.warn .ico { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+    a.tile.muted .ico { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; }
+    h2 {
+      margin: 0 0 4px;
+      font-size: 17px;
+      font-weight: 900;
+    }
+    p.desc {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
+    }
+
+    a.tile.primary {
+      border-color: color-mix(in srgb, var(--purple) 55%, var(--line));
+      background: color-mix(in srgb, var(--purple) 14%, var(--side));
+    }
+    a.tile.primary .ico {
+      background: color-mix(in srgb, var(--purple) 22%, transparent);
+    }
+    .foot {
+      margin-top: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      text-align: left;
+    }
+    a.sair {
+      color: var(--sair-fg);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0.5px solid var(--sair-line);
+      background: var(--sair-bg);
+    }
+    a.sair:hover { filter: brightness(1.1); }
+    a.sair:focus-visible {
+      outline: none;
+      border-color: var(--sair-fg);
+      box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.28);
+    }
+    .support {
+      font-size: 10.5px;
+      color: var(--support-muted);
+      max-width: 420px;
+      line-height: 1.45;
+    }
+    .support a { color: var(--link-support); }
+
+    #baixa-modal .ui-modal-panel { max-width: 980px; margin: 0 auto; }
+    #baixa-modal .baixa-head{display:flex;flex-direction:column;gap:2px;min-width:0;}
+    #baixa-modal .baixa-title{font-size:16px;font-weight:950;letter-spacing:-0.01em;line-height:1.1;}
+    #baixa-modal .baixa-sub{font-size:12px;font-weight:650;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #baixa-modal .baixa-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-height:0;flex:1;}
+    #baixa-modal #baixa-list{min-height:0;}
+    #baixa-modal #baixa-form{min-height:0;overflow:hidden;display:none;}
+    #baixa-modal .baixa-form-head{display:grid;gap:6px;}
+    #baixa-modal .baixa-pay-wrap{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:2px;}
+    #baixa-modal .baixa-pay-list{display:grid;gap:8px;}
+    #baixa-modal .baixa-pay-list[hidden]{display:none !important;}
+    #baixa-modal .baixa-more[hidden]{display:none !important;}
+    #baixa-modal .baixa-pay-row{border-radius:14px;border:0.5px solid var(--line);background:var(--surface);padding:8px 10px;display:flex;align-items:center;gap:10px;}
+    #baixa-modal .baixa-pay-name{font-weight:900;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #baixa-modal .baixa-pay-input{min-height:var(--ui-touch-sm);width:120px;border-radius:12px;border:0.5px solid var(--line);background:var(--bg);color:var(--text);padding:10px 12px;font-size:16px;font-weight:800;text-align:right;}
+    #baixa-modal .baixa-pay-input:focus-visible{outline:none;box-shadow:var(--ui-shadow-focus);border-color:var(--purple);}
+    #baixa-modal .baixa-more{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px;}
+    #baixa-modal .baixa-more .ui-mini-btn{min-height:var(--ui-touch-sm);}
+    #baixa-modal .baixa-actions{position:sticky;bottom:0;display:flex;gap:10px;justify-content:flex-end;align-items:center;padding-top:10px;margin-top:10px;border-top:0.5px solid var(--line);background:color-mix(in srgb, var(--side) 85%, transparent);}
+    #baixa-modal .baixa-actions .ui-mini-btn{min-width:160px;}
+    #baixa-modal [data-baixa-item]{cursor:pointer;}
+    #baixa-modal [data-baixa-item].sel{outline:2px solid rgba(124,58,237,.55);border-color:rgba(124,58,237,.55);}
+    @media (min-width: 901px){ #baixa-modal .baixa-pay-list{grid-template-columns:repeat(2,minmax(0,1fr));} }
+    @media (max-width: 900px){
+      #baixa-modal .baixa-layout{grid-template-columns:1fr; grid-template-rows:minmax(220px,45vh) 1fr;}
+      #baixa-modal .baixa-actions{position:static;}
+      #baixa-modal .baixa-pay-list{grid-template-columns:1fr;}
+    }
+
+    #baixa-modal.has-selection .ui-dash-controls{display:none;}
+    #baixa-modal.has-selection .baixa-layout{grid-template-columns:1fr;}
+    #baixa-modal.has-selection #baixa-list{display:none;}
+    #baixa-modal.has-selection #baixa-form{display:flex;}
+    #fechamento-modal .ui-modal-panel {
+      max-width: 560px;
+      margin: 0 auto;
+      width: min(560px, calc(100% - 28px));
+      position: relative;
+      max-height: min(86vh, 620px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #fechamento-modal .ui-modal-panel > section.ui-dash {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    #fechamento-modal .ui-modal-head { flex-shrink: 0; padding-right: 48px; justify-content: flex-start; }
+    #fechamento-modal #fechamento-close.fechamento-close-x {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 3;
+      width: 42px;
+      height: 42px;
+      min-height: 42px;
+      padding: 0;
+      margin: 0;
+      border: none;
+      border-radius: 50%;
+      background: #dc2626;
+      color: #fff;
+      font-size: 26px;
+      line-height: 1;
+      font-weight: 300;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(220, 38, 38, 0.45);
+      flex-shrink: 0;
+    }
+    #fechamento-modal #fechamento-close.fechamento-close-x:hover {
+      background: #b91c1c;
+    }
+    #fechamento-modal #fechamento-close.fechamento-close-x:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, #dc2626 35%, transparent), 0 2px 12px rgba(220, 38, 38, 0.45);
+    }
+    #fechamento-modal .fechamento-steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; align-items: center; flex-shrink: 0; }
+    #fechamento-modal .fech-step {
+      font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: 999px; border: 0.5px solid var(--line);
+      color: var(--muted); background: color-mix(in srgb, var(--side) 70%, transparent);
+    }
+    #fechamento-modal .fech-step.on {
+      border-color: rgba(124, 58, 237, 0.45);
+      background: color-mix(in srgb, var(--purple) 14%, transparent);
+      color: var(--text);
+    }
+    #fechamento-modal .fech-step-pane { display: none; }
+    #fechamento-modal .fech-step-pane.on { display: block; }
+    #fechamento-modal .fechamento-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+    #fechamento-modal .fechamento-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 800; color: var(--muted); }
+    #fechamento-modal .fechamento-fields input[type="date"] {
+      min-height: var(--ui-touch-sm, 44px); padding: 10px 12px; border-radius: 12px; border: 0.5px solid var(--line);
+      background: var(--bg); color: var(--text); font-family: inherit; font-weight: 700;
+    }
+    #fechamento-modal #fechamento-preview {
+      margin: 0; max-height: none; overflow: visible; white-space: pre-wrap; background: var(--bg); border: 0.5px solid var(--line);
+      border-radius: 14px; padding: 10px; font-size: 12px; line-height: 1.4; font-family: Consolas, 'Courier New', monospace; color: var(--text); text-align: left;
+    }
+    #fechamento-modal #fechamento-resumo-box {
+      margin: 0 0 8px; max-height: none; overflow: visible; background: var(--bg); border: 0.5px solid var(--line);
+      border-radius: 14px; padding: 10px; font-size: 12px; line-height: 1.4; color: var(--text); text-align: left;
+    }
+    #fechamento-modal #fechamento-gerencial-executivo {
+      margin: 0 0 8px; max-height: none; overflow: visible; background: var(--bg); border: 0.5px solid var(--line);
+      border-radius: 14px; padding: 10px; font-size: 12px; line-height: 1.4; color: var(--text); text-align: left;
+    }
+    #fechamento-modal #fechamento-gerencial-executivo .fech-ger-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; margin-top: 6px;
+    }
+    #fechamento-modal #fechamento-gerencial-executivo .fech-ger-card {
+      border: 0.5px solid var(--line); border-radius: 10px; padding: 6px 8px; background: color-mix(in srgb, var(--side) 60%, transparent);
+    }
+    #fechamento-modal #fechamento-gerencial-executivo .fech-ger-card b { display: block; font-size: 11px; color: var(--muted); font-weight: 800; margin-bottom: 4px; }
+    #fechamento-modal #fechamento-gerencial-executivo .fech-ger-card span { font-size: 14px; font-weight: 900; }
+    #fechamento-modal #fechamento-sel-impressora {
+      width: 100%; min-height: var(--ui-touch-sm, 44px); padding: 10px 12px; border-radius: 12px; border: 0.5px solid var(--line);
+      background: var(--bg); color: var(--text); font-family: inherit; font-weight: 700; margin-bottom: 10px;
+    }
+    #fechamento-modal .fechamento-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+
+    @media (max-width: 1024px) {
+      .content-wrap {
+        width: min(900px, 100%);
+      }
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 768px) {
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .brand {
+        width: 100%;
+        text-align: center;
+        flex: none;
+      }
+      .topbar-actions {
+        width: 100%;
+        justify-content: center;
+      }
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      h1 {
+        font-size: 22px;
+      }
+      .sub {
+        font-size: 13px;
+      }
+      .brand-logo {
+        justify-content: center;
+      }
+      .foot {
+        justify-content: center;
+        text-align: center;
+      }
+      .support {
+        max-width: 100%;
+      }
+    }
+    @media (max-width: 480px) {
+      main {
+        padding: 12px 10px 12px;
+      }
+      .title-row {
+        gap: 8px;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      .sub {
+        margin-bottom: 0;
+      }
+      .brand-logo img {
+        width: min(96px, 36vw);
+      }
+      .title-spacer {
+        width: min(96px, 36vw);
+      }
+      a.tile {
+        min-height: 92px;
+        padding: 12px;
+      }
+      .badge-id {
+        font-size: 11px;
+        padding: 6px 10px;
+      }
+    }
+    @media (max-height: 760px) {
+      h1 { font-size: 22px; }
+      .topbar { padding: 6px 12px; min-height: 52px; }
+      .brand-logo img { width: min(92px, 28vw); }
+      .grid { gap: 10px; }
+      a.tile { min-height: 86px; padding: 12px; }
+      p.desc { -webkit-line-clamp: 1; line-clamp: 1; }
+      .support { font-size: 10px; max-width: 520px; }
+    }
+    @media (max-height: 680px) {
+      main { padding: 10px 10px 10px; }
+      .content-wrap { gap: 10px; }
+      .sub { font-size: 13px; }
+      .grid { gap: 8px; }
+      a.tile { min-height: 78px; padding: 10px; border-radius: 14px; }
+      a.tile .ico { width: 44px; height: 44px; border-radius: 12px; }
+      h2 { font-size: 16px; }
+      .support { font-size: 9.5px; line-height: 1.35; }
+      a.sair { padding: 7px 10px; }
+    }
+
+    /* Dashboard (modal): hierarquia visual + botão Despachar */
+    #dash-modal .ui-modal-panel {
+      max-width: 920px;
+      margin: 0 auto;
+    }
+    #dash-modal .ui-modal-head {
+      padding-bottom: 10px;
+      margin-bottom: 2px;
+      border-bottom: 0.5px solid var(--line);
+    }
+    #dash-modal .ui-dash-list {
+      gap: 12px;
+      padding: 4px 2px 10px;
+    }
+    #dash-modal .ui-dash-card {
+      padding: 14px 16px;
+      gap: 8px;
+      box-shadow: 0 2px 14px rgba(0, 0, 0, 0.14);
+      border-color: color-mix(in srgb, var(--line) 88%, var(--purple) 12%);
+    }
+    html[data-theme="light"] #dash-modal .ui-dash-card {
+      box-shadow: 0 4px 22px rgba(15, 23, 42, 0.07);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      #dash-modal .ui-dash-card {
+        transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      #dash-modal .ui-dash-card:hover {
+        transform: translateY(-1px);
+        border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
+        box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+      }
+    }
+    #dash-modal .ui-dash-controls .ui-dash-search {
+      border-radius: 14px;
+    }
+    #dash-modal .ui-chip.active {
+      background: color-mix(in srgb, var(--purple) 20%, transparent);
+    }
+    #dash-pedido-modal .ui-modal-panel {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    #dash-modal .ui-mini-btn.ui-dash-btn-despacho,
+    #dash-pedido-modal .ui-mini-btn.ui-dash-btn-despacho {
+      border-color: rgba(16, 185, 129, 0.45);
+      background: rgba(16, 185, 129, 0.14);
+      color: color-mix(in srgb, var(--text) 78%, #10b981);
+    }
+    #dash-modal .ui-mini-btn.ui-dash-btn-despacho:hover,
+    #dash-pedido-modal .ui-mini-btn.ui-dash-btn-despacho:hover {
+      background: rgba(16, 185, 129, 0.24);
+    }
+    .ui-mini-btn.ui-dash-btn-cancelar {
+      border-color: rgba(220, 38, 38, 0.45);
+      background: rgba(220, 38, 38, 0.12);
+      color: color-mix(in srgb, var(--text) 78%, #dc2626);
+    }
+    .ui-mini-btn.ui-dash-btn-cancelar:hover {
+      background: rgba(220, 38, 38, 0.22);
+    }
+    .ui-mini-btn.ui-dash-btn-cancelar:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    #dash-modal .ui-mini-btn.ui-dash-btn-pronto,
+    #dash-pedido-modal .ui-mini-btn.ui-dash-btn-pronto {
+      border-color: rgba(245, 158, 11, 0.45);
+      background: rgba(245, 158, 11, 0.14);
+      color: color-mix(in srgb, var(--text) 78%, #f59e0b);
+    }
+    #dash-modal .ui-mini-btn.ui-dash-btn-pronto:hover,
+    #dash-pedido-modal .ui-mini-btn.ui-dash-btn-pronto:hover {
+      background: rgba(245, 158, 11, 0.24);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">{{ nome_fantasia or 'Minha Loja' }}</div>
+      <div class="topbar-actions">
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="dash-open" aria-label="Abrir dashboard"><i data-lucide="layout-dashboard" width="18" height="18"></i></button>
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro"><i data-lucide="sun" class="icon-light" width="18" height="18"></i><i data-lucide="moon" class="icon-dark" width="18" height="18"></i></button>
+        <span class="badge-id">ID {{ id_cliente or '—' }}</span>
+      </div>
+    </header>
+    <main>
+      <div class="content-wrap">
+      <div class="title-row">
+        <div class="brand-logo" aria-hidden="true">
+          <img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt="">
+        </div>
+        <h1 class="title-main">Menu principal</h1>
+        <span class="title-spacer" aria-hidden="true"></span>
+      </div>
+      <p class="sub">Atalhos rápidos para operações do dia a dia.</p>
+      <nav class="grid" aria-label="Navegação principal">
+        <a class="tile primary" href="{{ url_prefix }}/casa{% if IS_RETAIL %}?modo=balcao{% endif %}">
+          <span class="ico"><i data-lucide="shopping-cart" width="24" height="24"></i></span>
+          <div class="tile-copy">
+            <h2>{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %}</h2>
+            <p class="desc">{% if IS_RETAIL %}PDV de balcão — venda rápida com cliente opcional.{% else %}Abertura de pedidos (Delivery/Balcão) e acesso ao módulo de Mesas pelo seletor.{% endif %}</p>
+          </div>
+        </a>
+        <a class="tile" href="{{ url_prefix }}/configuracoes">
+          <span class="ico"><i data-lucide="settings" width="24" height="24"></i></span>
+          <div class="tile-copy">
+            <h2>Configurações</h2>
+            <p class="desc">Produtos, taxas e tabelas auxiliares.</p>
+          </div>
+        </a>
+        <a class="tile" href="{{ url_prefix }}/admin/lojas" style="border-color: rgba(124,58,237,.45);">
+          <span class="ico"><i data-lucide="building-2" width="24" height="24"></i></span>
+          <div class="tile-copy">
+            <h2>Cadastrar lojas</h2>
+            <p class="desc">Administração — incluir nova loja no sistema (equipe técnica / suporte).</p>
+          </div>
+        </a>
+        <a class="tile warn" href="#" id="baixa-open" onclick="return false;">
+          <span class="ico"><i data-lucide="wallet" width="24" height="24"></i></span>
+          <div class="tile-copy">
+            <h2>{% if IS_RETAIL %}Baixa da venda{% else %}Baixa do pedido{% endif %}</h2>
+            <p class="desc">{% if IS_RETAIL %}Marca venda como RECEBIDA e registra formas de pagamento.{% else %}Marca pedido como RECEBIDO e registra múltiplas formas de pagamento.{% endif %}</p>
+          </div>
+        </a>
+        <a class="tile warn" href="#" id="fechamento-open" onclick="return false;">
+          <span class="ico"><i data-lucide="clipboard-check" width="24" height="24"></i></span>
+          <div class="tile-copy">
+            <h2>Fechamento de caixa</h2>
+            <p class="desc">Arquiva itens recebidos no período (MESA: status_mesa RECEBIDO; outras: status_pedido RECEBIDO) e ITEM_REMOVIDO; AGUARDE permanece no diário. O contador de pedidos não é alterado.</p>
+          </div>
+        </a>
+        <a class="tile warn" href="#" id="cancelar-comanda-open" onclick="return false;">
+          <span class="ico"><i data-lucide="ban" width="24" height="24"></i></span>
+          <div class="tile-copy">
+            <h2>Cancelar comanda</h2>
+            <p class="desc">{% if IS_RETAIL %}Cancela a comanda de balcão enquanto ABERTO, AGUARDE ou ROTA. Não permite mais edição.{% else %}Cancela a comanda inteira (DELIVERY/Balcão) enquanto ABERTO, AGUARDE ou ROTA. Não permite mais edição.{% endif %}</p>
+          </div>
+        </a>
+      </nav>
+      <div class="foot">
+        <a class="sair" href="{{ url_for('logout') }}">Sair</a>
+        <p class="support" style="margin-bottom:8px;">
+          <a href="{{ url_prefix }}/admin/lojas" style="color:var(--link-support,#a78bfa);font-weight:700;">Cadastrar nova loja</a>
+          — acesso restrito (usuário: {{ session.get('usuario_logado') or '?' }})
+        </p>
+        <p class="support">
+          Suporte <strong>PcTrim</strong> —
+          <a href="https://www.pctrimtecnologia.com" target="_blank" rel="noopener noreferrer">www.pctrimtecnologia.com</a>
+          — (11) 97144-7534 / 97144-7584
+        </p>
+      </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="dash-modal" class="ui-modal" role="dialog" aria-modal="true" aria-label="Dashboard" hidden>
+    <div class="ui-modal-backdrop" data-close></div>
+    <div class="ui-modal-panel" role="document">
+      <div class="ui-modal-head">
+        <div class="ui-dash-tabs" role="tablist" aria-label="Fontes do dashboard">
+          <button type="button" class="ui-dash-tab active" data-dash-tab="pedidos" role="tab" aria-selected="true">{% if IS_RETAIL %}Balcão{% else %}Delivery/Balcão{% endif %}</button>
+          <button type="button" class="ui-dash-tab" data-dash-tab="mesas" data-retail-hide role="tab" aria-selected="false">Mesas</button>
+        </div>
+        <button type="button" class="ui-mini-btn ui-focus" id="dash-close">Fechar</button>
+      </div>
+      <section class="ui-dash" aria-label="Dashboard de pedidos" style="border:none;background:transparent;padding:0">
+        <div class="ui-dash-controls">
+          <input id="dash-q" class="ui-dash-search" type="search" inputmode="search" autocomplete="off" placeholder="{% if IS_RETAIL %}Buscar por venda, telefone ou cliente{% else %}Buscar por pedido, telefone, cliente ou endereço{% endif %}">
+          <div id="dash-chips" class="ui-chipbar" aria-label="Filtros"></div>
+          <button type="button" id="dash-refresh" class="ui-mini-btn ui-focus">Atualizar</button>
+        </div>
+        <div id="dash-list" class="ui-dash-list" aria-live="polite"></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="dash-pedido-modal" class="ui-modal" role="dialog" aria-modal="true" aria-label="{% if IS_RETAIL %}Detalhes da venda{% else %}Detalhes do pedido{% endif %}" hidden>
+    <div class="ui-modal-backdrop" data-close-dash-pedido></div>
+    <div class="ui-modal-panel" role="document">
+      <div class="ui-modal-head">
+        <div>
+          <div class="ui-dash-title" id="dash-pedido-titulo">{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %}</div>
+          <div class="ui-dash-muted" id="dash-pedido-sub">{% if IS_RETAIL %}Conferência da venda{% else %}Conferência do pedido{% endif %}</div>
+        </div>
+        <button type="button" class="ui-mini-btn ui-focus" id="dash-pedido-close">Fechar</button>
+      </div>
+      <section class="ui-dash" style="border:none;background:transparent;padding:0">
+        <div class="ui-dash-controls" style="justify-content:flex-end;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;width:100%;">
+            <span class="ui-pill neutral" id="dash-pedido-pill-origem"></span>
+            <span class="ui-pill neutral" id="dash-pedido-pill-status"></span>
+            <span class="ui-pill neutral" id="dash-pedido-pill-total"></span>
+            <span class="ui-pill neutral" id="dash-pedido-pill-pessoas" style="display:none;"></span>
+            <button type="button" class="ui-mini-btn ui-focus ui-dash-btn-despacho" id="dash-pedido-despacho" hidden>Despachar</button>
+            <button type="button" class="ui-mini-btn ui-focus ui-dash-btn-pronto" id="dash-pedido-pronto" hidden>Avisar pronto</button>
+            <button type="button" class="ui-mini-btn ui-focus ui-dash-btn-cancelar" id="dash-pedido-cancelar" hidden>Cancelar comanda</button>
+          </div>
+        </div>
+        <div class="ui-dash-card">
+          <div class="ui-dash-muted" id="dash-pedido-cliente"></div>
+          <div class="ui-dash-muted" id="dash-pedido-endereco"></div>
+        </div>
+        <div class="ui-dash-card">
+          <pre id="dash-pedido-itens" style="margin:0;max-height:48vh;white-space:pre-wrap;background:var(--bg);border:0.5px solid var(--line);border-radius:14px;padding:12px;font-size:13px;line-height:1.45;font-family:Consolas,'Courier New',monospace;color:var(--text);overflow:auto;"></pre>
+        </div>
+        <div class="ui-dash-card" id="dash-mesa-pessoas-wrap" style="display:none;">
+          <div class="ui-dash-row">
+            <div class="ui-dash-strong">Dividir conta</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input id="dash-mesa-pessoas" type="number" min="1" step="1" value="1" style="width:84px;min-height:var(--ui-touch-sm);padding:10px 12px;border-radius:12px;border:0.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:14px;font-weight:900;text-align:center;">
+              <button type="button" class="ui-mini-btn ui-focus" id="dash-mesa-pessoas-salvar">OK</button>
+            </div>
+          </div>
+          <div class="ui-dash-muted" id="dash-mesa-por-pessoa" style="margin-top:8px;"></div>
+        </div>
+        <div class="ui-dash-card" id="dash-pedido-pag-wrap" style="display:none;">
+          <div class="ui-dash-strong">Pagamento</div>
+          <pre id="dash-pedido-pag" style="margin:0;max-height:22vh;white-space:pre-wrap;background:var(--bg);border:0.5px solid var(--line);border-radius:14px;padding:12px;font-size:13px;line-height:1.45;font-family:Consolas,'Courier New',monospace;color:var(--text);overflow:auto;"></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="cancelar-comanda-modal" class="ui-modal" role="dialog" aria-modal="true" aria-label="Cancelar comanda" hidden>
+    <div class="ui-modal-backdrop" data-close-cancelar-comanda></div>
+    <div class="ui-modal-panel" role="document" style="max-width:640px;margin:0 auto;">
+      <div class="ui-modal-head">
+        <div>
+          <div class="ui-dash-title">Cancelar comanda</div>
+          <div class="ui-dash-muted">{% if IS_RETAIL %}Balcão — cancelamento irreversível na edição{% else %}DELIVERY ou Balcão — cancelamento irreversível na edição{% endif %}</div>
+        </div>
+        <button type="button" class="ui-mini-btn ui-focus" id="cancelar-comanda-close">Fechar</button>
+      </div>
+      <section class="ui-dash" style="border:none;background:transparent;padding:0;gap:12px;display:grid;">
+        <div class="ui-dash-card" style="display:grid;gap:10px;">
+          <label class="ui-dash-muted" for="cancelar-comanda-origem">Origem</label>
+          <select id="cancelar-comanda-origem" style="min-height:var(--ui-touch-sm);padding:10px 12px;border-radius:12px;border:0.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;">
+            <option value="DELIVERY"{% if IS_RETAIL %} hidden disabled{% endif %}>Delivery</option>
+            <option value="BALCAO"{% if IS_RETAIL %} selected{% endif %}>Balcão</option>
+          </select>
+          <label class="ui-dash-muted" for="cancelar-comanda-nro">Nº {% if IS_RETAIL %}venda{% else %}pedido{% endif %}</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input id="cancelar-comanda-nro" type="number" min="1" step="1" inputmode="numeric" placeholder="Ex.: 42" style="flex:1;min-width:120px;min-height:var(--ui-touch-sm);padding:10px 12px;border-radius:12px;border:0.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:16px;font-weight:800;">
+            <button type="button" class="ui-mini-btn ui-focus" id="cancelar-comanda-buscar">Buscar</button>
+          </div>
+        </div>
+        <div class="ui-dash-card" id="cancelar-comanda-preview" hidden>
+          <div class="ui-dash-strong" id="cancelar-comanda-preview-titulo">{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %}</div>
+          <div class="ui-dash-muted" id="cancelar-comanda-preview-sub"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;" id="cancelar-comanda-preview-pills"></div>
+        </div>
+        <div class="ui-dash-row" style="justify-content:flex-end;gap:10px;">
+          <button type="button" class="ui-mini-btn ui-focus ui-dash-btn-cancelar" id="cancelar-comanda-confirmar" disabled>Cancelar comanda inteira</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="fechamento-modal" class="ui-modal" role="dialog" aria-modal="true" aria-labelledby="fechamento-modal-title" aria-label="Fechamento de caixa" hidden aria-hidden="true">
+    <div class="ui-modal-backdrop" data-fechamento-close></div>
+    <div class="ui-modal-panel" role="document">
+      <button type="button" id="fechamento-close" class="fechamento-close-x" aria-label="Fechar" title="Fechar">×</button>
+      <div class="ui-modal-head">
+        <div>
+          <div class="baixa-title" id="fechamento-modal-title">Fechamento de caixa</div>
+          <div class="baixa-sub">Período, resumo financeiro, impressão e arquivo em pedido_periodos</div>
+        </div>
+      </div>
+      <section class="ui-dash" style="border:none;background:transparent;padding:0;text-align:left;">
+        <div class="fechamento-steps" aria-hidden="true">
+          <span class="fech-step on" id="fechamento-tab-1">1 · Período</span>
+          <span class="fech-step" id="fechamento-tab-2">2 · Resumo e impressão</span>
+          <span class="fech-step" id="fechamento-tab-3">3 · Arquivar</span>
+        </div>
+        <p class="ui-dash-muted" style="margin:0 0 10px;font-size:13px;line-height:1.45;">
+          Somente linhas <strong>recebidas</strong> no intervalo (mesa: <code>status_mesa</code> = RECEBIDO; delivery/balcão: <code>status_pedido</code> = RECEBIDO) ou <strong>ITEM_REMOVIDO</strong>.
+          <strong>AGUARDE</strong> e demais status permanecem no diário ativo.
+        </p>
+        <div id="fechamento-pane-1" class="fech-step-pane on">
+          <div class="fechamento-fields">
+            <label>Data inicial<input id="fechamento-di" type="date" required></label>
+            <label>Data final<input id="fechamento-df" type="date" required></label>
+            <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-preview">Pré-visualizar</button>
+          </div>
+          <pre id="fechamento-preview" aria-live="polite">Clique em Pré-visualizar para ver totais.</pre>
+          <div class="fechamento-actions">
+            <button type="button" class="ui-mini-btn" data-fechamento-close>Cancelar</button>
+            <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-ir-passo2">Próximo: resumo</button>
+          </div>
+        </div>
+        <div id="fechamento-pane-2" class="fech-step-pane">
+          <div class="ui-dash-muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">Resumo financeiro (fechamento)</div>
+          <div id="fechamento-resumo-box" aria-live="polite"></div>
+          <div class="ui-dash-muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">Relatório gerencial (prestação de contas)</div>
+          <div id="fechamento-gerencial-executivo" aria-live="polite"></div>
+          <label for="fechamento-sel-impressora" class="ui-dash-muted" style="display:block;font-size:12px;font-weight:800;margin-bottom:6px;">Impressora cadastrada</label>
+          <select id="fechamento-sel-impressora" aria-label="Impressora para resumo"></select>
+          <div class="fechamento-actions">
+            <button type="button" class="ui-mini-btn" id="fechamento-btn-voltar-1">Voltar</button>
+            <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-imprimir">Imprimir resumo</button>
+            <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-imprimir-gerencial">Imprimir relatório gerencial</button>
+            <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-ir-passo3">Próximo: arquivar</button>
+          </div>
+        </div>
+        <div id="fechamento-pane-3" class="fech-step-pane">
+          <p class="ui-dash-muted" style="margin:0 0 10px;font-size:13px;line-height:1.45;">
+            Confirme o arquivo no histórico e a remoção dessas linhas do diário. Será gerado relatório em pasta de relatórios (ex.: <code>C:\Geral\Relatorios</code>).
+          </p>
+          <div class="fechamento-actions">
+            <button type="button" class="ui-mini-btn" id="fechamento-btn-voltar-2">Voltar</button>
+            <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-executar" style="border-color:rgba(220,38,38,.45);background:rgba(220,38,38,.12);">Arquivar período</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="baixa-modal" class="ui-modal" role="dialog" aria-modal="true" aria-label="{% if IS_RETAIL %}Baixa da venda{% else %}Baixa do pedido{% endif %}" hidden>
+    <div class="ui-modal-backdrop" data-close></div>
+    <div class="ui-modal-panel" role="document">
+      <div class="ui-modal-head">
+        <div class="baixa-head" aria-label="{% if IS_RETAIL %}Baixa da venda{% else %}Baixa do pedido{% endif %}">
+          <div class="baixa-title">{% if IS_RETAIL %}Baixa da venda{% else %}Baixa do pedido{% endif %}</div>
+          <div class="baixa-sub">{% if IS_RETAIL %}Selecione a venda e informe como foi pago{% else %}Selecione o pedido e informe como foi pago{% endif %}</div>
+        </div>
+        <button type="button" class="ui-mini-btn ui-focus" id="baixa-close">Fechar</button>
+      </div>
+      <section class="ui-dash" aria-label="Baixa do pedido" style="border:none;background:transparent;padding:0">
+        <div class="ui-dash-controls">
+          <input id="baixa-q" class="ui-dash-search" type="search" inputmode="search" autocomplete="off" placeholder="{% if IS_RETAIL %}Buscar por venda, telefone ou cliente{% else %}Buscar por pedido, telefone, cliente, endereço ou entregador{% endif %}">
+          <button type="button" id="baixa-refresh" class="ui-mini-btn ui-focus">Atualizar</button>
+        </div>
+        <div class="baixa-layout">
+          <div id="baixa-list" class="ui-dash-list" aria-live="polite"></div>
+          <div id="baixa-form" class="ui-dash"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=9"></script>
+  {% include 'partials/retail_mode.html' %}
+  <script>
+    lucide.createIcons();
+
+    var IS_RETAIL = window.IS_RETAIL;
+    var LABEL_PEDIDO = window.LABEL_PEDIDO;
+    function lblPedidoHash(n) { return LABEL_PEDIDO + " #" + String(n == null ? "-" : n); }
+    window.applyRetailUi();
+
+    var _fechamentoPreviewOk = false;
+    var _fechamentoResumoData = null;
+    var _fechamentoGerencialData = null;
+
+    function fechamentoMoney(v) {
+      var n = Number(v);
+      if (!isFinite(n)) n = 0;
+      return 'R$ ' + n.toFixed(2).replace('.', ',');
+    }
+    function fechamentoEscHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+    function fechamentoHojeISO() {
+      var d = new Date();
+      var m = String(d.getMonth() + 1);
+      if (m.length < 2) m = '0' + m;
+      var day = String(d.getDate());
+      if (day.length < 2) day = '0' + day;
+      return d.getFullYear() + '-' + m + '-' + day;
+    }
+    function fechamentoSetStep(step) {
+      var s;
+      for (s = 1; s <= 3; s += 1) {
+        var p = document.getElementById('fechamento-pane-' + s);
+        var t = document.getElementById('fechamento-tab-' + s);
+        if (p) p.classList.toggle('on', s === step);
+        if (t) t.classList.toggle('on', s === step);
+      }
+    }
+    function abrirFechamentoModal() {
+      var m = document.getElementById('fechamento-modal');
+      if (!m) return;
+      var di = document.getElementById('fechamento-di');
+      var df = document.getElementById('fechamento-df');
+      var pv = document.getElementById('fechamento-preview');
+      var t = fechamentoHojeISO();
+      if (di) di.value = t;
+      if (df) df.value = t;
+      if (pv) pv.textContent = 'Clique em Pré-visualizar para ver totais.';
+      _fechamentoPreviewOk = false;
+      _fechamentoResumoData = null;
+      _fechamentoGerencialData = null;
+      fechamentoSetStep(1);
+      var rb = document.getElementById('fechamento-resumo-box');
+      if (rb) rb.textContent = '';
+      var gb = document.getElementById('fechamento-gerencial-executivo');
+      if (gb) gb.textContent = '';
+      var sel = document.getElementById('fechamento-sel-impressora');
+      if (sel) {
+        sel.innerHTML = '';
+        var o = document.createElement('option');
+        o.value = '';
+        o.textContent = 'Abra o passo 2 para listar impressoras';
+        sel.appendChild(o);
+      }
+      m.hidden = false;
+      m.removeAttribute('aria-hidden');
+      document.body.style.overflow = 'hidden';
+      if (window.lucide) lucide.createIcons();
+    }
+    function fecharFechamentoModal() {
+      var m = document.getElementById('fechamento-modal');
+      if (!m) return;
+      m.hidden = true;
+      m.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+    function fechamentoPreview() {
+      var di = document.getElementById('fechamento-di');
+      var df = document.getElementById('fechamento-df');
+      var pv = document.getElementById('fechamento-preview');
+      if (!di || !df || !pv) return;
+      var a = (di.value || '').trim();
+      var b = (df.value || '').trim();
+      if (!a || !b) {
+        alert('Informe data inicial e final.');
+        _fechamentoPreviewOk = false;
+        return;
+      }
+      pv.textContent = 'Carregando...';
+      _fechamentoPreviewOk = false;
+      fetch('/api/fechamento/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data_inicio: a, data_fim: b }),
+      })
+        .then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (d) {
+          if (!d.sucesso) {
+            pv.textContent = 'Erro: ' + (d.erro || 'Pré-visualização não disponível.');
+            _fechamentoPreviewOk = false;
+            return;
+          }
+          _fechamentoPreviewOk = true;
+          var lines = [];
+          lines.push('Período: ' + (d.data_inicio || a) + ' a ' + (d.data_fim || b) + ' (fim do dia incluso).');
+          lines.push('Linhas elegíveis: ' + String(d.linhas != null ? d.linhas : '?'));
+          lines.push('Grupos origem+número (distintos): ' + String(d.pedidos_origem_numero_distintos != null ? d.pedidos_origem_numero_distintos : '?'));
+          if (d.pasta_relatorios) {
+            lines.push('Pasta de relatórios: ' + String(d.pasta_relatorios));
+          }
+          if (d.pasta_relatorios_erro) {
+            lines.push('Aviso pasta: ' + String(d.pasta_relatorios_erro));
+          }
+          lines.push('');
+          lines.push('Por status:');
+          (d.por_status || []).forEach(function (x) {
+            lines.push('  ' + (x.status || '-') + ': ' + String(x.linhas));
+          });
+          pv.textContent = lines.join('\n');
+        })
+        .catch(function () {
+          if (pv) pv.textContent = 'Falha de rede ao pré-visualizar.';
+          _fechamentoPreviewOk = false;
+        });
+    }
+    function fechamentoHtmlGerencialExecutivo(g) {
+      if (!g || !g.sucesso) return '<div class="ui-dash-muted">Relatório gerencial indisponível.</div>';
+      var h = [];
+      h.push('<div style="font-weight:900;font-size:14px;margin-bottom:6px;">Prestação de contas</div>');
+      h.push('<div class="fech-ger-grid">');
+      h.push('<div class="fech-ger-card"><b>Faturamento RECEBIDO</b><span>' + fechamentoMoney(g.faturamento_recebido_total) + '</span></div>');
+      h.push('<div class="fech-ger-card"><b>Pedidos recebidos</b><span>' + String(g.pedidos_recebidos_distintos != null ? g.pedidos_recebidos_distintos : '—') + '</span></div>');
+      h.push('<div class="fech-ger-card"><b>Itens removidos (linhas)</b><span>' + String(g.item_removido_linhas != null ? g.item_removido_linhas : '—') + '</span></div>');
+      h.push('<div class="fech-ger-card"><b>Valor removido</b><span>' + fechamentoMoney(g.item_removido_valor) + '</span></div>');
+      h.push('<div class="fech-ger-card"><b>Comandas modificadas</b><span>' + String(g.comandas_modificadas_pedidos != null ? g.comandas_modificadas_pedidos : '—') + '</span></div>');
+      h.push('<div class="fech-ger-card"><b>Modif. não recebido</b><span>' + String(g.comandas_modificadas_nao_recebido_pedidos != null ? g.comandas_modificadas_nao_recebido_pedidos : '—') + '</span></div>');
+      h.push('<div class="fech-ger-card"><b>AGUARDE (pedidos)</b><span>' + String(g.pedidos_aguarde_distintos_periodo != null ? g.pedidos_aguarde_distintos_periodo : '—') + '</span></div>');
+      h.push('<div class="fech-ger-card"><b>Novos clientes</b><span>' + (g.novos_clientes_cadastro != null ? String(g.novos_clientes_cadastro) : '—') + '</span></div>');
+      h.push('</div>');
+      h.push('<div style="font-weight:800;margin:12px 0 4px;">Por canal</div><ul style="margin:0;padding-left:18px;">');
+      (g.por_canal || []).forEach(function (c) {
+        h.push('<li>' + fechamentoEscHtml(c.origem) + ': ' + fechamentoMoney(c.faturamento) + ' · ' + String(c.pedidos) + ' ped.</li>');
+      });
+      h.push('</ul>');
+      h.push('<div style="font-weight:800;margin:8px 0 4px;">Pagamentos (categorias)</div><ul style="margin:0;padding-left:18px;">');
+      (g.pagamentos_por_categoria || []).slice(0, 12).forEach(function (p) {
+        h.push('<li>' + fechamentoEscHtml(p.categoria) + ': <strong>' + fechamentoMoney(p.total) + '</strong></li>');
+      });
+      h.push('</ul>');
+      h.push('<div style="font-weight:800;margin:8px 0 4px;">Top produtos</div><ol style="margin:0;padding-left:22px;">');
+      (g.top_produtos || []).slice(0, 8).forEach(function (t) {
+        h.push('<li>' + fechamentoEscHtml((t.produto || t.ref || '').slice(0, 48)) + ' — ' + fechamentoMoney(t.total) + '</li>');
+      });
+      h.push('</ol>');
+      return h.join('');
+    }
+    function fechamentoCarregarPasso2(di, df) {
+      var rb = document.getElementById('fechamento-resumo-box');
+      var gb = document.getElementById('fechamento-gerencial-executivo');
+      var sel = document.getElementById('fechamento-sel-impressora');
+      if (rb) rb.textContent = 'Carregando resumo financeiro...';
+      if (gb) gb.textContent = 'Carregando relatório gerencial...';
+      _fechamentoResumoData = null;
+      _fechamentoGerencialData = null;
+      Promise.all([
+        fetch('/api/fechamento/resumo-financeiro', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data_inicio: di, data_fim: df }),
+        }).then(function (r) { return r.json().catch(function () { return {}; }); }),
+        fetch('/api/fechamento/relatorio-gerencial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data_inicio: di, data_fim: df }),
+        }).then(function (r) { return r.json().catch(function () { return {}; }); }),
+        fetch('/api/impressoras-cadastro').then(function (r) { return r.json().catch(function () { return {}; }); }),
+      ])
+        .then(function (arr) {
+          var d = arr[0];
+          var g = arr[1];
+          var imp = arr[2];
+          if (d && d.sucesso) {
+            _fechamentoResumoData = d;
+            var html = [];
+            html.push('<div style="font-weight:900;font-size:15px;margin-bottom:8px;">Total geral: ' + fechamentoMoney(d.total_geral) + '</div>');
+            html.push('<div class="ui-dash-muted" style="margin-bottom:10px;">Período: ' + fechamentoEscHtml(d.data_inicio) + ' a ' + fechamentoEscHtml(d.data_fim) + '</div>');
+            html.push('<div style="font-weight:800;margin:8px 0 4px;">Por status</div><ul style="margin:0;padding-left:18px;">');
+            (d.por_status || []).forEach(function (x) {
+              html.push('<li>' + fechamentoEscHtml(x.status) + ': <strong>' + fechamentoMoney(x.total) + '</strong></li>');
+            });
+            html.push('</ul>');
+            html.push('<div style="font-weight:800;margin:8px 0 4px;">Por forma de pagamento</div><ul style="margin:0;padding-left:18px;">');
+            (d.por_forma_pagamento || []).forEach(function (x) {
+              html.push('<li>' + fechamentoEscHtml(x.forma) + ': <strong>' + fechamentoMoney(x.total) + '</strong></li>');
+            });
+            html.push('</ul>');
+            if (rb) rb.innerHTML = html.join('');
+          } else {
+            _fechamentoResumoData = null;
+            if (rb) rb.innerHTML = '<div class="ui-dash-muted">Resumo financeiro: ' + fechamentoEscHtml((d && d.erro) || 'indisponível') + '</div>';
+          }
+          if (g && g.sucesso) {
+            _fechamentoGerencialData = g;
+            if (gb) gb.innerHTML = fechamentoHtmlGerencialExecutivo(g);
+          } else {
+            _fechamentoGerencialData = null;
+            if (gb) {
+              gb.innerHTML = '<div class="ui-dash-muted">Relatório gerencial: ' + fechamentoEscHtml((g && g.erro) || 'indisponível') + '</div>';
+            }
+          }
+          if (sel) {
+            sel.innerHTML = '';
+            var o0 = document.createElement('option');
+            o0.value = '';
+            var lista = (imp.sucesso && imp.impressoras) ? imp.impressoras : [];
+            o0.textContent = lista.length ? 'Selecione uma impressora' : 'Nenhuma impressora cadastrada';
+            sel.appendChild(o0);
+            lista.forEach(function (row) {
+              var o = document.createElement('option');
+              o.value = String(row.id);
+              var cam = row.caminho ? String(row.caminho) : '';
+              var lbl = (row.nomedaimpressora || '') + (cam ? ' — ' + (cam.length > 52 ? cam.slice(0, 52) + '…' : cam) : '');
+              o.textContent = lbl || ('#' + row.id);
+              sel.appendChild(o);
+            });
+          }
+        })
+        .catch(function () {
+          if (rb) rb.textContent = 'Falha de rede ao carregar o passo 2.';
+          if (gb) gb.textContent = '';
+          _fechamentoResumoData = null;
+          _fechamentoGerencialData = null;
+        });
+    }
+    function fechamentoIrParaPasso2() {
+      var di = document.getElementById('fechamento-di');
+      var df = document.getElementById('fechamento-df');
+      if (!di || !df) return;
+      var a = (di.value || '').trim();
+      var b = (df.value || '').trim();
+      if (!a || !b) {
+        alert('Informe data inicial e final.');
+        return;
+      }
+      if (!_fechamentoPreviewOk) {
+        alert('Use Pré-visualizar com sucesso antes de avançar para o resumo.');
+        return;
+      }
+      fechamentoSetStep(2);
+      fechamentoCarregarPasso2(a, b);
+    }
+    function fechamentoIrParaPasso3() {
+      fechamentoSetStep(3);
+    }
+    function fechamentoImprimirResumo() {
+      var sel = document.getElementById('fechamento-sel-impressora');
+      if (!_fechamentoResumoData || !_fechamentoResumoData.texto_impressao) {
+        alert('Aguarde o resumo carregar ou verifique o período.');
+        return;
+      }
+      var iid = sel && sel.value ? parseInt(sel.value, 10) : 0;
+      if (!iid) {
+        alert('Selecione uma impressora cadastrada.');
+        return;
+      }
+      var bodyF = {
+        conteudo: _fechamentoResumoData.texto_impressao,
+        impressora_id: iid,
+        copias: 1,
+        origem: 'fechamento_caixa',
+        produtos: [],
+      };
+      (window.lojaImprimir ? window.lojaImprimir(bodyF) : fetch(lojaUrl('/imprimir'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify(bodyF),
+      }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (d) { return { ok: d.sucesso !== false, data: d }; }))
+        .then(function (imp) {
+          var d = imp.data || {};
+          if (!imp.ok) {
+            alert((d && d.erro) || 'Falha na impressão.');
+            return;
+          }
+          alert('Impressão enviada: ' + (d.printer || '') + (d.via ? ' (' + d.via + ')' : '') + '.');
+        })
+        .catch(function () {
+          alert('Erro de rede na impressão.');
+        });
+    }
+    function fechamentoImprimirGerencial() {
+      var sel = document.getElementById('fechamento-sel-impressora');
+      if (!_fechamentoGerencialData || !_fechamentoGerencialData.texto_impressao) {
+        alert('Aguarde o relatório gerencial carregar ou verifique o período.');
+        return;
+      }
+      var iid = sel && sel.value ? parseInt(sel.value, 10) : 0;
+      if (!iid) {
+        alert('Selecione uma impressora cadastrada.');
+        return;
+      }
+      var bodyG = {
+        conteudo: _fechamentoGerencialData.texto_impressao,
+        impressora_id: iid,
+        copias: 1,
+        origem: 'fechamento_caixa',
+        produtos: [],
+      };
+      (window.lojaImprimir ? window.lojaImprimir(bodyG) : fetch(lojaUrl('/imprimir'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify(bodyG),
+      }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (d) { return { ok: d.sucesso !== false, data: d }; }))
+        .then(function (imp) {
+          var d = imp.data || {};
+          if (!imp.ok) {
+            alert((d && d.erro) || 'Falha na impressão.');
+            return;
+          }
+          alert('Relatório gerencial enviado à impressão: ' + (d.printer || '') + (d.via ? ' (' + d.via + ')' : '') + '.');
+        })
+        .catch(function () {
+          alert('Erro de rede na impressão.');
+        });
+    }
+    function fechamentoExecutar() {
+      var di = document.getElementById('fechamento-di');
+      var df = document.getElementById('fechamento-df');
+      if (!di || !df) return;
+      var a = (di.value || '').trim();
+      var b = (df.value || '').trim();
+      if (!a || !b) {
+        alert('Informe data inicial e final.');
+        return;
+      }
+      var msg =
+        'Confirme que entende:\n\n' +
+        '• No período ' +
+        a +
+        ' a ' +
+        b +
+        ': serão arquivadas linhas com ITEM_REMOVIDO e linhas recebidas (origem MESA: status_mesa = RECEBIDO; demais origens: status_pedido = RECEBIDO).\n' +
+        '• Esses dados passam para o HISTÓRICO (tabela pedido_periodos) e um arquivo .txt na pasta de relatórios (ex.: C:\\Geral\\Relatorios\\...).\n' +
+        '• Pedidos em AGUARDE ou outros status NÃO são eliminados e continuam no diário.\n' +
+        '• O contador de pedidos NÃO é alterado por este fechamento.\n\n' +
+        'Deseja continuar?';
+      if (!window.confirm(msg)) return;
+      fetch('/api/fechamento/executar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data_inicio: a, data_fim: b }),
+      })
+        .then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (d) {
+          if (!d.sucesso) {
+            alert(d.erro || 'Falha ao executar fechamento.');
+            return;
+          }
+          var msgOk =
+            'Fechamento concluído.\nLinhas arquivadas: ' +
+            String(d.linhas_arquivadas) +
+            '\nArquivo: ' +
+            String(d.arquivo || '-') +
+            '\nCaminho: ' +
+            String(d.caminho || '-');
+          if (d.arquivo_gerencial) {
+            msgOk += '\nRelatório gerencial: ' + String(d.arquivo_gerencial);
+          }
+          if (d.caminho_gerencial) {
+            msgOk += '\nCaminho (gerencial): ' + String(d.caminho_gerencial);
+          }
+          if (d.arquivo_gerencial_erro) {
+            msgOk += '\nAviso (gerencial arquivo): ' + String(d.arquivo_gerencial_erro);
+          }
+          if (d.relatorio_gerencial_erro) {
+            msgOk += '\nAviso (gerencial): ' + String(d.relatorio_gerencial_erro);
+          }
+          alert(msgOk);
+          fecharFechamentoModal();
+        })
+        .catch(function () {
+          alert('Erro de rede ao executar fechamento.');
+        });
+    }
+    (function () {
+      var fm = document.getElementById('fechamento-modal');
+      if (fm) {
+        fm.querySelectorAll('[data-fechamento-close]').forEach(function (x) {
+          x.addEventListener('click', fecharFechamentoModal);
+        });
+        var fc = document.getElementById('fechamento-close');
+        if (fc) fc.addEventListener('click', fecharFechamentoModal);
+        var bp = document.getElementById('fechamento-btn-preview');
+        if (bp) bp.addEventListener('click', fechamentoPreview);
+        var b2 = document.getElementById('fechamento-btn-ir-passo2');
+        if (b2) b2.addEventListener('click', fechamentoIrParaPasso2);
+        var bv1 = document.getElementById('fechamento-btn-voltar-1');
+        if (bv1) bv1.addEventListener('click', function () { fechamentoSetStep(1); });
+        var bi = document.getElementById('fechamento-btn-imprimir');
+        if (bi) bi.addEventListener('click', fechamentoImprimirResumo);
+        var big = document.getElementById('fechamento-btn-imprimir-gerencial');
+        if (big) big.addEventListener('click', fechamentoImprimirGerencial);
+        var b3 = document.getElementById('fechamento-btn-ir-passo3');
+        if (b3) b3.addEventListener('click', fechamentoIrParaPasso3);
+        var bv2 = document.getElementById('fechamento-btn-voltar-2');
+        if (bv2) bv2.addEventListener('click', function () { fechamentoSetStep(2); });
+        var be = document.getElementById('fechamento-btn-executar');
+        if (be) be.addEventListener('click', fechamentoExecutar);
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && fm && !fm.hidden) fecharFechamentoModal();
+        });
+      }
+      var fo = document.getElementById('fechamento-open');
+      if (fo) fo.addEventListener('click', function (ev) { ev.preventDefault(); abrirFechamentoModal(); });
+    })();
+
+    (function () {
+      function el(id) { return document.getElementById(id); }
+      function esc(s) {
+        return String(s == null ? "" : s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+      function money(v) {
+        var n = Number(v);
+        if (!isFinite(n)) n = 0;
+        return "R$ " + n.toFixed(2).replace(".", ",");
+      }
+      function toStr(v) { return String(v == null ? "" : v); }
+      function includesCI(hay, needle) {
+        if (!needle) return true;
+        return toStr(hay).toLowerCase().indexOf(toStr(needle).toLowerCase()) >= 0;
+      }
+      function copyText(txt) {
+        var t = toStr(txt).trim();
+        if (!t) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(t).catch(function () { window.prompt("Copiar:", t); });
+        } else {
+          window.prompt("Copiar:", t);
+        }
+      }
+
+      function formatDadosItemDash(raw) {
+        var txt = toStr(raw).trim();
+        if (!txt) return "";
+        if (txt[0] !== "{" && txt[0] !== "[") {
+          if (txt.indexOf("TAM=") >= 0 || txt.indexOf("MASSA=") >= 0 || txt.indexOf("BORDA=") >= 0 || txt.indexOf("COB=") >= 0 || txt.indexOf("ADD=") >= 0) {
+            return txt;
+          }
+          return "";
+        }
+        try {
+          var j = JSON.parse(txt);
+          var parts = [];
+          var ac = (j && j.acrescimos) ? j.acrescimos : {};
+          var pr = (j && j.pricing) ? j.pricing : {};
+          var partesN = Math.max(1, Math.floor(Number(j.partes) || 1));
+          var sizeRelevant = ((Number(pr.mult) || 1) !== 1) || (Number(pr.delta) || 0) !== 0 || (pr.override != null && Number(pr.override || 0) > 0);
+          if (j.tamanho && sizeRelevant) parts.push("Tamanho: " + toStr(j.tamanho));
+          if (j.massa && Number(ac.massa || 0) > 0) parts.push("Massa: " + toStr(j.massa));
+          if (j.borda && Number(ac.borda || 0) > 0) parts.push("Borda: " + toStr(j.borda));
+          if (j.cobertura && Number(ac.cobertura || 0) > 0) {
+            var sufC = (j.scope && partesN > 1 && j.scope.cobertura === "uma_parte") ? (" (1/" + partesN + ")") : "";
+            parts.push("Cobertura: " + toStr(j.cobertura) + sufC);
+          }
+          if (j.adicionais && Array.isArray(j.adicionais) && j.adicionais.length && Number(ac.adicionais || 0) > 0) {
+            var sufA = (j.scope && partesN > 1 && j.scope.adicionais === "uma_parte") ? (" (1/" + partesN + ")") : "";
+            parts.push("Adicionais: " + j.adicionais.map(toStr).join(", ") + sufA);
+          }
+          if (j.tipo === "pizza" && j.sabores && Array.isArray(j.sabores) && j.sabores.length) {
+            var nomes = j.sabores.map(function (s) { return toStr((s || {}).nome || "").trim(); }).filter(Boolean);
+            if (nomes.length) parts.push("Sabores: " + nomes.join(" • "));
+          }
+          return parts.join("\n").trim();
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function fmtPedidoTxt(pedido, itens) {
+        var lines = [];
+        (itens || []).forEach(function (it) {
+          var nm = toStr(it.produto || "-").trim();
+          var qtd = Number(it.quantidade);
+          if (!isFinite(qtd) || qtd <= 0) qtd = 1;
+          var preco = Number(it.preco);
+          if (!isFinite(preco)) preco = 0;
+          var total = preco * qtd;
+          lines.push("* " + nm);
+          lines.push("  Qtd: " + String(qtd).replace(".", ",") + "  Unit: " + money(preco) + "  Total: " + money(total));
+          var det = formatDadosItemDash(it.dados_item);
+          if (det) det.split("\n").forEach(function (ln) { if (toStr(ln).trim()) lines.push("  " + toStr(ln).trim()); });
+          var ob = toStr(it.obs_item || "").trim();
+          if (ob) lines.push("  Obs: " + ob);
+          lines.push("");
+        });
+        var fp = toStr(pedido && pedido.formapagamento || "").trim();
+        var origP = toStr(pedido && pedido.origem || "").toUpperCase();
+        var vpd = Number(pedido && pedido.valor_pago_troco);
+        if (fp) {
+          lines.push("--------------------------------");
+          lines.push("Forma: " + fp);
+          if (origP === "DELIVERY" && isFinite(vpd) && vpd > 0) {
+            var totPed = Number(pedido.total);
+            if (!isFinite(totPed)) totPed = 0;
+            lines.push("Cliente paga com: " + money(vpd));
+            lines.push("Troco a levar: " + money(Math.max(0, vpd - totPed)));
+          }
+        }
+        return lines.join("\n").trim();
+      }
+
+      function openDashMesa(mesanro) {
+        var modal = el("dash-pedido-modal");
+        if (!modal) return;
+        var btnDesp = el("dash-pedido-despacho");
+        if (btnDesp) btnDesp.hidden = true;
+        var btnPronto = el("dash-pedido-pronto");
+        if (btnPronto) btnPronto.hidden = true;
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+        el("dash-pedido-titulo").textContent = "Mesa " + String(mesanro || "-");
+        el("dash-pedido-sub").textContent = "Carregando detalhes…";
+        el("dash-pedido-pill-origem").textContent = "MESA";
+        el("dash-pedido-pill-status").textContent = "-";
+        el("dash-pedido-pill-total").textContent = "Total: -";
+        var pillP = el("dash-pedido-pill-pessoas");
+        if (pillP) { pillP.style.display = "none"; pillP.textContent = ""; }
+        var wrapDiv = el("dash-mesa-pessoas-wrap");
+        var ipDiv = el("dash-mesa-pessoas");
+        var btnDiv = el("dash-mesa-pessoas-salvar");
+        var txtDiv = el("dash-mesa-por-pessoa");
+        if (wrapDiv) wrapDiv.style.display = "none";
+        if (txtDiv) txtDiv.textContent = "";
+        el("dash-pedido-cliente").textContent = "";
+        el("dash-pedido-endereco").textContent = "—";
+        el("dash-pedido-itens").textContent = "Carregando…";
+        var pagWrap = el("dash-pedido-pag-wrap");
+        if (pagWrap) pagWrap.style.display = "none";
+        modal.dataset.mesa = String(mesanro || "");
+
+        fetch("/api/dashboard/mesa/" + encodeURIComponent(String(mesanro || 0)), { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d || d.sucesso === false) throw new Error((d && (d.erro || d.mensagem)) || "Falha ao carregar mesa");
+            var m = d.mesa || {};
+            var itens = d.itens || [];
+            el("dash-pedido-sub").textContent = "Conferência da mesa";
+            el("dash-pedido-pill-origem").textContent = "MESA";
+            el("dash-pedido-pill-status").textContent = toStr(m.status_mesa || "-").toUpperCase();
+            el("dash-pedido-pill-total").textContent = "Total: " + money(m.total || 0);
+            var ppl = Number(m.pessoas_mesa || 0);
+            if (!isFinite(ppl) || ppl <= 0) ppl = 1;
+            if (pillP) {
+              if (ppl > 1) {
+                pillP.style.display = "";
+                var por = Number(m.por_pessoa || 0);
+                pillP.textContent = "Pessoas: " + ppl + " | Por pessoa: " + money(por || (Number(m.total || 0) / ppl));
+              } else {
+                pillP.style.display = "none";
+                pillP.textContent = "";
+              }
+            }
+            if (wrapDiv && ipDiv && btnDiv && txtDiv) {
+              wrapDiv.style.display = "";
+              ipDiv.value = String(ppl);
+              ipDiv.disabled = toStr(m.status_mesa || "").toUpperCase() === "RECEBIDO";
+              btnDiv.disabled = ipDiv.disabled;
+              if (ppl > 1) {
+                var por2 = Number(m.por_pessoa || 0);
+                txtDiv.textContent = "Por pessoa: " + money(por2 || (Number(m.total || 0) / ppl));
+              } else {
+                txtDiv.textContent = "";
+              }
+            }
+            el("dash-pedido-cliente").textContent = "";
+            el("dash-pedido-endereco").textContent = "—";
+            el("dash-pedido-itens").textContent = fmtPedidoTxt({}, itens) || "Sem itens";
+
+            var baixa = toStr(m.baixa_pagamento || "").trim();
+            if (baixa) {
+              try {
+                var j = JSON.parse(baixa);
+                var l = [];
+                if (j.pagamentos && Array.isArray(j.pagamentos)) {
+                  j.pagamentos.forEach(function (x) {
+                    l.push(toStr(x.forma || "-") + ": " + money(x.valor || 0));
+                  });
+                }
+                if (Number(j.troco || 0) > 0) l.push("Troco: " + money(j.troco || 0));
+                if (j.usuario) l.push("Usuário: " + toStr(j.usuario));
+                el("dash-pedido-pag").textContent = l.join("\n") || baixa;
+              } catch (_) {
+                el("dash-pedido-pag").textContent = baixa;
+              }
+              if (pagWrap) pagWrap.style.display = "block";
+            }
+          })
+          .catch(function (e) {
+            el("dash-pedido-sub").textContent = "Falha ao carregar";
+            el("dash-pedido-itens").textContent = toStr(e && e.message ? e.message : "Erro");
+          });
+      }
+
+      function executarCancelamentoComanda(origem, nropedido, onSuccess) {
+        var orig = toStr(origem || "").toUpperCase();
+        var nro = Number(nropedido || 0);
+        if (!orig || !nro) {
+          alert("Selecione origem e número do pedido.");
+          return Promise.reject(new Error("Pedido inválido"));
+        }
+        var msg =
+          "Cancelar a comanda #" + nro + " (" + orig + ")?\n\n" +
+          "A comanda inteira ficará CANCELADA e não poderá mais ser editada na /casa.";
+        if (!window.confirm(msg)) return Promise.resolve(null);
+        if (!window.confirm("Confirme novamente: deseja CANCELAR o pedido #" + nro + "?")) return Promise.resolve(null);
+        return fetch("/api/pedido/cancelar-comanda", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ origem: orig, nropedido: nro, confirmacao: "CANCELAR" }),
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (x) {
+            if (!x.j || x.j.sucesso === false) throw new Error((x.j && x.j.erro) || "Falha ao cancelar comanda");
+            alert(toStr(x.j.mensagem || "Comanda cancelada."));
+            if (typeof onSuccess === "function") onSuccess();
+            try { loadAll(); } catch (_) {}
+            return x.j;
+          })
+          .catch(function (e) {
+            alert(toStr(e && e.message ? e.message : "Erro"));
+            throw e;
+          });
+      }
+      window.executarCancelamentoComanda = executarCancelamentoComanda;
+
+      function openDashPedido(origem, nropedido) {
+        var modal = el("dash-pedido-modal");
+        if (!modal) return;
+        var btnDesp = el("dash-pedido-despacho");
+        if (btnDesp) btnDesp.hidden = true;
+        var btnCancel = el("dash-pedido-cancelar");
+        if (btnCancel) btnCancel.hidden = true;
+        var btnPronto = el("dash-pedido-pronto");
+        if (btnPronto) btnPronto.hidden = true;
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+        el("dash-pedido-titulo").textContent = lblPedidoHash(nropedido);
+        el("dash-pedido-sub").textContent = "Carregando detalhes…";
+        el("dash-pedido-pill-origem").textContent = toStr(origem || "-").toUpperCase();
+        el("dash-pedido-pill-status").textContent = "-";
+        el("dash-pedido-pill-total").textContent = "Total: -";
+        var pillP = el("dash-pedido-pill-pessoas");
+        if (pillP) { pillP.style.display = "none"; pillP.textContent = ""; }
+        el("dash-pedido-cliente").textContent = "";
+        el("dash-pedido-endereco").textContent = "";
+        el("dash-pedido-itens").textContent = "Carregando…";
+        var pagWrap = el("dash-pedido-pag-wrap");
+        if (pagWrap) pagWrap.style.display = "none";
+
+        fetch("/api/dashboard/pedido/" + encodeURIComponent(toStr(origem || "")) + "/" + encodeURIComponent(String(nropedido || 0)), { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d || d.sucesso === false) throw new Error((d && (d.erro || d.mensagem)) || "Falha ao carregar pedido");
+            var p = d.pedido || {};
+            var itens = d.itens || [];
+            el("dash-pedido-sub").textContent = IS_RETAIL ? "Conferência da venda" : "Conferência do pedido";
+            el("dash-pedido-pill-origem").textContent = toStr(p.origem || origem || "-").toUpperCase();
+            var stComanda = toStr(p.status_comanda || "NORMAL").toUpperCase();
+            var stPed = toStr(p.status_pedido || "-").toUpperCase();
+            if (p.comanda_cancelada || stComanda === "CANCELADA") {
+              el("dash-pedido-pill-status").textContent = "CANCELADA";
+              el("dash-pedido-pill-status").className = "ui-pill bad";
+            } else if (stPed === "ROTA") {
+              el("dash-pedido-pill-status").textContent = stPed;
+              el("dash-pedido-pill-status").className = "ui-pill warn";
+            } else if (stPed === "RECEBIDO") {
+              el("dash-pedido-pill-status").textContent = stPed;
+              el("dash-pedido-pill-status").className = "ui-pill ok";
+            } else {
+              el("dash-pedido-pill-status").textContent = stPed;
+              el("dash-pedido-pill-status").className = "ui-pill neutral";
+            }
+            el("dash-pedido-pill-total").textContent = "Total: " + money(p.total || 0);
+            var cli = toStr(p.nome || "Cliente");
+            var tel = toStr(p.telefone || "").trim();
+            el("dash-pedido-cliente").textContent = cli + (tel ? (" • " + tel) : "");
+            var end = [toStr(p.endereco || "").trim(), toStr(p.nrocasa || "").trim()].filter(Boolean).join(", ");
+            var comp = toStr(p.complemento || "").trim();
+            if (comp) end = (end ? (end + " - " + comp) : comp);
+            var entN = toStr(p.entregador_nome || "").trim();
+            var entC = toStr(p.entregador || "").trim();
+            var entPart = "";
+            if (entN || entC) {
+              entPart = entN ? (" · Entregador: " + entN + (entC ? " (" + entC + ")" : "")) : (" · Entregador (código): " + entC);
+            }
+            el("dash-pedido-endereco").textContent = (end || "—") + entPart;
+            el("dash-pedido-itens").textContent = fmtPedidoTxt(p, itens) || "Sem itens";
+
+            var pagLines = [];
+            var vpd = Number(p.valor_pago_troco);
+            if (toStr(p.origem || origem).toUpperCase() === "DELIVERY" && isFinite(vpd) && vpd > 0) {
+              pagLines.push("--- Troco (conferência) ---");
+              pagLines.push("Forma: " + toStr(p.formapagamento || "").trim());
+              pagLines.push("Cliente paga com: " + money(vpd));
+              pagLines.push("Troco a levar: " + money(Math.max(0, vpd - Number(p.total || 0))));
+            }
+            var baixa = toStr(p.baixa_pagamento || "").trim();
+            if (baixa) {
+              try {
+                var j = JSON.parse(baixa);
+                if (pagLines.length) pagLines.push("");
+                pagLines.push("--- Baixa ---");
+                if (j.pagamentos && Array.isArray(j.pagamentos)) {
+                  j.pagamentos.forEach(function (x) {
+                    pagLines.push(toStr(x.forma || "-") + ": " + money(x.valor || 0));
+                  });
+                }
+                if (Number(j.troco || 0) > 0) pagLines.push("Troco: " + money(j.troco || 0));
+                if (j.usuario) pagLines.push("Usuário: " + toStr(j.usuario));
+              } catch (_) {
+                if (pagLines.length) pagLines.push("");
+                pagLines.push(baixa);
+              }
+            }
+            if (pagLines.length) {
+              el("dash-pedido-pag").textContent = pagLines.join("\n");
+              if (pagWrap) pagWrap.style.display = "block";
+            } else if (pagWrap) {
+              pagWrap.style.display = "none";
+            }
+            var btnD = el("dash-pedido-despacho");
+            if (btnD) {
+              var o = toStr(p.origem || origem || "").toUpperCase();
+              var st = toStr(p.status_pedido || "").toUpperCase();
+              var can = o === "DELIVERY" && (st === "ABERTO" || st === "ABERTA") && !p.comanda_cancelada;
+              btnD.hidden = !can;
+              btnD.setAttribute("data-nropedido", String(nropedido || ""));
+            }
+            var btnC = el("dash-pedido-cancelar");
+            if (btnC) {
+              var o2 = toStr(p.origem || origem || "").toUpperCase();
+              var pode = !!p.pode_cancelar_comanda;
+              btnC.hidden = !pode;
+              btnC.disabled = !pode;
+              btnC.setAttribute("data-origem", o2);
+              btnC.setAttribute("data-nropedido", String(nropedido || ""));
+              if (!pode && p.motivo_nao_cancelar) btnC.title = toStr(p.motivo_nao_cancelar);
+              else btnC.removeAttribute("title");
+            }
+            var btnP = el("dash-pedido-pronto");
+            if (btnP) {
+              var canPronto = canAvisarProntoBalcao({
+                origem: toStr(p.origem || origem || "").toUpperCase(),
+                status_pedido: toStr(p.status_pedido || "").toUpperCase(),
+                status_comanda: stComanda,
+                comanda_cancelada: p.comanda_cancelada || stComanda === "CANCELADA",
+                telefone: tel,
+              });
+              btnP.hidden = !canPronto;
+              btnP.setAttribute("data-origem", "BALCAO");
+              btnP.setAttribute("data-nropedido", String(nropedido || ""));
+            }
+          })
+          .catch(function (e) {
+            var btnD2 = el("dash-pedido-despacho");
+            if (btnD2) btnD2.hidden = true;
+            var btnC2 = el("dash-pedido-cancelar");
+            if (btnC2) btnC2.hidden = true;
+            var btnP2 = el("dash-pedido-pronto");
+            if (btnP2) btnP2.hidden = true;
+            el("dash-pedido-sub").textContent = "Falha ao carregar";
+            el("dash-pedido-itens").textContent = toStr(e && e.message ? e.message : "Erro");
+          });
+      }
+
+      function closeDashPedido() {
+        var modal = el("dash-pedido-modal");
+        if (!modal) return;
+        modal.hidden = true;
+        document.body.style.overflow = "";
+        try { delete modal.dataset.mesa; } catch (_) {}
+      }
+
+      var waDashRecursos = { ativo: false, notif_balcao_pronto: false };
+      function carregarWhatsappRecursosDash() {
+        return fetch("/api/whatsapp/recursos", { credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
+          .then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (d) {
+            if (d && d.sucesso) {
+              waDashRecursos = { ativo: !!d.ativo, notif_balcao_pronto: !!d.notif_balcao_pronto };
+            }
+          })
+          .catch(function () {});
+      }
+      function telefoneBalcaoWhatsappOk(tel) {
+        var s = String(tel || "").trim();
+        if (!s || s.toUpperCase().indexOf("BALCAO") === 0) return false;
+        var d = s.replace(/\D/g, "");
+        return d.length >= 10;
+      }
+      function canAvisarProntoBalcao(r) {
+        if (!waDashRecursos.ativo || !waDashRecursos.notif_balcao_pronto) return false;
+        var orig = String((r && r.origem) || "").toUpperCase();
+        if (orig !== "BALCAO") return false;
+        var stp = String((r && r.status_pedido) || "").toUpperCase();
+        var stCom = String((r && r.status_comanda) || "NORMAL").toUpperCase();
+        var cancelada = !!(r && r.comanda_cancelada) || stCom === "CANCELADA" || stp === "CANCELADA";
+        if (cancelada) return false;
+        if (stp !== "ABERTO" && stp !== "ABERTA") return false;
+        return telefoneBalcaoWhatsappOk(r && r.telefone);
+      }
+      function avisarProntoBalcao(origem, nropedido) {
+        var orig = String(origem || "BALCAO").toUpperCase();
+        var nro = Number(nropedido) || 0;
+        if (!nro) return Promise.resolve();
+        return fetch("/api/whatsapp/avisar-pronto", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ origem: orig, nropedido: nro }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); })
+          .then(function (res) {
+            if (res.r.ok && res.d && res.d.sucesso) {
+              alert(res.d.mensagem || "Cliente avisado no WhatsApp.");
+              return;
+            }
+            throw new Error((res.d && res.d.erro) || "Falha ao avisar no WhatsApp.");
+          });
+      }
+      window.avisarProntoBalcao = avisarProntoBalcao;
+
+      var state = {
+        tab: "pedidos",
+        filtro: "todos",
+        status: "aberto",
+        q: "",
+        dataMesas: [],
+        dataDelivery: [],
+        carregando: false,
+      };
+
+      function setTabsUI() {
+        var tabs = document.querySelectorAll("[data-dash-tab]");
+        tabs.forEach(function (b) {
+          var active = b.getAttribute("data-dash-tab") === state.tab;
+          b.classList.toggle("active", active);
+          b.setAttribute("aria-selected", active ? "true" : "false");
+        });
+      }
+
+      function renderChips() {
+        var host = el("dash-chips");
+        if (!host) return;
+        if (state.tab === "pedidos") {
+          var chipsOrig = [
+            { k: "todos", t: "Todos" },
+            { k: "delivery", t: "Delivery" },
+            { k: "balcao", t: "Balcão" },
+          ].filter(function (c) { return !IS_RETAIL || c.k !== "delivery"; });
+          var chipsStatus = [
+            { k: "aberto", t: "Aberto ou rota" },
+            { k: "recebido", t: "Recebidos" },
+            { k: "cancelado", t: "Cancelados" },
+            { k: "todos", t: "Abertos + rota + recebidos" },
+          ];
+          host.innerHTML =
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+            chipsOrig
+              .map(function (c) {
+                var act = c.k === state.filtro ? " active" : "";
+                return '<button type="button" class="ui-chip' + act + '" data-chip-orig="' + esc(c.k) + '">' + esc(c.t) + "</button>";
+              })
+              .join("") +
+            "</div>" +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+            chipsStatus
+              .map(function (c) {
+                var act = c.k === state.status ? " active" : "";
+                return '<button type="button" class="ui-chip' + act + '" data-chip-status="' + esc(c.k) + '">' + esc(c.t) + "</button>";
+              })
+              .join("") +
+            "</div>";
+          host.querySelectorAll("[data-chip-orig]").forEach(function (b) {
+            b.addEventListener("click", function () {
+              state.filtro = b.getAttribute("data-chip-orig") || "todos";
+              renderChips();
+              loadAll();
+            });
+          });
+          host.querySelectorAll("[data-chip-status]").forEach(function (b) {
+            b.addEventListener("click", function () {
+              state.status = b.getAttribute("data-chip-status") || "aberto";
+              renderChips();
+              loadAll();
+            });
+          });
+          return;
+        }
+        host.innerHTML = '<button type="button" class="ui-chip active" data-chip-orig="todos">Todos</button>';
+      }
+
+      function renderList() {
+        var host = el("dash-list");
+        if (!host) return;
+        if (state.carregando) {
+          host.innerHTML = '<div class="ui-dash-card"><div class="ui-dash-strong">Carregando…</div><div class="ui-dash-muted">Atualizando dados do dashboard.</div></div>';
+          return;
+        }
+
+        var q = (state.q || "").trim();
+        if (state.tab === "mesas") {
+          var rows = (state.dataMesas || []).filter(function (r) {
+            return (
+              includesCI(r.mesa, q) ||
+              includesCI(r.preview, q) ||
+              includesCI(r.total_itens, q) ||
+              includesCI(r.total_valor, q)
+            );
+          });
+          if (!rows.length) {
+            host.innerHTML = '<div class="ui-dash-card"><div class="ui-dash-strong">Nenhuma mesa encontrada</div><div class="ui-dash-muted">Sem registros recentes em pedido_diarios.</div></div>';
+            return;
+          }
+          host.innerHTML = rows
+            .map(function (r) {
+              var pillDetalhe = r.tem_detalhes ? '<span class="ui-pill ok">Com opções</span>' : "";
+              var pillConta = String(r.status_mesa || "").toUpperCase() === "CONTA" ? '<span class="ui-pill warn">CONTA</span>' : "";
+              return (
+                '<div class="ui-dash-card">' +
+                '<div class="ui-dash-row">' +
+                '<div class="ui-dash-strong">Mesa ' + esc(r.mesa) + "</div>" +
+                '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">' +
+                pillConta +
+                pillDetalhe +
+                '<span class="ui-pill neutral">' + esc(r.total_itens) + " item(s)</span>" +
+                "</div>" +
+                "</div>" +
+                '<div class="ui-dash-row">' +
+                '<div class="ui-dash-muted">' + esc(r.preview || "—") + "</div>" +
+                '<div class="ui-dash-strong">' + esc(money(r.total_valor)) + "</div>" +
+                "</div>" +
+                '<div class="ui-dash-row">' +
+              '<button type="button" class="ui-mini-btn ui-focus" data-ver-mesa="1" data-mesa="' + esc(r.mesa) + '">Ver</button>' +
+                '<button type="button" class="ui-mini-btn ui-focus" onclick="window.location.href=\'/mesa?mesa=' + encodeURIComponent(String(r.mesa||"")) + '\'">Abrir</button>' +
+                '<button type="button" class="ui-mini-btn ui-focus" data-copy="' + esc(r.mesa) + '">Copiar mesa</button>' +
+                "</div>" +
+                "</div>"
+              );
+            })
+            .join("");
+        host.querySelectorAll("[data-ver-mesa]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var nro = Number(b.getAttribute("data-mesa") || 0);
+            if (window.openDashMesa) window.openDashMesa(nro);
+          });
+        });
+          host.querySelectorAll("[data-copy]").forEach(function (b) {
+            b.addEventListener("click", function () { copyText(b.getAttribute("data-copy")); });
+          });
+          return;
+        }
+
+        var rowsD = (state.dataDelivery || []).filter(function (r) {
+          if (state.filtro === "delivery" && String(r.origem || "").toUpperCase() !== "DELIVERY") return false;
+          if (state.filtro === "balcao" && String(r.origem || "").toUpperCase() !== "BALCAO") return false;
+          return (
+            includesCI(r.nropedido, q) ||
+            includesCI(r.telefone, q) ||
+            includesCI(r.nome, q) ||
+            includesCI(r.endereco, q) ||
+            includesCI(r.formapagamento, q) ||
+            includesCI(r.entregador, q) ||
+            includesCI(r.entregador_nome, q)
+          );
+        });
+        if (!rowsD.length) {
+          host.innerHTML = '<div class="ui-dash-card"><div class="ui-dash-strong">Nenhum pedido encontrado</div><div class="ui-dash-muted">Sem registros em pedido_diarios.</div></div>';
+          return;
+        }
+        host.innerHTML = rowsD
+          .map(function (r) {
+            var orig = String(r.origem || "").toUpperCase();
+            var pill = '<span class="ui-pill neutral">' + esc(orig || "-") + "</span>";
+            var codEnt = String(r.entregador || "").trim();
+            var nomeEnt = String(r.entregador_nome || "").trim();
+            var pillEnt = "";
+            if (nomeEnt) {
+              pillEnt =
+                '<span class="ui-pill ok" title="' +
+                esc(codEnt ? "Código: " + codEnt : nomeEnt) +
+                '">' +
+                esc(nomeEnt) +
+                "</span>";
+            } else if (codEnt) {
+              pillEnt = '<span class="ui-pill ok">' + esc(codEnt) + "</span>";
+            }
+            var tel = String(r.telefone || "").replace(/\D/g, "");
+            var modo = IS_RETAIL ? "balcao" : (orig === "BALCAO" ? "balcao" : "delivery");
+            var modoHref = "/casa?modo=" + encodeURIComponent(modo) + "&pedido=" + encodeURIComponent(String(r.nropedido || "")) + "&rec=1" + (tel ? ("&tel=" + encodeURIComponent(tel)) : "");
+            var stp = String(r.status_pedido || "").toUpperCase();
+            var stCom = String(r.status_comanda || "NORMAL").toUpperCase();
+            var cancelada = !!r.comanda_cancelada || stCom === "CANCELADA" || stp === "CANCELADA";
+            var totPed = Number(r.total_preco);
+            if (!isFinite(totPed)) totPed = 0;
+            var vpt = r.valor_pago_troco;
+            var trocoLin = "";
+            if (orig === "DELIVERY" && vpt != null && isFinite(Number(vpt)) && Number(vpt) > 0) {
+              var vp = Number(vpt);
+              trocoLin =
+                '<div class="ui-dash-muted">Paga ' +
+                money(vp) +
+                " · troco " +
+                money(Math.max(0, vp - totPed)) +
+                "</div>";
+            }
+            var canBaixa = !cancelada && (stp === "ABERTO" || stp === "ABERTA" || stp === "ROTA");
+            var btnBaixa = canBaixa ? ('<button type="button" class="ui-mini-btn ui-focus" data-baixa-open="1" data-origem="' + esc(orig) + '" data-nropedido="' + esc(r.nropedido) + '">Baixa</button>') : "";
+            var canDespacho = !cancelada && orig === "DELIVERY" && (stp === "ABERTO" || stp === "ABERTA");
+            var btnDespacho = canDespacho
+              ? ('<button type="button" class="ui-mini-btn ui-focus ui-dash-btn-despacho" data-despacho-dash="1" data-nropedido="' + esc(r.nropedido) + '">Despachar</button>')
+              : "";
+            var canPronto = canAvisarProntoBalcao(r);
+            var btnPronto = canPronto
+              ? ('<button type="button" class="ui-mini-btn ui-focus ui-dash-btn-pronto" data-avisar-pronto="1" data-origem="' + esc(orig) + '" data-nropedido="' + esc(r.nropedido) + '">Avisar pronto</button>')
+              : "";
+            var pillStatus = cancelada
+              ? '<span class="ui-pill bad">CANCELADA</span>'
+              : stp === "RECEBIDO"
+                ? '<span class="ui-pill ok">RECEBIDO</span>'
+                : stp === "ROTA"
+                  ? '<span class="ui-pill warn">ROTA</span>'
+                  : '<span class="ui-pill neutral">' + esc(stp || "-") + "</span>";
+            var btnVerLabel = stp === "ROTA" ? "Ver completo" : "Ver";
+            var btnVer = '<button type="button" class="ui-mini-btn ui-focus" data-ver-pedido="1" data-origem="' + esc(orig) + '" data-nropedido="' + esc(r.nropedido) + '">' + esc(btnVerLabel) + "</button>";
+            var btnCancel = r.pode_cancelar_comanda
+              ? ('<button type="button" class="ui-mini-btn ui-focus ui-dash-btn-cancelar" data-cancelar-comanda="1" data-origem="' + esc(orig) + '" data-nropedido="' + esc(r.nropedido) + '">Cancelar</button>')
+              : "";
+            return (
+              '<div class="ui-dash-card">' +
+              '<div class="ui-dash-row">' +
+              '<div class="ui-dash-strong">' + esc(lblPedidoHash(r.nropedido)) + "</div>" +
+              '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">' + pill + pillStatus + pillEnt + "</div>" +
+              "</div>" +
+              '<div class="ui-dash-muted">' + esc(r.nome || "Cliente") + (r.telefone ? " • " + esc(r.telefone) : "") + "</div>" +
+              '<div class="ui-dash-muted">' + esc(r.endereco || "—") + "</div>" +
+              trocoLin +
+              (r.data_criacao ? ('<div class="ui-dash-muted">Criado: ' + esc(String(r.data_criacao)) + "</div>") : "") +
+              '<div class="ui-dash-row">' +
+              '<span class="ui-pill neutral">' + esc(r.total_produtos) + " item(s)</span>" +
+              '<div class="ui-dash-strong">' + esc(money(r.total_preco)) + "</div>" +
+              "</div>" +
+              '<div class="ui-dash-row">' +
+              btnBaixa +
+              btnDespacho +
+              btnPronto +
+              btnCancel +
+              btnVer +
+              (!cancelada && stp !== "RECEBIDO" && stp !== "ROTA" ? ('<button type="button" class="ui-mini-btn ui-focus" onclick="window.location.href=\'' + modoHref + '\'">Abrir</button>') : "") +
+              '<button type="button" class="ui-mini-btn ui-focus" data-copy="' + esc(r.telefone || "") + '">Copiar telefone</button>' +
+              "</div>" +
+              "</div>"
+            );
+          })
+          .join("");
+        host.querySelectorAll("[data-copy]").forEach(function (b) {
+          b.addEventListener("click", function () { copyText(b.getAttribute("data-copy")); });
+        });
+        host.querySelectorAll("[data-baixa-open]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var orig = b.getAttribute("data-origem") || "";
+            var nro = Number(b.getAttribute("data-nropedido") || 0);
+            if (window.openBaixaPedido) window.openBaixaPedido(orig, nro);
+          });
+        });
+        host.querySelectorAll("[data-ver-pedido]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var orig = b.getAttribute("data-origem") || "";
+            var nro = Number(b.getAttribute("data-nropedido") || 0);
+            if (window.openDashPedido) window.openDashPedido(orig, nro);
+          });
+        });
+        host.querySelectorAll("[data-despacho-dash]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var nro = Number(b.getAttribute("data-nropedido") || 0);
+            if (window.LojaOnlineDespachoDelivery && typeof window.LojaOnlineDespachoDelivery.open === "function") {
+              window.LojaOnlineDespachoDelivery.open(nro || undefined);
+            }
+          });
+        });
+        host.querySelectorAll("[data-avisar-pronto]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var orig = b.getAttribute("data-origem") || "BALCAO";
+            var nro = Number(b.getAttribute("data-nropedido") || 0);
+            if (!window.avisarProntoBalcao) return;
+            b.disabled = true;
+            window.avisarProntoBalcao(orig, nro)
+              .catch(function (e) { alert(String(e && e.message ? e.message : e)); })
+              .finally(function () { b.disabled = false; });
+          });
+        });
+        host.querySelectorAll("[data-cancelar-comanda]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var orig = b.getAttribute("data-origem") || "";
+            var nro = Number(b.getAttribute("data-nropedido") || 0);
+            if (window.executarCancelamentoComanda) {
+              window.executarCancelamentoComanda(orig, nro);
+            }
+          });
+        });
+      }
+
+      function groupMesas(rows) {
+        var map = {};
+        (rows || []).forEach(function (it) {
+          var mesa = it.mesanro != null ? String(it.mesanro) : "";
+          if (!mesa) return;
+          if (!map[mesa]) map[mesa] = { mesa: mesa, total_itens: 0, total_valor: 0, nomes: {}, tem_detalhes: false, status_mesa: "" };
+          var qtd = Number(it.quantidade);
+          if (!isFinite(qtd) || qtd <= 0) qtd = 1;
+          var preco = Number(it.preco);
+          if (!isFinite(preco)) preco = 0;
+          map[mesa].total_itens += qtd;
+          map[mesa].total_valor += preco * qtd;
+          if (it.dados_item && String(it.dados_item).trim()) map[mesa].tem_detalhes = true;
+          var nm = toStr(it.produto).trim();
+          if (nm) map[mesa].nomes[nm] = true;
+          var st = String(it.status_mesa || "").toUpperCase();
+          if (st === "CONTA") map[mesa].status_mesa = "CONTA";
+        });
+        var out = Object.keys(map).map(function (k) {
+          var nms = Object.keys(map[k].nomes);
+          var prev = nms.slice(0, 2).join(" • ");
+          if (nms.length > 2) prev = prev + " +" + (nms.length - 2);
+          return {
+            mesa: map[k].mesa,
+            total_itens: map[k].total_itens,
+            total_valor: map[k].total_valor,
+            preview: prev,
+            tem_detalhes: !!map[k].tem_detalhes,
+            status_mesa: map[k].status_mesa || "",
+          };
+        });
+        out.sort(function (a, b) { return Number(b.mesa) - Number(a.mesa); });
+        return out;
+      }
+
+      function normalizeDelivery(data) {
+        var rows = [];
+        if (!data) return rows;
+        if (Array.isArray(data)) rows = data;
+        else if (Array.isArray(data.registros)) rows = data.registros;
+        else if (Array.isArray(data.pedidos)) rows = data.pedidos;
+        return rows.map(function (r) {
+          var orig = String(r.origem || "").toUpperCase();
+          var vpt = r.valor_pago_troco;
+          var vptNum = vpt != null && vpt !== "" && isFinite(Number(vpt)) ? Number(vpt) : null;
+          return {
+            nropedido: r.nropedido,
+            telefone: r.telefone,
+            nome: r.nome,
+            origem: orig,
+            endereco: [r.endereco, r.nrocasa, r.complemento].filter(Boolean).join(", "),
+            entregador: r.entregador,
+            entregador_nome: r.entregador_nome,
+            formapagamento: toStr(r.formapagamento || "").trim(),
+            valor_pago_troco: vptNum,
+            status_pedido: String(r.status_pedido || "").toUpperCase(),
+            status_comanda: String(r.status_comanda || "NORMAL").toUpperCase(),
+            comanda_cancelada: !!r.comanda_cancelada,
+            pode_cancelar_comanda: !!r.pode_cancelar_comanda,
+            motivo_nao_cancelar: toStr(r.motivo_nao_cancelar || ""),
+            data_criacao: r.data_criacao,
+            total_preco: r.total_preco != null ? r.total_preco : r.total,
+            total_produtos: r.total_produtos != null ? r.total_produtos : r.total_itens,
+          };
+        });
+      }
+
+      function loadAll() {
+        state.carregando = true;
+        renderList();
+        var pMesas = fetch("/api/mesa-todos", { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { state.dataMesas = groupMesas((d && d.registros) || []); })
+          .catch(function () { state.dataMesas = []; });
+        var pDel = fetch("/api/dashboard/delivery-balcao?status=" + encodeURIComponent(state.status || "aberto"), { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { state.dataDelivery = normalizeDelivery(d); })
+          .catch(function () { state.dataDelivery = []; });
+        var pWa = carregarWhatsappRecursosDash();
+        Promise.all([pMesas, pDel, pWa]).finally(function () {
+          state.carregando = false;
+          renderList();
+        });
+      }
+
+      document.addEventListener("lojaonline:delivery-despachado", function () {
+        try {
+          loadAll();
+        } catch (_) {}
+      });
+
+      function bindTabs() {
+        document.querySelectorAll("[data-dash-tab]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            state.tab = b.getAttribute("data-dash-tab") || "mesas";
+            state.filtro = "todos";
+            state.status = "aberto";
+            setTabsUI();
+            renderChips();
+            renderList();
+          });
+        });
+      }
+      bindTabs();
+      var qEl = el("dash-q");
+      if (qEl) {
+        qEl.addEventListener("input", function () {
+          state.q = qEl.value || "";
+          renderList();
+        });
+      }
+      var rEl = el("dash-refresh");
+      if (rEl) rEl.addEventListener("click", loadAll);
+
+      setTabsUI();
+      renderChips();
+      carregarWhatsappRecursosDash().finally(function () {
+        if (IS_RETAIL) state.filtro = "balcao";
+        loadAll();
+      });
+
+      var modal = el("dash-modal");
+      var openBtn = el("dash-open");
+      var closeBtn = el("dash-close");
+      function openModal() {
+        if (!modal) return;
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+        renderList();
+        var q = el("dash-q");
+        if (q) q.focus();
+      }
+      function closeModal() {
+        if (!modal) return;
+        modal.hidden = true;
+        document.body.style.overflow = "";
+      }
+      if (openBtn) openBtn.addEventListener("click", openModal);
+      if (closeBtn) closeBtn.addEventListener("click", closeModal);
+      if (modal) {
+        modal.querySelectorAll("[data-close]").forEach(function (x) {
+          x.addEventListener("click", closeModal);
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && !modal.hidden) closeModal();
+        });
+      }
+
+      window.openDashPedido = openDashPedido;
+      window.openDashMesa = openDashMesa;
+      var dashPedidoClose = el("dash-pedido-close");
+      if (dashPedidoClose) dashPedidoClose.addEventListener("click", closeDashPedido);
+      var dashPedidoModal = el("dash-pedido-modal");
+      if (dashPedidoModal) {
+        dashPedidoModal.querySelectorAll("[data-close-dash-pedido]").forEach(function (x) {
+          x.addEventListener("click", closeDashPedido);
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && !dashPedidoModal.hidden) closeDashPedido();
+        });
+      }
+
+      var dashPedidoDespacho = el("dash-pedido-despacho");
+      if (dashPedidoDespacho) {
+        dashPedidoDespacho.addEventListener("click", function () {
+          var n = Number(dashPedidoDespacho.getAttribute("data-nropedido") || 0);
+          if (window.LojaOnlineDespachoDelivery && typeof window.LojaOnlineDespachoDelivery.open === "function") {
+            window.LojaOnlineDespachoDelivery.open(n || undefined);
+          }
+        });
+      }
+
+      var dashPedidoCancelar = el("dash-pedido-cancelar");
+      if (dashPedidoCancelar) {
+        dashPedidoCancelar.addEventListener("click", function () {
+          var orig = dashPedidoCancelar.getAttribute("data-origem") || "";
+          var nro = Number(dashPedidoCancelar.getAttribute("data-nropedido") || 0);
+          if (!window.executarCancelamentoComanda) return;
+          window.executarCancelamentoComanda(orig, nro, function () {
+            closeDashPedido();
+          });
+        });
+      }
+
+      var dashPedidoPronto = el("dash-pedido-pronto");
+      if (dashPedidoPronto) {
+        dashPedidoPronto.addEventListener("click", function () {
+          var orig = dashPedidoPronto.getAttribute("data-origem") || "BALCAO";
+          var nro = Number(dashPedidoPronto.getAttribute("data-nropedido") || 0);
+          if (!window.avisarProntoBalcao) return;
+          dashPedidoPronto.disabled = true;
+          window.avisarProntoBalcao(orig, nro)
+            .catch(function (e) { alert(String(e && e.message ? e.message : e)); })
+            .finally(function () { dashPedidoPronto.disabled = false; });
+        });
+      }
+
+      var cancelarPreviewState = { origem: "", nropedido: 0, pode: false };
+      function resetCancelarComandaPreview() {
+        cancelarPreviewState = { origem: "", nropedido: 0, pode: false };
+        var prev = el("cancelar-comanda-preview");
+        if (prev) prev.hidden = true;
+        var btn = el("cancelar-comanda-confirmar");
+        if (btn) btn.disabled = true;
+      }
+      function renderCancelarComandaPreview(p, origem, nropedido) {
+        var prev = el("cancelar-comanda-preview");
+        var tit = el("cancelar-comanda-preview-titulo");
+        var sub = el("cancelar-comanda-preview-sub");
+        var pills = el("cancelar-comanda-preview-pills");
+        var btn = el("cancelar-comanda-confirmar");
+        if (!prev || !tit || !sub || !pills || !btn) return;
+        var orig = toStr(origem || p.origem || "").toUpperCase();
+        var nro = Number(nropedido || p.nropedido || 0);
+        var pode = !!p.pode_cancelar_comanda;
+        cancelarPreviewState = { origem: orig, nropedido: nro, pode: pode };
+        tit.textContent = lblPedidoHash(nro) + " · " + orig;
+        sub.textContent = toStr(p.nome || "Cliente") + (p.telefone ? (" • " + toStr(p.telefone)) : "") + " — Total: " + money(p.total || 0);
+        var stPed = toStr(p.status_pedido || "-").toUpperCase();
+        var stCom = toStr(p.status_comanda || "NORMAL").toUpperCase();
+        pills.innerHTML =
+          '<span class="ui-pill neutral">' + esc(stPed) + "</span>" +
+          '<span class="ui-pill ' + (stCom === "CANCELADA" ? "bad" : "neutral") + '">' + esc(stCom) + "</span>";
+        if (!pode && p.motivo_nao_cancelar) {
+          sub.textContent += " — " + toStr(p.motivo_nao_cancelar);
+        }
+        prev.hidden = false;
+        btn.disabled = !pode;
+      }
+      function buscarCancelarComandaPreview() {
+        var orig = toStr(el("cancelar-comanda-origem") ? el("cancelar-comanda-origem").value : "DELIVERY").toUpperCase();
+        var nro = Number(el("cancelar-comanda-nro") ? el("cancelar-comanda-nro").value : 0);
+        if (!nro) {
+          alert("Informe o número do pedido.");
+          return;
+        }
+        resetCancelarComandaPreview();
+        fetch("/api/dashboard/pedido/" + encodeURIComponent(orig) + "/" + encodeURIComponent(String(nro)), { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d || d.sucesso === false) throw new Error((d && d.erro) || "Pedido não encontrado");
+            renderCancelarComandaPreview(d.pedido || {}, orig, nro);
+          })
+          .catch(function (e) {
+            alert(toStr(e && e.message ? e.message : "Erro"));
+          });
+      }
+      function openCancelarComandaModal(pre) {
+        var modal = el("cancelar-comanda-modal");
+        if (!modal) return;
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+        resetCancelarComandaPreview();
+        var sel = el("cancelar-comanda-origem");
+        var inp = el("cancelar-comanda-nro");
+        if (sel && pre && pre.origem) sel.value = toStr(pre.origem).toUpperCase();
+        if (inp) inp.value = pre && pre.nropedido ? String(pre.nropedido) : "";
+        if (pre && pre.origem && pre.nropedido) buscarCancelarComandaPreview();
+      }
+      function closeCancelarComandaModal() {
+        var modal = el("cancelar-comanda-modal");
+        if (!modal) return;
+        modal.hidden = true;
+        document.body.style.overflow = "";
+        resetCancelarComandaPreview();
+      }
+      var cancelarComandaOpen = el("cancelar-comanda-open");
+      if (cancelarComandaOpen) cancelarComandaOpen.addEventListener("click", function () { openCancelarComandaModal(null); });
+      var cancelarComandaClose = el("cancelar-comanda-close");
+      if (cancelarComandaClose) cancelarComandaClose.addEventListener("click", closeCancelarComandaModal);
+      var cancelarComandaModal = el("cancelar-comanda-modal");
+      if (cancelarComandaModal) {
+        cancelarComandaModal.querySelectorAll("[data-close-cancelar-comanda]").forEach(function (x) {
+          x.addEventListener("click", closeCancelarComandaModal);
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && !cancelarComandaModal.hidden) closeCancelarComandaModal();
+        });
+      }
+      var cancelarComandaBuscar = el("cancelar-comanda-buscar");
+      if (cancelarComandaBuscar) cancelarComandaBuscar.addEventListener("click", buscarCancelarComandaPreview);
+      var cancelarComandaNro = el("cancelar-comanda-nro");
+      if (cancelarComandaNro) {
+        cancelarComandaNro.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            buscarCancelarComandaPreview();
+          }
+        });
+      }
+      var cancelarComandaConfirmar = el("cancelar-comanda-confirmar");
+      if (cancelarComandaConfirmar) {
+        cancelarComandaConfirmar.addEventListener("click", function () {
+          if (!cancelarPreviewState.pode) return;
+          if (!window.executarCancelamentoComanda) return;
+          window.executarCancelamentoComanda(cancelarPreviewState.origem, cancelarPreviewState.nropedido, function () {
+            closeCancelarComandaModal();
+          });
+        });
+      }
+      window.openCancelarComandaModal = openCancelarComandaModal;
+
+      var dashMesaPessoasBtn = el("dash-mesa-pessoas-salvar");
+      var dashMesaPessoasIp = el("dash-mesa-pessoas");
+      var dashMesaPorPessoa = el("dash-mesa-por-pessoa");
+      function updateDashMesaPorPessoa() {
+        if (!dashMesaPessoasIp || !dashMesaPorPessoa) return;
+        var modal = el("dash-pedido-modal");
+        if (!modal || !modal.dataset || !modal.dataset.mesa) return;
+        var totalTxt = toStr(el("dash-pedido-pill-total") ? el("dash-pedido-pill-total").textContent : "");
+        var total = Number(totalTxt.replace(/[^\d,.-]/g, "").replace(",", ".")) || 0;
+        var ppl = Math.max(1, Math.floor(Number(dashMesaPessoasIp.value || 1) || 1));
+        if (ppl > 1 && total > 0) dashMesaPorPessoa.textContent = "Por pessoa: " + money(Math.round((total / ppl) * 100) / 100);
+        else dashMesaPorPessoa.textContent = "";
+      }
+      function salvarDashMesaPessoas() {
+        var modal = el("dash-pedido-modal");
+        if (!modal || !modal.dataset || !modal.dataset.mesa) return;
+        var mesa = Number(modal.dataset.mesa || 0);
+        if (!mesa) return;
+        var ppl = Math.max(1, Math.floor(Number(dashMesaPessoasIp ? dashMesaPessoasIp.value : 1) || 1));
+        if (dashMesaPessoasBtn) dashMesaPessoasBtn.disabled = true;
+        if (dashMesaPessoasIp) dashMesaPessoasIp.disabled = true;
+        fetch("/api/mesa/" + encodeURIComponent(String(mesa)) + "/pessoas", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pessoas: ppl }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d || d.sucesso === false) throw new Error((d && (d.erro || d.mensagem)) || "Falha ao salvar");
+            if (dashMesaPessoasIp) dashMesaPessoasIp.value = String(d.pessoas_mesa || ppl);
+            updateDashMesaPorPessoa();
+            var pillP = el("dash-pedido-pill-pessoas");
+            if (pillP && ppl > 1) {
+              pillP.style.display = "";
+              pillP.textContent = "Pessoas: " + ppl + " | Por pessoa: " + (dashMesaPorPessoa ? dashMesaPorPessoa.textContent.replace(/^Por pessoa:\s*/, "") : "");
+            } else if (pillP) {
+              pillP.style.display = "none";
+              pillP.textContent = "";
+            }
+            try { loadAll(); } catch (_) {}
+          })
+          .catch(function (e) {
+            alert(toStr(e && e.message ? e.message : "Erro"));
+          })
+          .finally(function () {
+            if (dashMesaPessoasIp) dashMesaPessoasIp.disabled = false;
+            if (dashMesaPessoasBtn) dashMesaPessoasBtn.disabled = false;
+          });
+      }
+      if (dashMesaPessoasIp) {
+        dashMesaPessoasIp.addEventListener("change", updateDashMesaPorPessoa);
+        dashMesaPessoasIp.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") { ev.preventDefault(); salvarDashMesaPessoas(); }
+        });
+      }
+      if (dashMesaPessoasBtn) dashMesaPessoasBtn.addEventListener("click", salvarDashMesaPessoas);
+    })();
+
+    (function () {
+      function el(id) { return document.getElementById(id); }
+      function esc(s) {
+        return String(s == null ? "" : s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+      function money(v) {
+        var n = Number(v);
+        if (!isFinite(n)) n = 0;
+        return "R$ " + n.toFixed(2).replace(".", ",");
+      }
+      function toStr(v) { return String(v == null ? "" : v); }
+      function includesCI(hay, needle) {
+        if (!needle) return true;
+        return toStr(hay).toLowerCase().indexOf(toStr(needle).toLowerCase()) >= 0;
+      }
+      function num(v) {
+        var s = toStr(v).replace(/\./g, "").replace(",", ".").trim();
+        var n = Number(s);
+        return isFinite(n) ? n : 0;
+      }
+
+      var st = { q: "", pedidos: [], formas: [], sel: null, valores: {}, baixaLastError: "" };
+
+      function loadFormas() {
+        return fetch("/api/formas-pagamento", { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { st.formas = (d && d.formas) || []; })
+          .catch(function () { st.formas = []; });
+      }
+      function loadPedidos() {
+        return fetch("/api/baixa/pedidos", { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.sucesso === false) {
+              st.baixaLastError = String(d.erro || "Erro ao carregar pedidos para baixa.");
+              st.pedidos = [];
+              return;
+            }
+            st.baixaLastError = "";
+            st.pedidos = (d && d.pedidos) || [];
+          })
+          .catch(function () {
+            st.baixaLastError = "Falha de rede ou resposta inválida ao carregar pedidos.";
+            st.pedidos = [];
+          });
+      }
+
+      function calcSomado() {
+        var sum = 0;
+        Object.keys(st.valores || {}).forEach(function (k) {
+          sum += num(st.valores[k] || 0);
+        });
+        return Math.round(sum * 100) / 100;
+      }
+
+      function calcNonTrocoSum(exceptName) {
+        var sum = 0;
+        Object.keys(st.valores || {}).forEach(function (k) {
+          if (exceptName && k === exceptName) return;
+          var v = num(st.valores[k] || 0);
+          if (v <= 0) return;
+          if (!formaAllowsTroco(k)) sum += v;
+        });
+        return Math.round(sum * 100) / 100;
+      }
+
+      function formaAllowsTroco(name) {
+        var want = normForma(name);
+        if (!want) return false;
+        var list = st.formas || [];
+        for (var i = 0; i < list.length; i++) {
+          var nm = (list[i].forma || list[i].nome || "").trim();
+          if (!nm) continue;
+          if (normForma(nm) !== want) continue;
+          var t = String(list[i].troco == null ? "" : list[i].troco).trim().toUpperCase();
+          return t === "S" || t === "SIM" || t === "1" || t === "Y" || t === "TRUE";
+        }
+        return false;
+      }
+
+      function calcTrocoInfo(total, somado) {
+        total = Number(total) || 0;
+        somado = Number(somado) || 0;
+        var over = Math.round((somado - total) * 100) / 100;
+        if (over <= 0.01) return { troco: 0, permitido: true, sumTrocoForms: 0, hasTrocoForm: false };
+        var sumTrocoForms = 0;
+        var hasTrocoForm = false;
+        Object.keys(st.valores || {}).forEach(function (k) {
+          var v = num(st.valores[k] || 0);
+          if (v <= 0) return;
+          if (formaAllowsTroco(k)) {
+            hasTrocoForm = true;
+            sumTrocoForms = Math.round((sumTrocoForms + v) * 100) / 100;
+          }
+        });
+        var permitido = hasTrocoForm && (over - sumTrocoForms) <= 0.01;
+        return { troco: over, permitido: permitido, sumTrocoForms: sumTrocoForms, hasTrocoForm: hasTrocoForm };
+      }
+
+      function fmtVal(v) {
+        var n = Number(v);
+        if (!isFinite(n)) n = 0;
+        return n.toFixed(2).replace(".", ",");
+      }
+
+      function normForma(s) {
+        return toStr(s)
+          .trim()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+      }
+
+      function isPrimaryForma(nm, fp) {
+        var x = normForma(nm);
+        var fpn = normForma(fp);
+        if (fpn && x === fpn) return true;
+        if (x.indexOf("dinheiro") >= 0) return true;
+        if (x.indexOf("debito") >= 0) return true;
+        if (x.indexOf("credito") >= 0) return true;
+        if (x.indexOf("pix") >= 0) return true;
+        if (x === "vr" || x.indexOf("vale refeicao") >= 0 || x.indexOf("refeicao") >= 0) return true;
+        if (x === "va" || x.indexOf("vale alimentacao") >= 0 || x.indexOf("alimentacao") >= 0) return true;
+        return false;
+      }
+
+      function matchFormaKey(fp) {
+        var want = normForma(fp);
+        if (!want) return "";
+        var list = st.formas || [];
+        for (var i = 0; i < list.length; i++) {
+          var nm = (list[i].forma || list[i].nome || "").trim();
+          if (normForma(nm) === want) return nm;
+        }
+        return fp;
+      }
+
+      function selectPedido(p) {
+        st.sel = p || null;
+        st.valores = {};
+        st._formKey = "";
+        st._showMore = false;
+        if (!st.sel) return;
+        var fp = matchFormaKey(toStr(st.sel.formapagamento || "").trim());
+        var total = Number(st.sel.total) || 0;
+        if (fp && fp.toUpperCase() !== "MISTO") {
+          st.valores[fp] = fmtVal(total);
+        }
+      }
+
+      function renderForm() {
+        var host = el("baixa-form");
+        if (!host) return;
+        var modalEl = el("baixa-modal");
+        if (!st.sel) {
+          if (modalEl) modalEl.classList.remove("has-selection");
+          host.style.display = "none";
+          host.innerHTML = "";
+          return;
+        }
+        if (modalEl) modalEl.classList.add("has-selection");
+        host.style.display = "flex";
+        host.style.flexDirection = "column";
+        var key = String(st.sel.origem || "") + "|" + String(st.sel.nropedido || "");
+        var rebuild = st._formKey !== key;
+        st._formKey = key;
+        if (rebuild) {
+          host.innerHTML =
+            '<div class="baixa-form-head ui-dash-card">' +
+              '<div class="ui-dash-row">' +
+                '<div class="ui-dash-strong" id="baixa-pedido-title"></div>' +
+                '<span class="ui-pill neutral" id="baixa-pedido-origem"></span>' +
+                '<span class="ui-pill neutral" id="baixa-pedido-status"></span>' +
+                '<span class="ui-pill neutral" id="baixa-pedido-total"></span>' +
+              "</div>" +
+              '<div class="ui-dash-muted" id="baixa-pedido-cli"></div>' +
+              '<div class="ui-dash-muted" id="baixa-pedido-end"></div>' +
+              '<div class="ui-dash-muted" id="baixa-pedido-ent" style="display:none"></div>' +
+              '<div class="ui-dash-row" style="margin-top:6px;">' +
+                '<span class="ui-pill neutral" id="baixa-somado"></span>' +
+                '<span class="ui-pill neutral" id="baixa-restante"></span>' +
+              "</div>" +
+            "</div>" +
+            '<div class="baixa-pay-wrap" id="baixa-pay-wrap"></div>' +
+            '<div class="baixa-actions">' +
+              '<button type="button" class="ui-mini-btn ui-focus" id="baixa-trocar">Trocar pedido</button>' +
+              '<button type="button" class="ui-mini-btn ui-focus" id="baixa-limpar">Limpar</button>' +
+              '<button type="button" class="ui-mini-btn ui-focus" id="baixa-confirmar">Marcar RECEBIDO</button>' +
+            "</div>";
+
+          var wrap = el("baixa-pay-wrap");
+          var listMain = document.createElement("div");
+          listMain.className = "baixa-pay-list";
+          listMain.id = "baixa-pay-list";
+          listMain.setAttribute("aria-label", "Formas de pagamento");
+
+          var moreWrap = document.createElement("div");
+          moreWrap.className = "baixa-more";
+          moreWrap.id = "baixa-more";
+
+          var moreBtn = document.createElement("button");
+          moreBtn.type = "button";
+          moreBtn.className = "ui-mini-btn ui-focus";
+          moreBtn.id = "baixa-more-btn";
+          moreBtn.textContent = "Outras formas";
+
+          var moreHint = document.createElement("div");
+          moreHint.className = "ui-dash-muted";
+          moreHint.textContent = "Toque para ver menos usadas";
+
+          moreWrap.appendChild(moreBtn);
+          moreWrap.appendChild(moreHint);
+
+          var listMore = document.createElement("div");
+          listMore.className = "baixa-pay-list";
+          listMore.id = "baixa-pay-list-more";
+          listMore.hidden = true;
+
+          var inputs = [];
+          var fpPref = matchFormaKey(toStr(st.sel.formapagamento || "").trim());
+          var formas = (st.formas || []).slice();
+          formas.sort(function (a, b) {
+            var na = (a.forma || a.nome || "").trim();
+            var nb = (b.forma || b.nome || "").trim();
+            var pa = isPrimaryForma(na, fpPref) ? 0 : 1;
+            var pb = isPrimaryForma(nb, fpPref) ? 0 : 1;
+            if (pa !== pb) return pa - pb;
+            return na.localeCompare(nb);
+          });
+
+          formas.forEach(function (f) {
+            var nm = (f.forma || f.nome || "").trim();
+            if (!nm) return;
+            var targetList = isPrimaryForma(nm, fpPref) ? listMain : listMore;
+            var row = document.createElement("div");
+            row.className = "baixa-pay-row";
+            var name = document.createElement("div");
+            name.className = "baixa-pay-name";
+            name.textContent = nm;
+            var ip = document.createElement("input");
+            ip.className = "baixa-pay-input";
+            ip.setAttribute("inputmode", "decimal");
+            ip.setAttribute("placeholder", "0,00");
+            ip.setAttribute("data-baixa-valor", nm);
+            ip.value = st.valores[nm] != null ? String(st.valores[nm]) : "";
+            ip.addEventListener("input", function () {
+              var totalNow = Number(st.sel && st.sel.total) || 0;
+              var v = num(ip.value || 0);
+              if (v > 0 && !formaAllowsTroco(nm)) {
+                var otherNonTroco = calcNonTrocoSum(nm);
+                var maxForThis = Math.max(0, Math.round((totalNow - otherNonTroco) * 100) / 100);
+                if (v > (maxForThis + 0.01)) {
+                  v = maxForThis;
+                  ip.value = fmtVal(v);
+                }
+              }
+              st.valores[nm] = ip.value || "";
+              updateResumo();
+            });
+            ip.addEventListener("keydown", function (e) {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                var idx = Number(ip.getAttribute("data-baixa-idx") || 0);
+                var next = inputs[idx + 1] || null;
+                if (next) next.focus();
+                else {
+                  var btn = el("baixa-confirmar");
+                  if (btn) btn.focus();
+                }
+              }
+            });
+            ip.setAttribute("data-baixa-idx", String(inputs.length));
+            inputs.push(ip);
+            row.appendChild(name);
+            row.appendChild(ip);
+            targetList.appendChild(row);
+          });
+
+          wrap.appendChild(listMain);
+          if (listMore.childElementCount > 0) {
+            wrap.appendChild(moreWrap);
+            wrap.appendChild(listMore);
+            moreBtn.addEventListener("click", function () {
+              st._showMore = !st._showMore;
+              listMore.hidden = !st._showMore;
+              moreHint.textContent = st._showMore ? "Toque para ocultar" : "Toque para ver menos usadas";
+              moreBtn.textContent = st._showMore ? "Ocultar outras" : "Outras formas";
+            });
+          }
+
+          var btnLimpar = el("baixa-limpar");
+          if (btnLimpar) btnLimpar.onclick = function () {
+            st.valores = {};
+            (st.formas || []).forEach(function (f) {
+              var nm = (f.forma || f.nome || "").trim();
+              if (!nm) return;
+              var ip = host.querySelector('[data-baixa-valor="' + nm.replace(/"/g, '\\"') + '"]');
+              if (ip) ip.value = "";
+            });
+            updateResumo();
+          };
+          var btnTrocar = el("baixa-trocar");
+          if (btnTrocar) btnTrocar.onclick = function () {
+            st.sel = null;
+            st.valores = {};
+            st._formKey = "";
+            st._showMore = false;
+            if (modalEl) modalEl.classList.remove("has-selection");
+            renderList();
+            renderForm();
+            var q = el("baixa-q");
+            if (q) q.focus();
+          };
+          var btnConf = el("baixa-confirmar");
+          if (btnConf) btnConf.onclick = function () {
+            var pagamentos = [];
+            Object.keys(st.valores || {}).forEach(function (k) {
+              var v = num(st.valores[k] || 0);
+              if (v > 0) pagamentos.push({ forma: k, valor: v });
+            });
+            var totalNow = Number(st.sel.total) || 0;
+            var somadoNow = calcSomado();
+            var nonTrocoNow = calcNonTrocoSum("");
+            var restanteNow = Math.round((totalNow - somadoNow) * 100) / 100;
+            if (!(somadoNow > 0 && restanteNow <= 0.01)) {
+              alert("Valores não fecham com o total do pedido.");
+              return;
+            }
+            if ((nonTrocoNow - totalNow) > 0.01) {
+              alert("A soma das formas sem troco não pode ultrapassar o total do pedido.");
+              return;
+            }
+            var trocoInfo = calcTrocoInfo(totalNow, somadoNow);
+            if (trocoInfo.troco > 0.01 && !trocoInfo.permitido) {
+              alert("Excedente não permitido. Atribua o excedente a uma forma de pagamento marcada com troco.");
+              return;
+            }
+            btnConf.disabled = true;
+            fetch("/api/baixa/receber", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ nropedido: st.sel.nropedido, origem: st.sel.origem, pagamentos: pagamentos }),
+            })
+              .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d || {} }; }); })
+              .then(function (x) {
+                if (!x.ok || (x.d && x.d.sucesso === false)) {
+                  alert((x.d && (x.d.erro || x.d.mensagem)) || "Não foi possível marcar como RECEBIDO.");
+                  return;
+                }
+                alert("Pedido marcado como RECEBIDO.");
+                st.sel = null;
+                st.valores = {};
+                st._formKey = "";
+                Promise.all([loadPedidos()]).finally(function () { renderList(); renderForm(); });
+              })
+              .catch(function () { alert("Falha de rede na baixa."); })
+              .finally(function () { btnConf.disabled = false; });
+          };
+        }
+
+        function updateResumo() {
+          var total = Number(st.sel.total) || 0;
+          var somado = calcSomado();
+          var restante = Math.round((total - somado) * 100) / 100;
+          var ok = restante <= 0.01 && somado > 0;
+          var nonTrocoNow = calcNonTrocoSum("");
+          if ((nonTrocoNow - total) > 0.01) ok = false;
+          var trocoInfo = calcTrocoInfo(total, somado);
+          var troco = trocoInfo.troco;
+          var pillRest = el("baixa-restante");
+          var pillSom = el("baixa-somado");
+          if (pillSom) pillSom.textContent = "Somado: " + money(somado);
+          if (pillRest) {
+            if (troco > 0.01) {
+              if (trocoInfo.permitido) {
+                pillRest.textContent = "Troco: " + money(troco);
+              } else {
+                pillRest.textContent = "Excedente: " + money(troco);
+                ok = false;
+              }
+            } else {
+              pillRest.textContent = "Restante: " + money(Math.max(0, restante));
+            }
+            pillRest.className = "ui-pill " + (ok ? "ok" : (((nonTrocoNow - total) > 0.01) || (troco > 0.01 && !trocoInfo.permitido) ? "warn" : "neutral"));
+          }
+          var btn = el("baixa-confirmar");
+          if (btn) btn.disabled = !ok;
+        }
+
+        var t = el("baixa-pedido-title");
+        var o = el("baixa-pedido-origem");
+        var stP = el("baixa-pedido-status");
+        var tt = el("baixa-pedido-total");
+        var cli = el("baixa-pedido-cli");
+        var end = el("baixa-pedido-end");
+        var bent = el("baixa-pedido-ent");
+        if (t) t.textContent = lblPedidoHash(st.sel.nropedido);
+        if (o) o.textContent = String(st.sel.origem || "-");
+        if (stP) {
+          var stv = toStr(st.sel.status_pedido || "").trim().toUpperCase() || "ABERTO";
+          stP.textContent = stv;
+          stP.className = "ui-pill " + (stv === "ROTA" ? "warn" : "neutral");
+        }
+        if (tt) tt.textContent = money(Number(st.sel.total) || 0);
+        if (cli) cli.textContent = (st.sel.cliente || "Cliente") + (st.sel.telefone ? " • " + st.sel.telefone : "");
+        if (end) end.textContent = st.sel.endereco || "—";
+        if (bent) {
+          var nm = toStr(st.sel.entregador_nome).trim();
+          var cd = toStr(st.sel.entregador_codigo).trim();
+          if (nm || cd) {
+            bent.style.display = "";
+            bent.textContent = nm ? ("Entregador: " + nm + (cd ? " (" + cd + ")" : "")) : ("Entregador (código): " + cd);
+          } else {
+            bent.style.display = "none";
+            bent.textContent = "";
+          }
+        }
+        updateResumo();
+
+        var fpNow = matchFormaKey(toStr(st.sel.formapagamento || "").trim());
+        if (fpNow && fpNow.toUpperCase() !== "MISTO" && st.valores[fpNow] != null) {
+          var ipPref = host.querySelector('[data-baixa-valor="' + fpNow.replace(/"/g, '\\"') + '"]');
+          if (ipPref && !ipPref.value) ipPref.value = String(st.valores[fpNow]);
+        }
+
+        if (!st._showMore) {
+          var hasOther = false;
+          Object.keys(st.valores || {}).forEach(function (k) {
+            if (st.valores[k] && !isPrimaryForma(k, fpNow)) hasOther = true;
+          });
+          if (hasOther) {
+            st._showMore = true;
+            var listMore = el("baixa-pay-list-more");
+            if (listMore) listMore.hidden = false;
+            var moreBtn = el("baixa-more-btn");
+            if (moreBtn) moreBtn.textContent = "Ocultar outras";
+          }
+        }
+      }
+
+      function renderList() {
+        var host = el("baixa-list");
+        if (!host) return;
+        var modalEl = el("baixa-modal");
+        if (modalEl) {
+          if (st.sel) modalEl.classList.add("has-selection");
+          else modalEl.classList.remove("has-selection");
+        }
+        var qRaw = (st.q || "").trim();
+        var all = st.pedidos || [];
+        var rows = all.filter(function (r) {
+          if (!qRaw) return true;
+          return (
+            includesCI(r.nropedido, qRaw) ||
+            includesCI(r.origem, qRaw) ||
+            includesCI(r.telefone, qRaw) ||
+            includesCI(r.cliente, qRaw) ||
+            includesCI(r.endereco, qRaw) ||
+            includesCI(r.entregador_nome, qRaw) ||
+            includesCI(r.entregador_codigo, qRaw) ||
+            includesCI(r.status_pedido, qRaw)
+          );
+        });
+        if (!rows.length) {
+          if (st.baixaLastError) {
+            host.innerHTML =
+              '<div class="ui-dash-card"><div class="ui-dash-strong">Não foi possível carregar a lista</div><div class="ui-dash-muted">' +
+              esc(st.baixaLastError) +
+              '</div><div class="ui-dash-muted" style="margin-top:8px;">Confirme se a tabela <code>entregador</code> existe e se está autenticado.</div></div>';
+            return;
+          }
+          if (all.length && qRaw) {
+            host.innerHTML =
+              '<div class="ui-dash-card"><div class="ui-dash-strong">Nenhum resultado na busca</div><div class="ui-dash-muted">Limpe o campo de busca ou use outro termo. Há ' +
+              String(all.length) +
+              " pedido(s) carregado(s).</div></div>";
+            return;
+          }
+          host.innerHTML =
+            '<div class="ui-dash-card"><div class="ui-dash-strong">Nenhum pedido para baixa</div><div class="ui-dash-muted">Aparecem pedidos em ABERTO ou em ROTA (origens DELIVERY e BALCÃO). Ficam de fora: só RECEBIDO, linhas em AGUARDE, removidos (ITEM_REMOVIDO) e outras origens (ex.: mesa).</div></div>';
+          return;
+        }
+        host.innerHTML = rows.map(function (r) {
+          var selected = st.sel && String(st.sel.origem) === String(r.origem) && Number(st.sel.nropedido) === Number(r.nropedido);
+          var selCls = selected ? " sel" : "";
+          var tag = '<span class="ui-pill neutral">' + esc(r.origem || "-") + "</span>";
+          var stv = toStr(r.status_pedido || "").trim().toUpperCase() || "ABERTO";
+          var stTag = '<span class="ui-pill ' + (stv === "ROTA" ? "warn" : "neutral") + '">' + esc(stv) + "</span>";
+          var nm = toStr(r.entregador_nome).trim();
+          var cd = toStr(r.entregador_codigo).trim();
+          var entLine =
+            nm || cd
+              ? '<div class="ui-dash-muted">' +
+                (nm ? "Entregador: " + esc(nm) + (cd ? " (" + esc(cd) + ")" : "") : "Entregador (código): " + esc(cd)) +
+                "</div>"
+              : "";
+          return (
+            '<div class="ui-dash-card' + selCls + '" data-baixa-item="' + esc(String(r.origem || "") + "|" + String(r.nropedido || "")) + '">' +
+              '<div class="ui-dash-row">' +
+                '<div class="ui-dash-strong">' + esc(lblPedidoHash(r.nropedido)) + "</div>" +
+                tag +
+                stTag +
+              "</div>" +
+              '<div class="ui-dash-muted">' + esc(r.cliente || "Cliente") + (r.telefone ? " • " + esc(r.telefone) : "") + "</div>" +
+              '<div class="ui-dash-muted">' + esc(r.endereco || "—") + "</div>" +
+              entLine +
+            "</div>"
+          );
+        }).join("");
+        host.querySelectorAll("[data-baixa-item]").forEach(function (card) {
+          card.addEventListener("click", function () {
+            var key = card.getAttribute("data-baixa-item") || "";
+            var parts = key.split("|");
+            var origem = parts[0] || "";
+            var nro = Number(parts[1] || 0);
+            var found = (st.pedidos || []).find(function (x) { return String(x.origem) === String(origem) && Number(x.nropedido) === nro; });
+            selectPedido(found || null);
+            renderList();
+            renderForm();
+          });
+        });
+      }
+
+      var modal = el("baixa-modal");
+      var openBtn = el("baixa-open");
+      var closeBtn = el("baixa-close");
+      function openModal(preselect) {
+        if (!modal) return;
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+        st.sel = null;
+        st.valores = {};
+        st._formKey = "";
+        st.q = "";
+        st.baixaLastError = "";
+        var qIn = el("baixa-q");
+        if (qIn) qIn.value = "";
+        Promise.all([loadFormas(), loadPedidos()]).finally(function () {
+          if (preselect && preselect.origem && preselect.nropedido) {
+            var found = (st.pedidos || []).find(function (x) {
+              return String(x.origem || "").toUpperCase() === String(preselect.origem || "").toUpperCase() &&
+                     Number(x.nropedido) === Number(preselect.nropedido);
+            });
+            if (found) selectPedido(found);
+            else alert("Pedido precisa estar ABERTO ou em ROTA para dar baixa.");
+          }
+          renderList();
+          renderForm();
+          var q = el("baixa-q");
+          if (q && !st.sel) q.focus();
+        });
+      }
+      function closeModal() {
+        if (!modal) return;
+        modal.hidden = true;
+        document.body.style.overflow = "";
+      }
+      window.openBaixaPedido = function (origem, nropedido) {
+        var dash = document.getElementById("dash-modal");
+        if (dash) dash.hidden = true;
+        openModal({ origem: origem, nropedido: nropedido });
+      };
+      if (openBtn) openBtn.addEventListener("click", function () { openModal(null); });
+      if (closeBtn) closeBtn.addEventListener("click", closeModal);
+      if (modal) {
+        modal.querySelectorAll("[data-close]").forEach(function (x) { x.addEventListener("click", closeModal); });
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !modal.hidden) closeModal(); });
+      }
+      var qEl = el("baixa-q");
+      if (qEl) qEl.addEventListener("input", function () { st.q = qEl.value || ""; renderList(); });
+      var rEl = el("baixa-refresh");
+      if (rEl) rEl.addEventListener("click", function () {
+        Promise.all([loadPedidos()]).finally(function () { renderList(); });
+      });
+    })();
+  </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+</body>
+</html>

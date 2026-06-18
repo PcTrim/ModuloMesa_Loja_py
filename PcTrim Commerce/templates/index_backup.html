@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Carrossel + Produto</title>
+<style>
+body { margin:0; font-family:Arial; background:#f0f0f0; }
+.topo { position:fixed; top:0; left:0; width:100%; background:#f0f0f0; padding:10px 20px; display:flex; align-items:center; gap:20px; z-index:1000; }
+.logo { height:100px; display:block; }
+.carrossel-wrapper { flex-grow:1; overflow-x:auto; display:flex; align-items:center; cursor:grab; user-select:none; }
+.carrossel-wrapper img { width:140px; height:100px; margin-right:10px; border-radius:8px; border:2px solid transparent; object-fit:cover; transition:0.2s; }
+.carrossel-wrapper img:hover { transform:scale(1.05); }
+.carrossel-wrapper img.selecionado { border:3px solid #0077ff; }
+.content-spacer { height:140px; }
+.linha { display:flex; width:100%; gap:20px; padding:20px; box-sizing:border-box; }
+.coluna { flex:1 1 50%; background:#fff; min-height:600px; padding:20px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
+</style>
+</head>
+<body>
+
+<div class="topo">
+    <img src="/static/img/pctrimLogo.jpg" class="logo">
+    <div class="carrossel-wrapper" id="carrossel"></div>
+</div>
+
+<div style="position: absolute; top: 8px; left: 8px; z-index: 99999; background: #fffbe6; color: #ff9800; font-size: 2.2em; font-weight: bold; border-radius: 10px; padding: 2px 18px 2px 12px; box-shadow: 0 2px 8px #ff980055; border: 2px solid #ff9800;">17</div>
+
+<div class="content-spacer"></div>
+
+<div class="linha">
+    <div id="coluna-esquerda" class="coluna">
+        <div id="classificacao-info"></div>
+        <div id="produto-info"></div>
+        <div id="lista-classificacao"></div>
+        <button id="btnEnviarProdutos" onclick="enviarProdutosMarcados()" style="margin-top:15px; padding:12px 24px; background:#0077ff; color:white; border:none; border-radius:6px; cursor:pointer; font-size:16px; font-weight:bold; display:none;">Enviar Produtos Selecionados</button>
+    </div>
+    <div class="coluna" id="coluna-direita">
+        Coluna da direita. (50%)
+    </div>
+</div>
+
+<script>
+const carrossel = document.getElementById("carrossel");
+let currentMaxParts = null; // limite de checkboxes pela classificação
+
+// Carrega lista de produtos ao iniciar
+window.addEventListener('DOMContentLoaded', () => {
+    // Carrega imagens do carrossel a partir do backend
+    fetch('/carrossel-imagens')
+        .then(res => res.json())
+        .then(lista => {
+            console.log('Carrossel imagens:', lista);
+            if (Array.isArray(lista)) {
+                lista.forEach(img => {
+                    const image = document.createElement("img");
+                    image.src = img.arquivo;
+                    image.alt = "thumb";
+                    if (img.nome) image.title = img.nome;
+                    image.dataset.classe = img.classe;
+                    image.style.cursor = "pointer";
+
+                    // Se a imagem .jpeg falhar, tenta .jpg automaticamente
+                    image.addEventListener('error', () => {
+                        try {
+                            const url = new URL(image.src, window.location.origin);
+                            if (url.pathname.endsWith('.jpeg')) {
+                                url.pathname = url.pathname.replace(/\.jpeg$/i, '.jpg');
+                                image.src = url.toString();
+                            }
+                        } catch (e) {
+                            // fallback simples sem URL
+                            image.src = image.src.replace(/\.jpeg$/i, '.jpg');
+                        }
+                    });
+
+                    image.addEventListener("click", () => {
+                        console.log("CLICK imagem, classe:", img.classe, "nome:", img.nome);
+                        currentMaxParts = (typeof img.max === 'number') ? img.max : null;
+                        // Remove título e texto de classe na coluna esquerda
+                        const esquerdaInfo = document.getElementById('classificacao-info');
+                        if (esquerdaInfo) esquerdaInfo.innerHTML = '';
+                        // Limpa o bloco de detalhes individuais (não usar mais buscarProduto)
+                        const produtoInfo = document.getElementById('produto-info');
+                        if (produtoInfo) produtoInfo.innerHTML = '';
+                        // Carrega produtos filtrados na coluna esquerda
+                        carregarPorClassificacao(img.nome, img.classe);
+                    });
+
+                    carrossel.appendChild(image);
+                });
+                if (lista.length === 0) {
+                    const aviso = document.createElement('div');
+                    aviso.textContent = 'Nenhuma imagem encontrada para o carrossel.';
+                    aviso.style.padding = '8px';
+                    carrossel.appendChild(aviso);
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Erro ao carregar carrossel:', err);
+            const aviso = document.createElement('div');
+            aviso.textContent = 'Erro ao carregar carrossel: ' + err;
+            aviso.style.color = 'red';
+            aviso.style.padding = '8px';
+            carrossel.appendChild(aviso);
+        });
+});
+
+/* destaca visualmente */
+function destacarImagem(imgElem) {
+    document.querySelectorAll(".carrossel-wrapper img").forEach(i => i.classList.remove("selecionado"));
+    if (imgElem) imgElem.classList.add("selecionado");
+}
+
+/* BUSCA O PRODUTO */
+function buscarProduto(classe, imgElem) {
+    // Confirmação imediata ao usuário / dev
+    console.log("Iniciando fetch /produto/" + classe);
+    // (opcional) alerta para debug - depois pode remover
+    // alert("CLICOU! Classe = " + classe);
+
+    destacarImagem(imgElem);
+
+    fetch(`/produto/${encodeURIComponent(classe)}`)
+        .then(res => {
+            console.log("Resposta HTTP:", res.status, res.statusText);
+            // tenta ler JSON mesmo em erro para mostrar detalhes
+            return res.json().then(data => ({ status: res.status, data: data }));
+        })
+        .then(obj => {
+            if (!obj || !obj.data) {
+                console.error("Resposta inesperada:", obj);
+                document.getElementById("produto-info").innerText = "Resposta inválida do servidor.";
+                return;
+            }
+
+            if (obj.status >= 400) {
+                // mostra a mensagem de erro que o servidor retornou
+                console.warn("Erro do servidor:", obj.data);
+                document.getElementById("produto-info").innerHTML =
+                    `<h2>Erro ao buscar produto</h2>
+                     <pre>${JSON.stringify(obj.data, null, 2)}</pre>`;
+                return;
+            }
+
+            const prod = obj.data;
+            document.getElementById("produto-info").innerHTML = `
+                <h2>Produto encontrado</h2>
+                <p><b>Classe:</b> ${prod.classe ?? ''}</p>
+                <p><b>Descrição:</b> ${prod.descricao ?? ''}</p>
+                <p><b>Preço:</b> ${prod.preco ?? ''}</p>
+                <pre style="background:#f6f6f6;padding:10px;border-radius:6px;">${JSON.stringify(prod,null,2)}</pre>
+            `;
+        })
+        .catch(err => {
+            console.error("Erro no fetch:", err);
+            document.getElementById("produto-info").innerHTML = `
+                <h2>Erro na requisição</h2>
+                <pre>${err}</pre>
+            `;
+        });
+}
+
+/* CARREGA PRODUTOS FILTRADOS NA COLUNA DIREITA */
+function carregarPorClassificacao(nome, classe) {
+    const url = `/produtos-filtrar?nome=${encodeURIComponent(nome || '')}`;
+    fetch(url)
+        .then(res => res.json())
+        .then(lista => {
+            const container = document.getElementById('lista-classificacao');
+            if (!Array.isArray(lista)) {
+                container.innerHTML = `<h2>Erro</h2><pre>${JSON.stringify(lista, null, 2)}</pre>`;
+                return;
+            }
+            if (lista.length === 0) {
+                container.innerHTML = `<div style="padding:8px;">Nenhum produto encontrado para a classificação.</div>`;
+                return;
+            }
+            let info = '';
+            if (currentMaxParts !== null) {
+                info = `<div id="limite-msg" style="margin-bottom:8px; color:#555;">Máx. selecionados: ${currentMaxParts}</div>`;
+            }
+            let html = info + '<table style="width:100%; border-collapse:collapse;">';
+            html += '<thead><tr>' +
+                    '<th style="border:1px solid #ccc; padding:8px; background:#f5f5f5;">Selecionado</th>' +
+                    '<th style="border:1px solid #ccc; padding:8px; background:#f5f5f5;">Produto</th>' +
+                    '<th style="border:1px solid #ccc; padding:8px; background:#f5f5f5;">Classe</th>' +
+                    '<th style="border:1px solid #ccc; padding:8px; background:#f5f5f5;">Preço</th>' +
+                    '</tr></thead><tbody>';
+            lista.forEach((p, i) => {
+                const preco = typeof p.preco === 'number' ? p.preco : (parseFloat(p.preco) || 0);
+                html += `<tr>
+                    <td style="border:1px solid #ccc; padding:8px; text-align:center;">
+                        <input type="checkbox" class="check-esq" id="sel_esq_${i}" value="${p.produto || ''}" data-preco="${preco}">
+                    </td>
+                    <td style="border:1px solid #ccc; padding:8px;">${p.produto || ''}</td>
+                    <td style="border:1px solid #ccc; padding:8px;">${p.classe || ''}</td>
+                    <td style="border:1px solid #ccc; padding:8px;">R$ ${preco.toFixed(2)}</td>
+                </tr>`;
+                html += `<tr id="obs_esq_row_${i}" style="display:none;">
+                    <td colspan="4" style="border:1px solid #ccc; padding:12px; background:#f9f9f9;">
+                        <label style="display:block; margin-bottom:5px; font-weight:bold;">Observação:</label>
+                        <textarea id="obs_esq_${i}" rows="3" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; resize:vertical;" placeholder="Digite a observação para ${p.produto || ''}..." onkeydown="checkEnterOrEscEsq(event, ${i})" onblur="checkEmptyEsq(${i})"></textarea>
+                    </td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+
+            // Aplica limite de seleção
+            const checks = container.querySelectorAll('input.check-esq[type="checkbox"]');
+            const msg = document.getElementById('limite-msg');
+            const updateMsg = () => {
+                if (msg) {
+                    const count = container.querySelectorAll('input.check-esq[type="checkbox"]:checked').length;
+                    msg.textContent = `Máx. selecionados: ${currentMaxParts} | Selecionados: ${count}`;
+                }
+            };
+            checks.forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const idx = parseInt((e.target.id || '').replace('sel_esq_', ''), 10);
+                    const row = document.getElementById(`obs_esq_row_${idx}`);
+                    const ta = document.getElementById(`obs_esq_${idx}`);
+
+                    if (e.target.checked && currentMaxParts !== null) {
+                        const count = container.querySelectorAll('input.check-esq[type="checkbox"]:checked').length;
+                        if (count > currentMaxParts) {
+                            e.target.checked = false;
+                            // opcional: feedback visual
+                            if (msg) {
+                                msg.style.color = 'red';
+                                setTimeout(() => { msg.style.color = '#555'; }, 1200);
+                            }
+                            updateMsg();
+                            return;
+                        }
+                    }
+
+                    // Abre/fecha observação conforme seleção
+                    if (e.target.checked) {
+                        if (row) {
+                            row.style.display = 'table-row';
+                            setTimeout(() => { if (ta) ta.focus(); }, 100);
+                        }
+                    } else {
+                        if (row) row.style.display = 'none';
+                        if (ta) ta.value = '';
+                    }
+
+                    updateMsg();
+                    atualizarBotaoEnviar();
+                });
+            });
+            updateMsg();
+        })
+        .catch(err => {
+            document.getElementById('lista-classificacao').innerHTML = `<h2>Erro na requisição</h2><pre>${err}</pre>`;
+            console.error('Erro ao filtrar produtos:', err);
+        });
+}
+
+/* FUNÇÃO DO CARROSSEL ARRASTÁVEL (mantive) */
+let isDown = false;
+let startX;
+let scrollLeft;
+
+carrossel.addEventListener('mousedown', e => {
+    isDown = true;
+    carrossel.style.cursor = 'grabbing';
+    startX = e.clientX;
+    scrollLeft = carrossel.scrollLeft;
+});
+
+carrossel.addEventListener('mouseleave', ()=>{ isDown=false; carrossel.style.cursor='grab'; });
+carrossel.addEventListener('mouseup', ()=>{ isDown=false; carrossel.style.cursor='grab'; });
+
+carrossel.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const walk = (e.clientX - startX) * 2;
+    carrossel.scrollLeft = scrollLeft - walk;
+});
+
+/* FUNÇÃO PARA MOSTRAR/OCULTAR OBSERVAÇÃO */
+function toggleObservacao(index) {
+    const checkbox = document.getElementById(`prod_${index}`);
+    const obsRow = document.getElementById(`obs_row_${index}`);
+    
+    if (checkbox.checked) {
+        obsRow.style.display = 'table-row';
+        // Foca no textarea quando abrir
+        setTimeout(() => document.getElementById(`obs_${index}`).focus(), 100);
+    } else {
+        obsRow.style.display = 'none';
+        // Limpar o textarea quando desmarcar
+        document.getElementById(`obs_${index}`).value = '';
+    }
+}
+
+/* FUNÇÃO PARA VERIFICAR ENTER OU ESC */
+function checkEnterOrEsc(event, index) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        // Se Enter sem Shift, apenas oculta a observação (checkbox continua marcado)
+        document.getElementById(`obs_row_${index}`).style.display = 'none';
+    } else if (event.key === 'Escape') {
+        // ESC também oculta (checkbox continua marcado)
+        document.getElementById(`obs_row_${index}`).style.display = 'none';
+    }
+}
+
+/* FUNÇÃO PARA VERIFICAR SE ESTÁ VAZIO AO PERDER FOCO */
+function checkEmpty(index) {
+    const textarea = document.getElementById(`obs_${index}`);
+    // Independente de ter texto ou não, apenas oculta mantendo o checkbox marcado
+    document.getElementById(`obs_row_${index}`).style.display = 'none';
+}
+
+/* FUNÇÕES PARA OBSERVAÇÕES DA LISTA ESQUERDA */
+function checkEnterOrEscEsq(event, index) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        document.getElementById(`obs_esq_row_${index}`).style.display = 'none';
+    } else if (event.key === 'Escape') {
+        document.getElementById(`obs_esq_row_${index}`).style.display = 'none';
+    }
+}
+
+function checkEmptyEsq(index) {
+    document.getElementById(`obs_esq_row_${index}`).style.display = 'none';
+}
+
+/* FUNÇÃO PARA ATUALIZAR VISIBILIDADE DO BOTÃO */
+function atualizarBotaoEnviar() {
+    const btn = document.getElementById('btnEnviarProdutos');
+    if (!btn) return;
+    const checkboxes = document.querySelectorAll('input.check-esq[type="checkbox"]:checked');
+    btn.style.display = checkboxes.length > 0 ? 'block' : 'none';
+}
+
+/* FUNÇÃO PARA ENVIAR PRODUTOS MARCADOS PARA A DIREITA */
+function enviarProdutosMarcados() {
+    const checkboxes = document.querySelectorAll('input.check-esq[type="checkbox"]:checked');
+    if (checkboxes.length === 0) {
+        alert('Nenhum produto selecionado!');
+        return;
+    }
+
+    let texto = 'PRODUTOS SELECIONADOS\n';
+    texto += '='.repeat(50) + '\n\n';
+
+    checkboxes.forEach((checkbox, idx) => {
+        const produto = checkbox.value;
+        const preco = parseFloat(checkbox.dataset.preco || '0');
+        const obsId = checkbox.id.replace('sel_esq_', 'obs_esq_');
+        const obsTextarea = document.getElementById(obsId);
+        const observacao = obsTextarea ? obsTextarea.value.trim() : '';
+
+        texto += `${produto}\n`;
+        texto += `   Preço: R$ ${preco.toFixed(2)}\n`;
+        if (observacao) {
+            texto += `   Observação: ${observacao}\n`;
+        }
+        texto += '\n';
+    });
+
+    texto += '='.repeat(50) + '\n';
+    texto += `Total de itens: ${checkboxes.length}`;
+
+    // Acrescenta na coluna direita (não substitui)
+    const colunaDireita = document.getElementById('coluna-direita');
+    let containerTexto = document.getElementById('texto-direita');
+    if (!containerTexto) {
+        containerTexto = document.createElement('div');
+        containerTexto.id = 'texto-direita';
+        colunaDireita.appendChild(containerTexto);
+    }
+    const novoPre = document.createElement('pre');
+    novoPre.style.whiteSpace = 'pre-wrap';
+    novoPre.style.fontFamily = 'monospace';
+    novoPre.style.lineHeight = '1.6';
+    novoPre.style.marginBottom = '20px';
+    novoPre.style.borderBottom = '2px solid #ddd';
+    novoPre.style.paddingBottom = '15px';
+    novoPre.textContent = texto;
+    containerTexto.appendChild(novoPre);
+
+    // Limpa a coluna esquerda
+    document.getElementById('classificacao-info').innerHTML = '';
+    document.getElementById('produto-info').innerHTML = '';
+    document.getElementById('lista-classificacao').innerHTML = '';
+    
+    // Oculta o botão
+    const btn = document.getElementById('btnEnviarProdutos');
+    if (btn) btn.style.display = 'none';
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela Configurações</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    {% include 'partials/topbar_meta_assets.html' %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+{% set papel = (session.get('funcao') or 'gerente')|lower %}
+{% if papel != 'gerente' %}
+    <main class="cfg-content"><div class="cfg-wrap">
+      <div class="cfg-flash cfg-flash--err" role="alert">
+        <span class="cfg-flash-icon">X</span>
+        <span>Acesso restrito a gerentes. <a href="{{ url_prefix }}/configuracoes">Voltar</a></span>
+      </div>
+    </div></main>
+{% else %}
+
+    <div class="pdv">
+    <header class="topbar">
+        <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
+        <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+        <div class="brand">Configurações</div>
+        {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+            <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+            <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+        </button>
+    </header>
+
+    <div class="shell">
+        <section class="center">
+            <div class="field-group" id="sistemaPanel">
+                <p class="title">Configuração do sistema</p>
+                <form id="formSistema" class="form">
+                    <div class="row-split">
+                        <div data-field="nromesa">
+                            <p class="title">Nº mesas</p>
+                            <input type="number" id="nromesa" min="0" step="1" placeholder="Ex: 100">
+                        </div>
+                        <div data-field="servicomesa">
+                            <p class="title">Serviço mesa (%)</p>
+                            <input type="number" id="servicomesa" min="0" step="0.01" placeholder="Ex: 10">
+                        </div>
+                    </div>
+                    <div data-field="calculodistancia">
+                        <p class="title">Calcular distância (taxa)</p>
+                        <select id="calculodistancia">
+                            <option value="Sim">Sim</option>
+                            <option value="Nao">Não</option>
+                        </select>
+                    </div>
+                    <div class="actions" style="margin-top:8px;">
+                        <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
+                        <button type="submit" class="btn-green" id="btnSalvarSistema">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <aside class="right">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+
+            <div class="field-group" id="impressorasListPanel">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <p class="title" style="margin:0;">Impressoras cadastradas</p>
+                    <button type="button" class="btn-mini" style="width:auto;" onclick="novaImpressora()">Nova</button>
+                </div>
+                <table class="tbl" style="margin-top:8px;">
+                    <thead>
+                        <tr>
+                            <th style="width:70px;">ID</th>
+                            <th>Nome (apelido)</th>
+                            <th>Caminho (Windows)</th>
+                            <th style="width:80px; text-align:center;">Nro</th>
+                            <th style="width:70px; text-align:center;">Feed</th>
+                            <th style="width:120px; text-align:center;">Conta mesa</th>
+                            <th style="width:180px; text-align:center;">Comanda delivery/balcão</th>
+                            <th style="width:220px; text-align:center;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyImpressoras">
+                        <tr><td colspan="8" class="empty">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <datalist id="printersDatalist"></datalist>
+
+            <div class="field-group" id="impressorasFormPanel">
+                <p class="title">Cadastro de impressora</p>
+                <form id="formImpressora" class="form">
+                    <input type="hidden" id="printerId" value="">
+                    <input type="text" id="printerCaminho" list="printersDatalist" placeholder="Caminho (Windows) ou http://..." autocomplete="off">
+                    <input type="text" id="printerNome" placeholder="Nome (apelido)" autocomplete="off">
+                    <div class="row-split">
+                        <input type="number" id="printerNro" min="0" step="1" placeholder="Nro (imprenro)">
+                        <select id="printerContaMesa">
+                            <option value="N">Conta mesa: Não</option>
+                            <option value="S">Conta mesa: Sim</option>
+                        </select>
+                    </div>
+                    <select id="printerComandaDelivery">
+                        <option value="N">Comanda delivery/balcão: Não</option>
+                        <option value="S">Comanda delivery/balcão: Sim</option>
+                    </select>
+                    <input type="number" id="printerFeedFinal" min="0" max="20" step="1" placeholder="Avanço final (ESC d) — 0 a 20">
+                    <div class="help">Conta mesa: imprime a conta da mesa. Comanda delivery/balcão: imprime a comanda completa do pedido.</div>
+                    <div class="help" id="printerDefaultHint" style="display:none;"></div>
+                    <div class="actions">
+                        <button type="button" class="btn-modal" id="btnAtualizarPrinters">Atualizar lista do Windows</button>
+                        <button type="submit" class="btn-green" id="btnSalvarImpressora">Salvar</button>
+                        <button type="button" class="btn-modal" id="btnCancelarImpressora" onclick="cancelarEdicaoImpressora()" style="display:none;">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="field-group" id="terminalImpressaoPanel">
+                <p class="title">Impressão deste terminal</p>
+                <div class="help">Cada PC tem caminhos Windows próprios. O identificador vem do Print Bridge (hostname + usuário).</div>
+                <p class="help" id="termImpStatus">Detectando terminal...</p>
+                <p class="help"><strong id="termImpId">—</strong></p>
+                <table class="tbl" style="margin-top:8px;">
+                    <thead>
+                        <tr>
+                            <th style="width:70px;">ID</th>
+                            <th>Impressora lógica</th>
+                            <th>Caminho local (Windows)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyTerminalImpressoras">
+                        <tr><td colspan="3" class="empty">Carregando...</td></tr>
+                    </tbody>
+                </table>
+                <div class="actions" style="margin-top:10px;">
+                    <button type="button" class="btn-green" id="btnSalvarTerminalImp">Salvar deste terminal</button>
+                </div>
+            </div>
+
+            <div class="field-group" id="whatsappPanel">
+                <p class="title">WhatsApp (uazapi)</p>
+                <div class="help">Conecte o WhatsApp desta loja e ative as notificações automáticas.</div>
+
+                <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                    <span class="title" style="margin:0;">Status:</span>
+                    <span id="waStatusPill" class="pill bad">desconhecido</span>
+                    <button type="button" class="btn-mini" style="width:auto;" onclick="waVerificarStatus()">Atualizar</button>
+                </div>
+
+                <div class="row-split" style="margin-top:10px;">
+                    <input type="text" id="waNomeInstancia" placeholder="Nome da instância (ex: minha-loja)" autocomplete="off">
+                    <button type="button" class="btn-modal" id="btnWaCriar" onclick="waCriarInstancia()">Criar instância</button>
+                </div>
+                <div class="help">Criar instância só é necessário uma vez por loja (precisa do admintoken no .env).</div>
+
+                <div class="actions" style="margin-top:10px;">
+                    <button type="button" class="btn-green" id="btnWaConectar" onclick="waConectar()">Conectar (gerar QR)</button>
+                    <button type="button" class="btn-modal" id="btnWaDesconectar" onclick="waDesconectar()">Desconectar</button>
+                </div>
+
+                <div id="waQrBox" style="display:none; margin-top:12px; text-align:center;">
+                    <p class="help">Abra o WhatsApp no celular da loja > Aparelhos conectados > Conectar aparelho e escaneie:</p>
+                    <img id="waQrImg" alt="QR code" style="max-width:260px; width:100%; background:#fff; padding:8px; border-radius:8px;">
+                    <p class="help" id="waPairCode" style="display:none;"></p>
+                </div>
+
+                <hr style="border-color:rgba(255,255,255,0.08); margin:14px 0;">
+
+                <p class="title" style="margin-bottom:6px;">Enviar teste</p>
+                <div class="row-split">
+                    <input type="text" id="waTesteTelefone" placeholder="Telefone (ex: 89999999999)" autocomplete="off">
+                    <button type="button" class="btn-modal" id="btnWaTeste" onclick="waEnviarTeste()">Enviar teste</button>
+                </div>
+
+                <hr style="border-color:rgba(255,255,255,0.08); margin:14px 0;">
+
+                <p class="title" style="margin-bottom:6px;">Notificações automáticas</p>
+                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                    <input type="checkbox" id="waAtivo"> Ativar WhatsApp nesta loja
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                    <input type="checkbox" id="waNotifDespacho"> Avisar cliente no despacho (delivery a caminho)
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                    <input type="checkbox" id="waNotifDeliveryCopia"> Botão de enviar cópia do pedido (delivery)
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                    <input type="checkbox" id="waNotifBalcaoPronto"> Botão de avisar pedido pronto (balcão)
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                    <input type="checkbox" id="waNotifMesaConta"> Enviar cópia da conta no fechamento da mesa
+                </label>
+                <div class="actions" style="margin-top:10px;">
+                    <button type="button" class="btn-green" id="btnWaSalvarCfg" onclick="waSalvarConfig()">Salvar configurações</button>
+                </div>
+            </div>
+        </aside>
+    </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=10"></script>
+    <script>
+        let sistemaCampos = [];
+        let printersDisponiveis = [];
+        let impressorasRows = [];
+
+        function showMsg(texto, tipo) {
+            const el = document.getElementById('mensagem');
+            el.className = `mensagem ${tipo}`;
+            el.textContent = texto;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 4000);
+        }
+
+        function setFieldVisible(field, visible) {
+            const el = document.querySelector(`[data-field="${field}"]`);
+            if (!el) return;
+            el.style.display = visible ? '' : 'none';
+        }
+
+        async function fetchJsonSafe(url, options) {
+            const resp = await fetch(url, options);
+            const txt = await resp.text();
+            if (txt && txt.trim().startsWith('<')) {
+                throw new Error(`API retornou HTML (${resp.status}) em ${url}. Faça login novamente ou verifique erro no servidor.`);
+            }
+            let data = null;
+            try { data = txt ? JSON.parse(txt) : null; } catch { data = null; }
+            if (!resp.ok) {
+                if (data && data.erro) {
+                    const extra = [];
+                    if (data.path) extra.push(`path=${data.path}`);
+                    if (data.method) extra.push(`method=${data.method}`);
+                    if (data.allow && Array.isArray(data.allow) && data.allow.length) extra.push(`allow=${data.allow.join(',')}`);
+                    throw new Error(extra.length ? `${data.erro} (${extra.join(' ')})` : data.erro);
+                }
+                throw new Error(`Erro HTTP ${resp.status} em ${url}`);
+            }
+            return data;
+        }
+
+        async function carregarSistema() {
+            try {
+                const data = await fetchJsonSafe('/api/configuracao-sistema');
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao carregar configuração.');
+                sistemaCampos = Array.isArray(data.campos) ? data.campos : [];
+
+                ['nromesa', 'servicomesa', 'calculodistancia'].forEach((k) => {
+                    setFieldVisible(k, sistemaCampos.includes(k));
+                });
+
+                const dados = data.dados || {};
+                if (sistemaCampos.includes('nromesa')) document.getElementById('nromesa').value = dados.nromesa ?? '';
+                if (sistemaCampos.includes('servicomesa')) document.getElementById('servicomesa').value = dados.servicomesa ?? '';
+                if (sistemaCampos.includes('calculodistancia')) document.getElementById('calculodistancia').value = (dados.calculodistancia || 'Sim');
+            } catch (e) {
+                console.error(e);
+                try {
+                    const data2 = await fetchJsonSafe('/api/buscar-configuracao');
+                    const cfg = data2 && data2.config ? data2.config : null;
+                    if (cfg) {
+                        const fields = ['nromesa', 'servicomesa', 'calculodistancia'];
+                        sistemaCampos = fields.filter(k => Object.prototype.hasOwnProperty.call(cfg, k));
+                        fields.forEach((k) => setFieldVisible(k, sistemaCampos.includes(k)));
+                        if (sistemaCampos.includes('nromesa')) document.getElementById('nromesa').value = cfg.nromesa ?? '';
+                        if (sistemaCampos.includes('servicomesa')) document.getElementById('servicomesa').value = cfg.servicomesa ?? '';
+                        if (sistemaCampos.includes('calculodistancia')) document.getElementById('calculodistancia').value = (cfg.calculodistancia || 'Sim');
+                        showMsg('Configuração carregada via /api/buscar-configuracao.', 'sucesso');
+                        return;
+                    }
+                } catch {}
+                showMsg(e.message || 'Erro ao carregar sistema.', 'erro');
+            }
+        }
+
+        async function salvarSistema() {
+            const btn = document.getElementById('btnSalvarSistema');
+            btn.disabled = true;
+            try {
+                const dados = {};
+                if (sistemaCampos.includes('nromesa')) dados.nromesa = document.getElementById('nromesa').value;
+                if (sistemaCampos.includes('servicomesa')) dados.servicomesa = document.getElementById('servicomesa').value;
+                if (sistemaCampos.includes('calculodistancia')) dados.calculodistancia = document.getElementById('calculodistancia').value;
+
+                const data = await fetchJsonSafe('/api/configuracao-sistema', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dados })
+                });
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao salvar configuração.');
+                showMsg(data?.mensagem || 'Configuração salva.', 'sucesso');
+                await carregarSistema();
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao salvar sistema.', 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function carregarPrintersDisponiveis() {
+            const hint = document.getElementById('printerDefaultHint');
+            hint.style.display = 'none';
+            try {
+                const data = await fetchJsonSafe('/api/impressoras-disponiveis');
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao listar impressoras.');
+                printersDisponiveis = Array.isArray(data.impressoras) ? data.impressoras : [];
+                if (data.padrao) {
+                    hint.textContent = `Impressora padrão do Windows: ${data.padrao}`;
+                    hint.style.display = '';
+                }
+
+                const dl = document.getElementById('printersDatalist');
+                dl.innerHTML = printersDisponiveis.map(n => `<option value="${String(n).replace(/"/g, '&quot;')}"></option>`).join('');
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao listar impressoras.', 'erro');
+                printersDisponiveis = [];
+            }
+        }
+
+        function renderImpressorasTabela() {
+            const tbody = document.getElementById('tbodyImpressoras');
+            if (!Array.isArray(impressorasRows) || impressorasRows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma impressora cadastrada.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = impressorasRows.map(r => {
+                const mesa = String(r.conta_mesa || '').toUpperCase() === 'S' ? '<span class="pill ok">Sim</span>' : '<span class="pill bad">Não</span>';
+                const del = String(r.comanda_delivery || '').toUpperCase() === 'S' ? '<span class="pill ok">Sim</span>' : '<span class="pill bad">Não</span>';
+                const feed = (r.feed_final_linhas ?? '');
+                return `
+                    <tr>
+                        <td class="kcell">#${r.id}</td>
+                        <td>${String(r.nomedaimpressora || '')}</td>
+                        <td>${String(r.caminho || '')}</td>
+                        <td style="text-align:center;">${(r.imprenro ?? '')}</td>
+                        <td style="text-align:center;">${feed}</td>
+                        <td style="text-align:center;">${mesa}</td>
+                        <td style="text-align:center;">${del}</td>
+                        <td style="text-align:center;">
+                            <div class="tbl-actions">
+                                <button type="button" class="btn-mini" onclick="editarImpressora(${r.id})">Editar</button>
+                                <button type="button" class="btn-mini btn-mini-danger" onclick="excluirImpressora(${r.id})">Excluir</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function carregarImpressorasCadastro() {
+            try {
+                const data = await fetchJsonSafe('/api/impressoras-cadastro');
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao carregar impressoras cadastradas.');
+                impressorasRows = Array.isArray(data.impressoras) ? data.impressoras : [];
+                renderImpressorasTabela();
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao carregar impressoras.', 'erro');
+            }
+        }
+
+        function novaImpressora() {
+            document.getElementById('printerId').value = '';
+            document.getElementById('printerCaminho').value = '';
+            document.getElementById('printerNome').value = '';
+            document.getElementById('printerNro').value = '0';
+            document.getElementById('printerContaMesa').value = 'N';
+            document.getElementById('printerComandaDelivery').value = 'N';
+            document.getElementById('printerFeedFinal').value = '6';
+            document.getElementById('btnSalvarImpressora').textContent = 'Salvar';
+            document.getElementById('btnCancelarImpressora').style.display = 'none';
+            document.getElementById('impressorasFormPanel')?.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('printerCaminho')?.focus();
+        }
+
+        let terminalImpRows = [];
+        let terminalImpId = '';
+
+        function renderTerminalImpressorasTabela() {
+            const tbody = document.getElementById('tbodyTerminalImpressoras');
+            if (!tbody) return;
+            if (!Array.isArray(terminalImpRows) || terminalImpRows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhuma impressora lógica cadastrada.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = terminalImpRows.map(r => {
+                const iid = Number(r.impressora_id || 0);
+                const cam = String(r.caminho_local || '');
+                return `
+                    <tr>
+                        <td class="kcell">#${iid}</td>
+                        <td>${String(r.nomedaimpressora || '')}</td>
+                        <td><input type="text" class="term-imp-caminho" data-iid="${iid}" list="printersDatalist" value="${cam.replace(/"/g, '&quot;')}" placeholder="Nome exato no Windows" autocomplete="off"></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function carregarTerminalImpressao() {
+            const statusEl = document.getElementById('termImpStatus');
+            const idEl = document.getElementById('termImpId');
+            const tbody = document.getElementById('tbodyTerminalImpressoras');
+            if (!tbody || !statusEl || !idEl) return;
+            try {
+                let tid = null;
+                if (typeof window.lojaGetBridgeTerminalId === 'function') {
+                    tid = await window.lojaGetBridgeTerminalId(true);
+                }
+                if (!tid) {
+                    statusEl.textContent = 'Print Bridge OFF neste PC. Abra deploy\\print_bridge\\iniciar-print-bridge.bat e deixe a janela aberta.';
+                    idEl.textContent = 'Terminal: —';
+                    terminalImpId = '';
+                    tbody.innerHTML = '<tr><td colspan="3" class="empty">Bridge não detectado.</td></tr>';
+                    return;
+                }
+                terminalImpId = tid;
+                idEl.textContent = 'Terminal: ' + tid;
+                const data = await fetchJsonSafe('/api/terminal-impressoras?terminal_id=' + encodeURIComponent(tid));
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao carregar terminal.');
+                terminalImpRows = Array.isArray(data.impressoras) ? data.impressoras : [];
+                statusEl.textContent = data.configurado
+                    ? 'Terminal configurado. Ajuste os caminhos se necessário.'
+                    : 'Primeira configuração deste terminal — informe os caminhos e salve.';
+                renderTerminalImpressorasTabela();
+            } catch (e) {
+                console.error(e);
+                statusEl.textContent = e.message || 'Erro ao carregar configuração do terminal.';
+                tbody.innerHTML = '<tr><td colspan="3" class="empty">Erro ao carregar.</td></tr>';
+            }
+        }
+
+        async function salvarTerminalImpressao() {
+            const btn = document.getElementById('btnSalvarTerminalImp');
+            if (!btn) return;
+            if (!terminalImpId) {
+                showMsg('Print Bridge não detectado neste PC.', 'erro');
+                return;
+            }
+            btn.disabled = true;
+            try {
+                const inputs = document.querySelectorAll('.term-imp-caminho');
+                const itens = [];
+                inputs.forEach(inp => {
+                    const iid = Number(inp.getAttribute('data-iid') || 0);
+                    if (!iid) return;
+                    itens.push({ impressora_id: iid, caminho_local: String(inp.value || '').trim() });
+                });
+                const data = await fetchJsonSafe('/api/terminal-impressoras', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ terminal_id: terminalImpId, itens })
+                });
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao salvar.');
+                showMsg(data?.mensagem || 'Configuração do terminal salva.', 'sucesso');
+                await carregarTerminalImpressao();
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao salvar terminal.', 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function editarImpressora(id) {
+            const r = (impressorasRows || []).find(x => Number(x.id) === Number(id));
+            if (!r) return;
+            document.getElementById('printerId').value = String(r.id);
+            document.getElementById('printerCaminho').value = String(r.caminho || '');
+            document.getElementById('printerNome').value = String(r.nomedaimpressora || '');
+            document.getElementById('printerNro').value = String(Number(r.imprenro || 0));
+            document.getElementById('printerContaMesa').value = String(r.conta_mesa || 'N').toUpperCase() === 'S' ? 'S' : 'N';
+            document.getElementById('printerComandaDelivery').value = String(r.comanda_delivery || 'N').toUpperCase() === 'S' ? 'S' : 'N';
+            document.getElementById('printerFeedFinal').value = String(Number.isFinite(Number(r.feed_final_linhas)) ? Number(r.feed_final_linhas) : 6);
+            document.getElementById('btnSalvarImpressora').textContent = 'Atualizar';
+            document.getElementById('btnCancelarImpressora').style.display = 'block';
+            document.getElementById('impressorasFormPanel')?.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('printerCaminho')?.focus();
+        }
+
+        async function excluirImpressora(id) {
+            const r = (impressorasRows || []).find(x => Number(x.id) === Number(id));
+            const nome = r ? String(r.nomedaimpressora || '') : String(id);
+            if (!confirm(`Excluir a impressora "${nome}"?`)) return;
+            try {
+                const data = await fetchJsonSafe(`/api/impressoras-cadastro/${id}`, { method: 'DELETE' });
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao excluir.');
+                showMsg(data?.mensagem || 'Impressora removida.', 'sucesso');
+                await carregarImpressorasCadastro();
+                if (String(document.getElementById('printerId').value) === String(id)) {
+                    novaImpressora();
+                }
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao excluir impressora.', 'erro');
+            }
+        }
+
+        function cancelarEdicaoImpressora() {
+            novaImpressora();
+        }
+
+        async function salvarImpressora() {
+            const btn = document.getElementById('btnSalvarImpressora');
+            btn.disabled = true;
+            try {
+                const id = String(document.getElementById('printerId').value || '').trim();
+                const payload = {
+                    caminho: document.getElementById('printerCaminho').value.trim(),
+                    nomedaimpressora: document.getElementById('printerNome').value.trim(),
+                    imprenro: document.getElementById('printerNro').value,
+                    conta_mesa: document.getElementById('printerContaMesa').value,
+                    comanda_delivery: document.getElementById('printerComandaDelivery').value,
+                    feed_final_linhas: document.getElementById('printerFeedFinal').value
+                };
+                const url = id ? `/api/impressoras-cadastro/${encodeURIComponent(id)}` : '/api/impressoras-cadastro';
+                const method = id ? 'PUT' : 'POST';
+                const data = await fetchJsonSafe(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao salvar.');
+                showMsg(data?.mensagem || 'Impressora salva.', 'sucesso');
+                await carregarImpressorasCadastro();
+                if (!id && data?.id) {
+                    editarImpressora(data.id);
+                }
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao salvar impressora.', 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function atualizarListaPrinters() {
+            const btn = document.getElementById('btnAtualizarPrinters');
+            btn.disabled = true;
+            try {
+                await carregarPrintersDisponiveis();
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // ===================== WhatsApp (uazapi) =====================
+        let waPollTimer = null;
+
+        function waSetStatus(status) {
+            const pill = document.getElementById('waStatusPill');
+            const s = String(status || 'disconnected').toLowerCase();
+            let cls = 'pill bad', txt = 'desconectado';
+            if (s === 'connected') { cls = 'pill ok'; txt = 'conectado'; }
+            else if (s === 'connecting') { cls = 'pill'; txt = 'conectando...'; }
+            pill.className = cls;
+            pill.textContent = txt;
+            return s;
+        }
+
+        async function waVerificarStatus() {
+            try {
+                const data = await fetchJsonSafe('/api/whatsapp/instancia/status');
+                const s = waSetStatus(data?.status);
+                if (s === 'connected') {
+                    document.getElementById('waQrBox').style.display = 'none';
+                    if (waPollTimer) { clearInterval(waPollTimer); waPollTimer = null; }
+                }
+                return s;
+            } catch (e) {
+                console.error(e);
+                waSetStatus('disconnected');
+                return 'disconnected';
+            }
+        }
+
+        async function waCriarInstancia() {
+            const btn = document.getElementById('btnWaCriar');
+            btn.disabled = true;
+            try {
+                const nome = document.getElementById('waNomeInstancia').value.trim();
+                const data = await fetchJsonSafe('/api/whatsapp/instancia/criar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome })
+                });
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao criar instância.');
+                showMsg('Instância criada. Agora clique em Conectar para gerar o QR.', 'sucesso');
+                await waVerificarStatus();
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao criar instância.', 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function waConectar() {
+            const btn = document.getElementById('btnWaConectar');
+            btn.disabled = true;
+            try {
+                const data = await fetchJsonSafe('/api/whatsapp/instancia/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao conectar.');
+                waSetStatus(data?.status || 'connecting');
+                const box = document.getElementById('waQrBox');
+                const img = document.getElementById('waQrImg');
+                const pair = document.getElementById('waPairCode');
+                if (data.qrcode) {
+                    img.src = String(data.qrcode).startsWith('data:') ? data.qrcode : ('data:image/png;base64,' + data.qrcode);
+                    box.style.display = 'block';
+                } else {
+                    box.style.display = 'none';
+                }
+                if (data.paircode) {
+                    pair.textContent = 'Código de pareamento: ' + data.paircode;
+                    pair.style.display = 'block';
+                } else {
+                    pair.style.display = 'none';
+                }
+                if (waPollTimer) clearInterval(waPollTimer);
+                waPollTimer = setInterval(waVerificarStatus, 4000);
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao conectar.', 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function waDesconectar() {
+            if (!confirm('Desconectar o WhatsApp desta loja?')) return;
+            try {
+                const data = await fetchJsonSafe('/api/whatsapp/instancia/desconectar', { method: 'POST' });
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao desconectar.');
+                showMsg('WhatsApp desconectado.', 'sucesso');
+                document.getElementById('waQrBox').style.display = 'none';
+                await waVerificarStatus();
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao desconectar.', 'erro');
+            }
+        }
+
+        async function waEnviarTeste() {
+            const btn = document.getElementById('btnWaTeste');
+            btn.disabled = true;
+            try {
+                const telefone = document.getElementById('waTesteTelefone').value.trim();
+                if (!telefone) { showMsg('Informe um telefone.', 'erro'); return; }
+                const data = await fetchJsonSafe('/api/whatsapp/enviar-teste', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefone })
+                });
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao enviar teste.');
+                showMsg('Mensagem de teste enviada.', 'sucesso');
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao enviar teste.', 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function waCarregarConfig() {
+            try {
+                const data = await fetchJsonSafe('/api/whatsapp/config');
+                if (!data?.sucesso) return;
+                document.getElementById('waAtivo').checked = !!data.ativo;
+                document.getElementById('waNotifDespacho').checked = !!data.notif_despacho;
+                document.getElementById('waNotifDeliveryCopia').checked = !!data.notif_delivery_copia;
+                document.getElementById('waNotifBalcaoPronto').checked = !!data.notif_balcao_pronto;
+                document.getElementById('waNotifMesaConta').checked = !!data.notif_mesa_conta;
+                if (data.instancia_nome) document.getElementById('waNomeInstancia').value = data.instancia_nome;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function waSalvarConfig() {
+            const btn = document.getElementById('btnWaSalvarCfg');
+            btn.disabled = true;
+            try {
+                const payload = {
+                    ativo: document.getElementById('waAtivo').checked ? 1 : 0,
+                    notif_despacho: document.getElementById('waNotifDespacho').checked ? 1 : 0,
+                    notif_delivery_copia: document.getElementById('waNotifDeliveryCopia').checked ? 1 : 0,
+                    notif_balcao_pronto: document.getElementById('waNotifBalcaoPronto').checked ? 1 : 0,
+                    notif_mesa_conta: document.getElementById('waNotifMesaConta').checked ? 1 : 0
+                };
+                const data = await fetchJsonSafe('/api/whatsapp/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao salvar.');
+                showMsg(data?.mensagem || 'Configuração de WhatsApp salva.', 'sucesso');
+            } catch (e) {
+                console.error(e);
+                showMsg(e.message || 'Erro ao salvar configuração de WhatsApp.', 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('formSistema').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await salvarSistema();
+            });
+            document.getElementById('formImpressora').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await salvarImpressora();
+            });
+            document.getElementById('btnAtualizarPrinters').addEventListener('click', async () => {
+                await atualizarListaPrinters();
+            });
+            const btnTermImp = document.getElementById('btnSalvarTerminalImp');
+            if (btnTermImp) btnTermImp.addEventListener('click', salvarTerminalImpressao);
+
+            await carregarSistema();
+            await carregarPrintersDisponiveis();
+            await carregarImpressorasCadastro();
+            await carregarTerminalImpressao();
+            novaImpressora();
+            await waCarregarConfig();
+            await waVerificarStatus();
+        });
+
+        window.novaImpressora = novaImpressora;
+        window.editarImpressora = editarImpressora;
+        window.excluirImpressora = excluirImpressora;
+        window.cancelarEdicaoImpressora = cancelarEdicaoImpressora;
+        window.waVerificarStatus = waVerificarStatus;
+        window.waCriarInstancia = waCriarInstancia;
+        window.waConectar = waConectar;
+        window.waDesconectar = waDesconectar;
+        window.waEnviarTeste = waEnviarTeste;
+        window.waSalvarConfig = waSalvarConfig;
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+<script>try { lucide.createIcons(); } catch (e) {}</script>
+
+{% endif %}
+</body>
+</html>

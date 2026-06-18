@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tela Interna</title>
+    <style>
+        body {
+            background: #fff7e6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container-interna {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+            padding: 32px 24px;
+            text-align: center;
+        }
+        .btn-laranja {
+            background: #ff9800;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 16px 32px;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 18px 0;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(255,152,0,0.15);
+            transition: background 0.2s;
+        }
+        .btn-laranja:hover {
+            background: #fb8c00;
+        }
+    </style>
+</head>
+<body>
+    <div style="position: absolute; top: 8px; left: 8px; z-index: 99999; background: #fffbe6; color: #ff9800; font-size: 2.2em; font-weight: bold; border-radius: 10px; padding: 2px 18px 2px 12px; box-shadow: 0 2px 8px #ff980055; border: 2px solid #ff9800;">8</div>
+    <div class="container-interna">
+        <h2 style="color:#ff9800;">Menu Interno</h2>
+        <button class="btn-laranja">Botão 1</button>
+        <button class="btn-laranja">Botão 2</button>
+        <button class="btn-laranja">Botão 3</button>
+        <button class="btn-laranja">Botão 4</button>
+        <button class="btn-laranja">Botão 5</button>
+        <br><br>
+        <a href="/interna" class="btn-laranja" style="display:inline-block; text-decoration:none;">Cadastro Inde</a>
+    </div>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+</body>
+</html>

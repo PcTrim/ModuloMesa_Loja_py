@@ -1,0 +1,27 @@
+CADA PC COM IMPRESSORA = bridge separado neste PC
+
+PC A funcionou, PC B nao = no PC B voce precisa instalar Python e rodar o .bat de novo.
+
+=== PC B (que nao imprime) ===
+
+1) Copie a pasta print_bridge INTEIRA (sem .venv do outro PC):
+   iniciar-print-bridge.bat, verificar-bridge.bat, app.py,
+   printer_core.py, printer_match.py, requirements.txt
+
+2) Instale Python 3 (se ainda nao tem): Add to PATH, reinicie o PC
+
+3) Duplo clique: verificar-bridge.bat
+   - Tudo [OK]? Pule para 5
+   - [X] Python? Instale Python
+   - [X] .venv? Apague .venv, rode iniciar-print-bridge.bat
+   - [X] Bridge? Rode iniciar-print-bridge.bat, janela aberta
+
+4) Duplo clique: iniciar-print-bridge.bat — NAO FECHE a janela preta
+
+5) Neste MESMO PC B, navegador: http://127.0.0.1:9123/health  -> "ok": true
+
+6) Neste MESMO PC B, site: https://pedidofacil.online/LojaOnline/casa  Ctrl+F5
+
+IMPORTANTE:
+- Site no celular/outro PC NAO imprime na impressora do PC B
+- Hostinger = so site. Bridge = so no PC da impressora

@@ -1,0 +1,12 @@
+loja_erros.log
+pedidos_salvos_export/
+.env
+.venv/
+.venv-1/
+__pycache__/
+*.pyc
+.pytest_cache/
+ultimo_arranque_loja.txt
+data/pedidos_salvos/
+data/relatorios/
+!data/.gitkeep
