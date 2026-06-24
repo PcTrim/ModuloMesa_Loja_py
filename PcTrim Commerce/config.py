@@ -38,13 +38,6 @@ class Config:
     LOG_SESSION_DEBUG = os.environ.get("LOG_SESSION_DEBUG", "").lower() in ("1", "true", "yes")
     ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
 
-    # restaurant (padrão) | retail (PDV balcão)
-    BUSINESS_TYPE = (os.environ.get("BUSINESS_TYPE", "restaurant") or "restaurant").strip().lower()
-
-    @classmethod
-    def is_retail(cls):
-        return cls.BUSINESS_TYPE == "retail"
-
     # Subpath em produção (ex.: https://pedidofacil.online/LojaOnline/). Vazio = raiz.
     _raw_prefix = (os.environ.get("LOJA_URL_PREFIX") or "").strip()
     URL_PREFIX = ("/" + _raw_prefix.strip("/")) if _raw_prefix else ""

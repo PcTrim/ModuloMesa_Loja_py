@@ -3,10 +3,9 @@ import sys
 import traceback
 import unicodedata
 
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, jsonify, render_template, request, session, url_for
 
-from config import Config
-from decorators import login_required
+from decorators import login_required, restaurant_only
 from database import conectar
 from repositories.mesa_repo import fetch_mesa_recent_for_client
 from services.dados_loja import obter_dados_loja
@@ -84,6 +83,7 @@ def _ensure_pedido_diarios_table():
 
 @mesa_shop_bp.route("/api/mesa-todos")
 @login_required
+@restaurant_only
 def listar_todas_mesas():
     try:
         id_cliente = session.get("id_cliente")
@@ -97,9 +97,8 @@ def listar_todas_mesas():
 
 @mesa_shop_bp.route("/api/salvar-mesa", methods=["POST"])
 @login_required
+@restaurant_only
 def salvar_mesa():
-    if Config.is_retail():
-        return jsonify({"sucesso": False, "mensagem": "Módulo de mesas indisponível no modo varejo."}), 403
     try:
         data = request.get_json()
         produtos = data.get("produtos", [])
@@ -299,15 +298,15 @@ def salvar_mesa():
 
 @mesa_shop_bp.route("/mesa_test")
 @login_required
+@restaurant_only
 def mesa_test():
     return render_template("mesa_test.html")
 
 
 @mesa_shop_bp.route("/mesa")
 @login_required
+@restaurant_only
 def mesa():
-    if Config.is_retail():
-        return redirect(f"{url_for('casa')}?modo=balcao")
     id_cliente = session.get("id_cliente")
     print(f"[LOG] (mesa) id_cliente na sessão: {id_cliente}", flush=True)
     dados_loja = obter_dados_loja(id_cliente)

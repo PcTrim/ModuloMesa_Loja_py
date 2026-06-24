@@ -150,7 +150,7 @@ O mesmo banco `loja2001` pode atender **várias lojas**. Cada loja tem um `id_cl
 5. O sistema cria automaticamente: usuário, `dadosloja`, contador de pedidos, configuração, formas de pagamento e taxas de entrega padrão.
 6. Entregue login/senha ao cliente. Ele completa produtos e impressoras em **Configurações**.
 
-**Checklist pós-cadastro (manual):** impressoras, WhatsApp (uazapi), e `BUSINESS_TYPE=retail` no `.env` se a instalação for PDV de varejo (hoje é por servidor, não por loja).
+**Checklist pós-cadastro (manual):** impressoras, WhatsApp (uazapi). Para PDV de varejo, selecione **Varejo** no tipo de negócio ao cadastrar a loja em `/admin/lojas` (campo `tipo_negocio` em `dadosloja`).
 
 ---
 

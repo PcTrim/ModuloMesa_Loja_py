@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+{% set label_classif = 'Categoria' if is_retail else 'Classificação' %}
+{% set label_classif_pl = 'Categorias' if is_retail else 'Classificações' %}
 <head>
     <meta charset="UTF-8">
     <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastrar Produto - Novaloja</title>
+    <title>Cadastrar Produto | {{ nome_fantasia or 'Loja' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -44,7 +46,7 @@
                         <th style="width: 90px;">Código</th>
                         <th>Produto</th>
                         <th style="width: 110px;">Preço</th>
-                        <th style="width: 130px;">Classe</th>
+                        <th style="width: 130px;">{{ label_classif if is_retail else 'Classe' }}</th>
                         <th style="width: 110px;">Por kilo</th>
                         <th style="width: 120px;">Venda</th>
                         <th style="width: 220px; text-align: center;">Ações</th>
@@ -67,12 +69,12 @@
 
                     <div class="row-split">
                         <input type="number" id="preco" step="0.01" required placeholder="Preço (R$)">
-                        <select id="classificacaoSelect">
-                            <option value="">Classificação...</option>
+                        <select id="classificacaoSelect" required>
+                            <option value="">{{ label_classif }}...</option>
                         </select>
                     </div>
 
-                    <input type="text" id="classe" required placeholder="Classe (preenchida pela classificação)" readonly>
+                    <input type="text" id="classe" required placeholder="{% if is_retail %}{{ label_classif }}{% else %}Classe (preenchida pela {{ label_classif|lower }}){% endif %}" readonly>
 
                     <div class="row-split">
                         <select id="porkilo">
@@ -86,12 +88,17 @@
                         </select>
                     </div>
 
+                    {% if not is_retail %}
                     <div class="row-split">
                         <select id="impressora">
                             <option value="1">Impressora (padrão)</option>
                         </select>
                         <input type="number" id="display" value="0" placeholder="Display">
                     </div>
+                    {% else %}
+                    <input type="hidden" id="impressora" value="1">
+                    <input type="hidden" id="display" value="0">
+                    {% endif %}
 
                     {% set papel = (session.get('funcao') or 'gerente')|lower %}
                     {% if papel == 'gerente' %}
@@ -120,8 +127,70 @@
     </div>
 
     <script>
+        const IS_RETAIL = {{ 'true' if is_retail else 'false' }};
+        const LABEL_CLASSIF = window.LABEL_CLASSIF || {{ label_classif|tojson }};
+        const LABEL_CLASSIF_PL = window.LABEL_CLASSIF_PL || {{ label_classif_pl|tojson }};
+        const LABEL_CLASSIF_LOWER = IS_RETAIL ? 'categoria' : 'classificação';
+
+        function mostrarMensagem(texto, tipo) {
+            const mensagemDiv = document.getElementById('mensagem');
+            if (!mensagemDiv) return;
+            mensagemDiv.className = `mensagem ${tipo}`;
+            mensagemDiv.textContent = texto;
+            mensagemDiv.style.display = 'block';
+        }
+
+        function sincronizarClasseDoSelect() {
+            const selClass = document.getElementById('classificacaoSelect');
+            const classeEl = document.getElementById('classe');
+            if (!selClass || !classeEl) return;
+            const val = (selClass.value || '').trim().toUpperCase();
+            classeEl.value = val;
+        }
+
+        function preencherSelectClassificacao(items) {
+            const select = document.getElementById('classificacaoSelect');
+            if (!select || !Array.isArray(items)) return;
+            const placeholder = `${LABEL_CLASSIF}...`;
+            select.innerHTML = `<option value="">${placeholder}</option>`;
+            items.forEach(item => {
+                const nome = String(item.nome || item.nomeclassificacao || '').trim();
+                if (!nome || nome === placeholder) return;
+                const opt = document.createElement('option');
+                opt.value = nome.toUpperCase();
+                opt.textContent = nome;
+                select.appendChild(opt);
+            });
+        }
+
+        function configurarValidacaoPtBr() {
+            const mensagens = {
+                nome: 'Informe o nome do produto.',
+                preco: 'Informe o preco do produto.',
+                classificacaoSelect: `Selecione uma ${LABEL_CLASSIF_LOWER}.`,
+                classe: `Selecione uma ${LABEL_CLASSIF_LOWER}.`
+            };
+            ['nome', 'preco', 'classificacaoSelect', 'classe'].forEach(id => {
+                const campo = document.getElementById(id);
+                if (!campo) return;
+                const atualizarMensagem = () => {
+                    let mensagem = '';
+                    if (campo.validity.valueMissing) {
+                        mensagem = mensagens[id] || 'Preencha este campo.';
+                    } else if (id === 'preco' && campo.validity.badInput) {
+                        mensagem = 'Informe um preco valido.';
+                    }
+                    campo.setCustomValidity(mensagem);
+                };
+                campo.addEventListener('invalid', atualizarMensagem);
+                campo.addEventListener('input', () => campo.setCustomValidity(''));
+                campo.addEventListener('change', () => campo.setCustomValidity(''));
+            });
+        }
+
         // Inicialização ao carregar a página
         document.addEventListener('DOMContentLoaded', () => {
+            configurarValidacaoPtBr();
             // Configurar navegação por Enter
             const ordemCampos = [
                 'nome',
@@ -131,8 +200,7 @@
                 'classe',
                 'porkilo',
                 'vendaliberada',
-                'impressora',
-                'display',
+                ...(IS_RETAIL ? [] : ['impressora', 'display']),
                 'cfop',
                 'ncm',
                 'descricao'
@@ -158,35 +226,30 @@
                 if (el) el.addEventListener('keydown', avancar);
             });
 
-            // Carrega classificações e preenche select
-            fetch('/carrossel-imagens')
+            // Carrega categorias/classificações e preenche select
+            const urlClassif = IS_RETAIL ? '/api/listar-classificacoes' : '/carrossel-imagens';
+            fetch(urlClassif)
                 .then(r => r.json())
-                .then(lista => {
-                    const select = document.getElementById('classificacaoSelect');
-                    if (!select || !Array.isArray(lista)) return;
-                    lista.forEach(item => {
-                        const opt = document.createElement('option');
-                        opt.value = item.nome?.toUpperCase() || '';
-                        opt.textContent = item.nome || '';
-                        select.appendChild(opt);
-                    });
+                .then(data => {
+                    const items = IS_RETAIL
+                        ? (Array.isArray(data) ? data : []).map(c => ({ nome: c.nomeclassificacao }))
+                        : (Array.isArray(data) ? data : []);
+                    preencherSelectClassificacao(items);
                 })
-                .catch(err => console.error('Erro ao carregar classificações:', err));
+                .catch(err => console.error(`Erro ao carregar ${LABEL_CLASSIF_LOWER}:`, err));
 
-            // Ao escolher classificação, preencher classe
             const selClass = document.getElementById('classificacaoSelect');
             if (selClass) {
-                selClass.addEventListener('change', () => {
-                    const classe = document.getElementById('classe');
-                    if (classe) {
-                        classe.value = (selClass.value || '').toUpperCase();
-                    }
-                });
+                selClass.addEventListener('change', sincronizarClasseDoSelect);
             }
 
-            carregarImpressorasParaProduto().finally(() => {
+            if (!IS_RETAIL) {
+                carregarImpressorasParaProduto().finally(() => {
+                    carregarProdutos();
+                });
+            } else {
                 carregarProdutos();
-            });
+            }
         });
 
         async function carregarImpressorasParaProduto() {
@@ -309,6 +372,7 @@
                                 break;
                             }
                         }
+                        sincronizarClasseDoSelect();
                     }
                     
                     document.getElementById('btnSalvar').textContent = 'Atualizar';
@@ -377,6 +441,17 @@
         
         async function salvarProduto(event) {
             event.preventDefault();
+
+            sincronizarClasseDoSelect();
+            const form = document.getElementById('formProduto');
+            if (form && !form.reportValidity()) {
+                return;
+            }
+            if (!(document.getElementById('classe').value || '').trim()) {
+                mostrarMensagem(`Selecione uma ${LABEL_CLASSIF_LOWER} antes de salvar.`, 'erro');
+                document.getElementById('classificacaoSelect')?.focus();
+                return;
+            }
             
             const chaveEdicao = document.getElementById('chaveEdicao').value;
             const dados = {
@@ -441,8 +516,10 @@
             }
         }
     </script>
+{% if not is_retail %}
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+{% endif %}
 <script>try { lucide.createIcons(); } catch (e) {}</script>
 </body>
 </html>

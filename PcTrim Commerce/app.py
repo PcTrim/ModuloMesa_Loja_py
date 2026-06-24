@@ -27,7 +27,8 @@ from version import APP_VERSION
 from database import conectar
 from auth_routes import auth_bp
 from blueprints import register_domain_blueprints
-from decorators import login_required
+from decorators import login_required, restaurant_only
+from services.business_mode import is_retail
 from services.dados_loja import obter_dados_loja
 from services import uazapi as uazapi_service
 from services import terminal_impressao as terminal_impressao_service
@@ -119,11 +120,11 @@ register_domain_blueprints(app)
 
 @app.context_processor
 def inject_app_globals():
-    retail = Config.is_retail()
+    retail = is_retail()
     return {
         "app_version": APP_VERSION,
         "url_prefix": Config.URL_PREFIX,
-        "business_type": Config.BUSINESS_TYPE,
+        "business_type": "varejo" if retail else "restaurante",
         "is_retail": retail,
         "IS_RETAIL": retail,
         "is_platform_admin": Config.is_platform_admin(session.get("usuario_logado")),
@@ -194,6 +195,7 @@ def configuracoes():
 
 @app.route("/configuracoes-dados")
 @login_required
+@restaurant_only
 def configuracoes_dados():
     """Tabela de configurações (JSON) — link a partir do painel de configurações."""
     return render_template("configuracoes_dados.html")
@@ -567,6 +569,20 @@ def _sql_comanda_cancelada(alias="pd"):
 
 def _origem_delivery_balcao_valida(origem):
     return str(origem or "").strip().upper() in ("DELIVERY", "BALCAO")
+
+
+def _casa_forcar_balcao_se_varejo(data):
+    if not is_retail():
+        return data
+    if data is None:
+        data = {}
+    elif not isinstance(data, dict):
+        data = dict(data)
+    else:
+        data = dict(data)
+    data["modo"] = "balcao"
+    data["origem"] = "BALCAO"
+    return data
 
 
 def _comanda_esta_cancelada(cur, id_cliente, origem, nropedido):
@@ -1083,8 +1099,35 @@ def _ensure_produtos_barcode_column():
             conn.close()
 
 
+def _ensure_tipo_negocio_column():
+    conn = None
+    cur = None
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute("SHOW COLUMNS FROM dadosloja LIKE 'tipo_negocio'")
+        if cur.fetchone() is None:
+            cur.execute(
+                "ALTER TABLE dadosloja ADD COLUMN tipo_negocio VARCHAR(20) NOT NULL DEFAULT 'restaurante'"
+            )
+        conn.commit()
+    except Exception as e:
+        try:
+            if conn:
+                conn.rollback()
+        except Exception:
+            pass
+        print("[DADOSLOJA TIPO_NEGOCIO COLUNA ERRO]", e, flush=True)
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
 def bootstrap_schema():
     try:
+        _ensure_tipo_negocio_column()
         _ensure_obs_columns()
         _ensure_produtos_barcode_column()
         _ensure_status_comanda_column()
@@ -1338,6 +1381,7 @@ def api_casa_pedidos_aguarde():
         id_cliente = session.get("id_cliente")
         if not id_cliente:
             return jsonify({"sucesso": False, "erro": "Sessão inválida."}), 401
+        origem_sql = "AND d.origem = 'BALCAO'" if is_retail() else "AND d.origem IN ('DELIVERY','BALCAO')"
         conn = conectar()
         cur = conn.cursor(dictionary=True)
         cur.execute(
@@ -1349,7 +1393,7 @@ def api_casa_pedidos_aguarde():
                    COUNT(*) AS linhas
             FROM pedido_diarios d
             WHERE d.id_cliente = %s
-              AND d.origem IN ('DELIVERY','BALCAO')
+              {origem_sql}
               AND UPPER(COALESCE(d.status_pedido, '')) = 'AGUARDE'
               AND UPPER(COALESCE(d.status_pedido, '')) <> 'ITEM_REMOVIDO'
               AND NOT ({_sql_comanda_cancelada('d')})
@@ -1388,6 +1432,7 @@ def api_casa_pedidos_aguarde():
 
 @app.route("/api/casa/buscar-cep", methods=["GET"])
 @login_required
+@restaurant_only
 def api_casa_buscar_cep():
     """Consulta ViaCEP e retorna campos de endereço para preenchimento automático no /casa."""
     cep_raw = request.args.get("cep", "").strip()
@@ -1425,9 +1470,7 @@ def api_casa_add_item():
     cur = None
     try:
         data = request.get_json(silent=True) or {}
-        if Config.is_retail():
-            data = dict(data)
-            data["modo"] = "BALCAO"
+        data = _casa_forcar_balcao_se_varejo(data)
         nropedido = data.get("nropedido")
         item = data.get("item") or {}
         nome = (item.get("nome") or "").strip()
@@ -1750,7 +1793,9 @@ def api_casa_listar_itens(nropedido):
         id_cliente = session.get("id_cliente")
         if id_cliente is None:
             return jsonify({"sucesso": False, "erro": "Sessão sem loja (id_cliente). Faça login novamente."}), 401
-        modo = str(request.args.get("modo") or "delivery").strip().lower()
+        modo = str(request.args.get("modo") or ("balcao" if is_retail() else "delivery")).strip().lower()
+        if is_retail() and modo in ("delivery", "mesa"):
+            modo = "balcao"
         status_req = str(request.args.get("status") or "").strip().upper()
         telefone_req = "".join(ch for ch in str(request.args.get("telefone") or "") if ch.isdigit())
         conn = conectar()
@@ -2719,6 +2764,8 @@ def _montar_msg_balcao_pronto(dados_loja, ped, nropedido, texto_custom=None):
 
 def _notificar_despacho_whatsapp(id_cliente, nropedido, codigo_entregador):
     """Dispara avisos de despacho (cliente + entregador). Não-bloqueante, isolado."""
+    if is_retail():
+        return
     cfg = uazapi_service.obter_config(id_cliente) or {}
     ativo = bool(int(cfg.get("ativo") or 0)) and bool(cfg.get("instancia_token"))
     if not (ativo and int(cfg.get("notif_despacho") or 0)):
@@ -3556,6 +3603,7 @@ def api_dashboard_delivery_balcao():
             )
         else:
             status_filter_sql = "AND UPPER(TRIM(COALESCE(pd.status_pedido, ''))) IN ('ABERTO','ABERTA','RECEBIDO','ROTA')"
+        origem_filter_sql = "AND pd.origem = 'BALCAO'" if is_retail() else "AND pd.origem IN ('DELIVERY','BALCAO')"
         cur.execute(
             f"""
             SELECT
@@ -3588,7 +3636,7 @@ def api_dashboard_delivery_balcao():
                   OR en.chave = CAST(NULLIF(TRIM(pd.entregador), '') AS UNSIGNED)
                  )
             WHERE pd.id_cliente = %s
-              AND pd.origem IN ('DELIVERY','BALCAO')
+              {origem_filter_sql}
               AND UPPER(TRIM(COALESCE(pd.status_pedido, ''))) <> 'ITEM_REMOVIDO'
               {status_filter_sql}
             GROUP BY pd.origem, pd.nropedido
@@ -3776,6 +3824,7 @@ def api_dashboard_pedido_detalhe(origem, nropedido):
 
 @app.route("/api/dashboard/mesa/<int:mesanro>", methods=["GET"])
 @login_required
+@restaurant_only
 def api_dashboard_mesa_detalhe(mesanro):
     conn = None
     cur = None
@@ -4918,6 +4967,10 @@ def logout():
 @login_required
 def casa():
     """Página de pedidos (carrossel) / PDV balcão no modo varejo."""
+    if is_retail():
+        modo = str(request.args.get("modo") or "").strip().lower()
+        if modo in ("delivery", "mesa"):
+            return redirect(url_for("casa") + "?modo=balcao")
     id_cliente = session.get("id_cliente")
     dados_loja = obter_dados_loja(id_cliente) or {}
     nome_fantasia = dados_loja.get("nome", "Minha Loja")
@@ -4925,6 +4978,7 @@ def casa():
 
 @app.route("/delivery-pendente-view")
 @login_required
+@restaurant_only
 def delivery_pendente_view():
     """Página para visualizar pedidos pendentes de entrega"""
     id_cliente = session.get('id_cliente')
@@ -4943,6 +4997,7 @@ def canceladas_view():
 
 @app.route("/comandas")
 @login_required
+@restaurant_only
 def comandas_view():
     """Página para visualizar comandas fechadas"""
     id_cliente = session.get('id_cliente')
@@ -4954,6 +5009,7 @@ def comandas_view():
 
 @app.route("/cadastrar-entregador")
 @login_required
+@restaurant_only
 def cadastrar_entregador():
     """Página de cadastro de entregadores"""
     id_cliente = session.get('id_cliente')
@@ -4963,6 +5019,7 @@ def cadastrar_entregador():
 
 @app.route("/api/salvar-entregador", methods=["POST"])
 @login_required
+@restaurant_only
 def salvar_entregador():
     """Salva um novo entregador na tabela de entregadores"""
     conn = None
@@ -5007,6 +5064,7 @@ def salvar_entregador():
 
 @app.route("/api/listar-entregadores", methods=["GET"])
 @login_required
+@restaurant_only
 def listar_entregadores():
     """Lista todos os entregadores cadastrados"""
     conn = None
@@ -5043,6 +5101,7 @@ def listar_entregadores():
 
 @app.route("/api/delivery-pedidos-despacho", methods=["GET"])
 @login_required
+@restaurant_only
 def api_delivery_pedidos_despacho():
     """Lista pedidos DELIVERY cujas linhas ativas estão todas em ABERTO (elegíveis para despacho → ROTA)."""
     id_cliente = session.get("id_cliente")
@@ -5100,6 +5159,7 @@ def api_delivery_pedidos_despacho():
 
 @app.route("/api/despachar-delivery", methods=["POST"])
 @login_required
+@restaurant_only
 def api_despachar_delivery():
     """Grava código do entregador (chave) e altera status_pedido para ROTA nas linhas DELIVERY em ABERTO."""
     id_cliente = session.get("id_cliente")
@@ -5212,6 +5272,7 @@ def api_despachar_delivery():
 
 @app.route("/api/obter-entregador/<int:chave>", methods=["GET"])
 @login_required
+@restaurant_only
 def obter_entregador(chave):
     """Obtém dados de um entregador específico"""
     conn = None
@@ -5249,6 +5310,7 @@ def obter_entregador(chave):
 
 @app.route("/api/editar-entregador/<int:chave>", methods=["PUT"])
 @login_required
+@restaurant_only
 def editar_entregador(chave):
     """Edita um entregador existente"""
     conn = None
@@ -5295,6 +5357,7 @@ def editar_entregador(chave):
 
 @app.route("/api/excluir-entregador/<int:chave>", methods=["DELETE"])
 @login_required
+@restaurant_only
 def excluir_entregador(chave):
     """Exclui um entregador"""
     conn = None
@@ -5688,6 +5751,7 @@ def buscar_dados_loja():
 
 @app.route("/cadastrar-taxa")
 @login_required
+@restaurant_only
 def cadastrar_taxa():
     """Página de cadastro de taxas de entrega"""
     id_cliente = session.get('id_cliente')
@@ -5709,6 +5773,7 @@ def dados_loja_info():
 
 @app.route("/api/salvar-taxa", methods=["POST"])
 @login_required
+@restaurant_only
 def salvar_taxa():
     """Salva ou atualiza as taxas de entrega"""
     conn = None
@@ -5779,6 +5844,7 @@ def salvar_taxa():
 
 @app.route("/api/obter-taxa", methods=["GET"])
 @login_required
+@restaurant_only
 def obter_taxa():
     """Obtém as taxas de entrega configuradas"""
     conn = None
@@ -5809,6 +5875,7 @@ def obter_taxa():
 
 @app.route("/api/buscar-taxa-padrao", methods=["GET"])
 @login_required
+@restaurant_only
 def buscar_taxa_padrao():
     """Busca o valor da primeira faixa de entrega (taxa padrão)"""
     conn = None
@@ -7371,6 +7438,7 @@ def numero_pedido_atual():
 
 
 @app.route("/delivery-pendente", methods=["GET"])
+@restaurant_only
 def listar_delivery_pendente():
     """Lista todos os registros pendentes de entrega, agrupados por nropedido"""
     conn = None
@@ -7434,6 +7502,7 @@ def listar_delivery_pendente():
             print("[WARN] falha ao fechar conexão:", e)
 
 @app.route("/atribuir-entregador", methods=["POST"])
+@restaurant_only
 def atribuir_entregador():
     """Atribui um entregador a um pedido na tabela deliverypendente"""
     conn = None
@@ -7985,6 +8054,7 @@ def salvar_cliente():
             print("[WARN] falha ao fechar conexão:", e)
 
 @app.route("/api/comandas", methods=["GET"])
+@restaurant_only
 def api_comandas():
     """Retorna todos os registros da tabela comanda em JSON"""
     conn = None
@@ -8290,6 +8360,7 @@ def api_fechamento_executar():
 
 @app.route("/api/verificar-delivery-pendente", methods=["GET"])
 @login_required
+@restaurant_only
 def verificar_delivery_pendente():
     """Verifica se existem registros na tabela deliverypendente, contando apenas pedidos únicos"""
     conn = None
@@ -8331,6 +8402,7 @@ def verificar_delivery_pendente():
 
 @app.route("/api/limpar-delivery-pendente", methods=["POST"])
 @login_required
+@restaurant_only
 def limpar_delivery_pendente():
     """Apaga todos os registros da tabela deliverypendente"""
     conn = None
@@ -8388,6 +8460,7 @@ def limpar_delivery_pendente():
 
 @app.route("/api/verificar-comandas", methods=["GET"])
 @login_required
+@restaurant_only
 def verificar_comandas():
     """Verifica se existem registros na tabela comandas, contando apenas pedidos únicos"""
     conn = None
@@ -8419,6 +8492,7 @@ def verificar_comandas():
 
 @app.route("/api/transferir-comandas-liquidadas", methods=["POST"])
 @login_required
+@restaurant_only
 def transferir_comandas_liquidadas():
     """Transfere registros da tabela comanda para liquidada e reseta o contador"""
     conn = None
@@ -8508,6 +8582,7 @@ def formas_pagamento_api():
 # Endpoint para buscar produtos de uma mesa específica
 @app.route("/api/mesa/<int:mesanro>", methods=["GET"])
 @login_required
+@restaurant_only
 def buscar_mesa(mesanro):
     try:
         _ensure_pedido_diarios_preparo_columns()
@@ -8660,6 +8735,7 @@ def buscar_mesa(mesanro):
 
 @app.route("/api/mesa/<int:mesanro>/pessoas", methods=["POST"])
 @login_required
+@restaurant_only
 def api_mesa_set_pessoas(mesanro):
     conn = None
     cur = None
@@ -8738,6 +8814,7 @@ def api_mesa_set_pessoas(mesanro):
 
 @app.route("/api/mesa/<int:mesanro>/reabrir", methods=["POST"])
 @login_required
+@restaurant_only
 def api_mesa_reabrir(mesanro):
     conn = None
     cur = None
@@ -8807,6 +8884,7 @@ def api_mesa_reabrir(mesanro):
 
 @app.route("/api/mesa/<int:mesanro>/transferir", methods=["POST"])
 @login_required
+@restaurant_only
 def api_mesa_transferir(mesanro):
     conn = None
     cur = None
@@ -8900,6 +8978,7 @@ def api_mesa_transferir(mesanro):
 
 @app.route("/api/mesa/<int:mesanro>/status", methods=["POST"])
 @login_required
+@restaurant_only
 def api_mesa_set_status(mesanro):
     conn = None
     cur = None
@@ -8967,6 +9046,7 @@ def api_mesa_set_status(mesanro):
 
 @app.route("/api/mesa/<int:mesanro>/receber", methods=["POST"])
 @login_required
+@restaurant_only
 def api_mesa_receber(mesanro):
     conn = None
     cur = None
@@ -9112,6 +9192,7 @@ def api_mesa_receber(mesanro):
 # Endpoint para remover item da mesa
 @app.route("/api/mesa/<int:mesanro>/item/<int:item_id>", methods=["DELETE"])
 @login_required
+@restaurant_only
 def remover_item_mesa(mesanro, item_id):
     try:
         id_cliente = session.get('id_cliente')
@@ -9225,6 +9306,7 @@ def remover_item_mesa(mesanro, item_id):
 
 @app.route("/api/mesa/<int:mesanro>/item/<int:item_id>", methods=["PATCH"])
 @login_required
+@restaurant_only
 def alterar_item_mesa(mesanro, item_id):
     conn = None
     cur = None
@@ -9301,6 +9383,7 @@ def alterar_item_mesa(mesanro, item_id):
 
 @app.route("/api/mesa/<int:mesanro>/ajuste-item", methods=["POST"])
 @login_required
+@restaurant_only
 def api_mesa_ajuste_item(mesanro):
     conn = None
     cur = None
@@ -9487,6 +9570,7 @@ def api_mesa_ajuste_item(mesanro):
 
 @app.route("/api/mesa/<int:mesanro>/item/<int:item_id>/obs", methods=["PATCH"])
 @login_required
+@restaurant_only
 def atualizar_obs_item_mesa(mesanro, item_id):
     conn = None
     cur = None

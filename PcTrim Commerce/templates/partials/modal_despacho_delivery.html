@@ -1,4 +1,5 @@
 {# Modal global: despachar pedido DELIVERY (ABERTO → ROTA) + código entregador #}
+{% if not is_retail %}
 <style>
   .despacho-fab {
     position: fixed;
@@ -228,3 +229,4 @@
     </div>
   </div>
 </div>
+{% endif %}

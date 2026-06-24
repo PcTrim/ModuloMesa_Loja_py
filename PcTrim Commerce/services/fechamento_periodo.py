@@ -73,6 +73,15 @@ def _where_periodo_diario(id_cliente: int, d0: datetime, d1: datetime) -> Tuple[
     return sql.strip(), params
 
 
+def _mensagem_erro_relatorios(exc: Exception | str) -> str:
+    texto = str(exc or "").strip()
+    if not texto:
+        return "Pasta de relatorios indisponivel. Verifique as permissoes do diretorio configurado."
+    if isinstance(exc, PermissionError) or "access is denied" in texto.lower() or "acesso negado" in texto.lower():
+        return "Pasta de relatorios sem permissao de acesso. Verifique as permissoes do diretorio configurado."
+    return "Nao foi possivel preparar a pasta de relatorios. Verifique a configuracao do diretorio."
+
+
 def _sql_recebido_para_faturamento() -> str:
     """
     Linha considerada recebida para faturamento / relatórios:
@@ -160,7 +169,7 @@ def garantir_diretorio_relatorios(id_cliente: int) -> dict:
         os.makedirs(os.path.join(base, str(int(id_cliente))), exist_ok=True)
         return {"sucesso": True, "base": base}
     except OSError as e:
-        return {"sucesso": False, "erro": str(e), "base": base}
+        return {"sucesso": False, "erro": _mensagem_erro_relatorios(e), "base": base}
 
 
 def _money_br(v: float) -> str:
@@ -329,8 +338,8 @@ def preview_fechamento(id_cliente: int, data_inicio: str, data_fim: str) -> dict
         if pasta_info.get("sucesso"):
             out["pasta_relatorios"] = pasta_info.get("base")
         else:
-            out["pasta_relatorios"] = pasta_info.get("base")
             out["pasta_relatorios_erro"] = pasta_info.get("erro")
+            out["pasta_relatorios_indisponivel"] = True
         return out
     finally:
         if cur:
@@ -820,7 +829,7 @@ def executar_fechamento(id_cliente: int, data_inicio: str, data_fim: str) -> dic
                 out["arquivo_gerencial"] = n_ger
                 out["caminho_gerencial"] = c_ger
             except OSError as oe:
-                out["arquivo_gerencial_erro"] = str(oe)
+                out["arquivo_gerencial_erro"] = _mensagem_erro_relatorios(oe)
         elif not gerencial.get("sucesso"):
             out["relatorio_gerencial_erro"] = gerencial.get("erro") or "Falha ao montar relatório gerencial."
 
@@ -831,7 +840,8 @@ def executar_fechamento(id_cliente: int, data_inicio: str, data_fim: str) -> dic
                 conn.rollback()
             except Exception:
                 pass
-        return {"sucesso": False, "erro": str(e)}
+        erro = _mensagem_erro_relatorios(e) if isinstance(e, OSError) else str(e)
+        return {"sucesso": False, "erro": erro}
     finally:
         if cur:
             cur.close()

@@ -8,6 +8,7 @@ from services.tenant_provision import (
     list_tenants,
     provision_tenant,
     suggested_next_id_cliente,
+    update_tenant_tipo_negocio,
 )
 
 platform_admin_bp = Blueprint("platform_admin", __name__)
@@ -59,7 +60,20 @@ def api_admin_lojas_create():
             ddd=data.get("ddd"),
             telefone=data.get("telefone"),
             cidade=data.get("cidade"),
+            tipo_negocio=data.get("tipo_negocio", "restaurante"),
         )
+        return jsonify(result)
+    except TenantProvisionError as e:
+        return jsonify({"sucesso": False, "erro": e.message}), e.status
+
+
+@platform_admin_bp.route("/api/admin/lojas/<int:id_cliente>", methods=["PATCH"])
+@login_required
+@platform_admin_required
+def api_admin_lojas_update(id_cliente):
+    data = request.get_json(silent=True) or {}
+    try:
+        result = update_tenant_tipo_negocio(id_cliente, data.get("tipo_negocio"))
         return jsonify(result)
     except TenantProvisionError as e:
         return jsonify({"sucesso": False, "erro": e.message}), e.status

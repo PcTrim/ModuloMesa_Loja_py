@@ -162,6 +162,58 @@ def obter_produto(chave):
             conn.close()
 
 
+@catalog_bp.route("/api/produto/codigo/<codigo>", methods=["GET"])
+@login_required
+def obter_produto_por_codigo(codigo):
+    """Busca produto por código de barras ou chave interna (numérica)."""
+    conn = None
+    cursor = None
+    try:
+        codigo = (codigo or "").strip()
+        if not codigo:
+            return jsonify({"sucesso": False, "erro": "Código inválido"}), 400
+
+        conn = conectar()
+        cursor = conn.cursor(dictionary=True)
+        id_cliente = session.get("id_cliente")
+
+        if codigo.isdigit():
+            cursor.execute(
+                """
+                SELECT chave, produto AS nome, preco, classe, descricao, barcode
+                FROM produtos
+                WHERE id_cliente = %s AND (barcode = %s OR chave = %s)
+                LIMIT 1
+                """,
+                (id_cliente, codigo, int(codigo)),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT chave, produto AS nome, preco, classe, descricao, barcode
+                FROM produtos
+                WHERE id_cliente = %s AND barcode = %s
+                LIMIT 1
+                """,
+                (id_cliente, codigo),
+            )
+
+        produto = cursor.fetchone()
+        if produto:
+            return jsonify({"sucesso": True, "produto": produto})
+        return jsonify({"sucesso": False, "erro": "Produto não encontrado"}), 404
+
+    except mysql.connector.Error as db_err:
+        print("[DB ERROR]", db_err)
+        return jsonify({"sucesso": False, "erro": "Erro ao buscar produto"}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 @catalog_bp.route("/api/editar-produto/<int:chave>", methods=["PUT"])
 @login_required
 def editar_produto(chave):

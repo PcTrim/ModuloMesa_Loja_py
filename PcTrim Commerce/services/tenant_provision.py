@@ -201,6 +201,7 @@ def provision_tenant(
     ddd: str = "",
     telefone: str = "",
     cidade: str = "",
+    tipo_negocio: str = "restaurante",
 ) -> dict:
     """
     Cria tenant completo com registros mínimos para operação.
@@ -212,6 +213,9 @@ def provision_tenant(
     ddd = (ddd or "").strip()
     telefone = (telefone or "").strip()
     cidade = (cidade or "").strip()
+    tipo_negocio = str(tipo_negocio or "restaurante").strip().lower()
+    if tipo_negocio not in ("restaurante", "varejo"):
+        raise TenantProvisionError("tipo_negocio deve ser 'restaurante' ou 'varejo'.")
 
     if not nome:
         raise TenantProvisionError("Nome fantasia é obrigatório.")
@@ -237,10 +241,10 @@ def provision_tenant(
 
         cur.execute(
             """
-            INSERT INTO dadosloja (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd)
-            VALUES (%s, %s, '', '', %s, '', %s, '', '', '', %s)
+            INSERT INTO dadosloja (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, tipo_negocio)
+            VALUES (%s, %s, '', '', %s, '', %s, '', '', '', %s, %s)
             """,
-            (id_cliente, nome, cidade, telefone, ddd or "11"),
+            (id_cliente, nome, cidade, telefone, ddd or "11", tipo_negocio),
         )
 
         cur.execute(
@@ -279,6 +283,52 @@ def provision_tenant(
             conn.close()
 
 
+def update_tenant_tipo_negocio(id_cliente: int, tipo_negocio: str) -> dict:
+    """Atualiza tipo_negocio de uma loja existente (restaurante | varejo)."""
+    try:
+        id_cliente = int(id_cliente)
+    except (TypeError, ValueError):
+        raise TenantProvisionError("ID cliente inválido.", status=400)
+    if id_cliente <= 0:
+        raise TenantProvisionError("ID cliente inválido.", status=400)
+
+    tipo = str(tipo_negocio or "restaurante").strip().lower()
+    if tipo not in ("restaurante", "varejo"):
+        raise TenantProvisionError("tipo_negocio deve ser 'restaurante' ou 'varejo'.")
+
+    conn = None
+    cur = None
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE dadosloja SET tipo_negocio = %s WHERE id_cliente = %s",
+            (tipo, id_cliente),
+        )
+        if cur.rowcount == 0:
+            raise TenantProvisionError("Loja não encontrada.", status=404)
+        conn.commit()
+        return {
+            "sucesso": True,
+            "id_cliente": id_cliente,
+            "tipo_negocio": tipo,
+            "mensagem": f"Tipo de negócio atualizado para '{tipo}'.",
+        }
+    except TenantProvisionError:
+        if conn:
+            conn.rollback()
+        raise
+    except mysql.connector.Error as e:
+        if conn:
+            conn.rollback()
+        raise TenantProvisionError(f"Erro no banco de dados: {e}", status=500) from e
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
 def list_tenants() -> list[dict]:
     """Lista lojas provisionadas com login gerente principal."""
     conn = None
@@ -294,6 +344,7 @@ def list_tenants() -> list[dict]:
                 d.cidade,
                 d.telefone,
                 d.ddd,
+                d.tipo_negocio,
                 (
                     SELECT u.usuario
                     FROM usuarios u
@@ -325,6 +376,7 @@ def list_tenants() -> list[dict]:
                     "cidade": r.get("cidade") or "",
                     "telefone": r.get("telefone") or "",
                     "ddd": r.get("ddd") or "",
+                    "tipo_negocio": r.get("tipo_negocio") or "restaurante",
                     "usuario_gerente": r.get("usuario_gerente") or "",
                     "ativo": None if ativo_raw is None else bool(int(ativo_raw)),
                 }

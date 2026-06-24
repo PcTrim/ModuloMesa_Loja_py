@@ -4,6 +4,7 @@ from functools import wraps
 from flask import jsonify, redirect, request, session, url_for
 
 from config import Config
+from services.business_mode import is_retail
 
 
 def login_required(f):
@@ -36,3 +37,17 @@ def platform_admin_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+def restaurant_only(f):
+    """Bloqueia rotas de mesa/delivery/entrega em lojas varejo."""
+
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        if is_retail():
+            if request.path.startswith("/api/") or request.is_json:
+                return jsonify({"sucesso": False, "erro": "Recurso indisponível no modo varejo."}), 403
+            return redirect(url_for("casa") + "?modo=balcao")
+        return f(*args, **kwargs)
+
+    return wrapped

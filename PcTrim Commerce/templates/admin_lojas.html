@@ -28,11 +28,20 @@
     @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
     label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
     input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 0.5px solid var(--line); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; }
-    input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 2px rgba(124,58,237,.2); }
+    select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 0.5px solid var(--line); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; }
+    input:focus, select:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 2px rgba(124,58,237,.2); }
     .btn { border: none; border-radius: 10px; padding: 11px 16px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn-primary { background: var(--purple); color: #fff; width: 100%; margin-top: 6px; }
     .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
     .btn-ghost { background: transparent; border: 0.5px solid var(--line); color: var(--text); }
+    .btn-edit { padding: 6px 12px; font-size: 12px; white-space: nowrap; }
+    .modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.55); }
+    .modal-overlay[hidden] { display: none; }
+    .modal-panel { width: 100%; max-width: 420px; background: var(--surface); border: 0.5px solid var(--line); border-radius: 14px; padding: 18px; }
+    .modal-panel h3 { margin: 0 0 4px; font-size: 1rem; }
+    .modal-meta { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+    .modal-actions .btn-primary { width: auto; margin-top: 0; }
     .alert { padding: 12px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; display: none; }
     .alert.ok { display: block; background: rgba(16,185,129,.12); border: 0.5px solid rgba(16,185,129,.35); color: var(--green); }
     .alert.err { display: block; background: rgba(248,113,113,.12); border: 0.5px solid rgba(248,113,113,.35); color: var(--danger); }
@@ -92,6 +101,13 @@
           <label for="senha2">Confirmar senha *</label>
           <input id="senha2" name="senha2" type="password" required minlength="4" autocomplete="new-password">
         </div>
+        <div>
+          <label for="tipo_negocio">Tipo de negócio *</label>
+          <select id="tipo_negocio" name="tipo_negocio" required>
+            <option value="restaurante">Restaurante</option>
+            <option value="varejo">Varejo</option>
+          </select>
+        </div>
         <div style="grid-column: 1 / -1;">
           <button type="submit" class="btn btn-primary" id="btn-submit">Criar loja</button>
         </div>
@@ -106,6 +122,22 @@
     </section>
   </div>
 
+  <div id="modal-editar" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="modal-editar-title">
+    <div class="modal-panel">
+      <h3 id="modal-editar-title">Editar tipo de negócio</h3>
+      <p class="modal-meta" id="modal-editar-meta"></p>
+      <label for="edit-tipo-negocio">Tipo de negócio *</label>
+      <select id="edit-tipo-negocio" required>
+        <option value="restaurante">Restaurante</option>
+        <option value="varejo">Varejo</option>
+      </select>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="btn-edit-cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-edit-save">Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     lucide.createIcons();
 
@@ -115,6 +147,60 @@
     const btnSubmit = document.getElementById("btn-submit");
     const idClienteInput = document.getElementById("id_cliente");
     const idClienteHint = document.getElementById("id-cliente-hint");
+    const modalEditar = document.getElementById("modal-editar");
+    const editTipoSelect = document.getElementById("edit-tipo-negocio");
+    const modalEditarMeta = document.getElementById("modal-editar-meta");
+    const btnEditSave = document.getElementById("btn-edit-save");
+    const btnEditCancel = document.getElementById("btn-edit-cancel");
+    let editIdCliente = null;
+
+    function openEditModal(id, nome, tipo) {
+      editIdCliente = id;
+      modalEditarMeta.textContent = "Loja #" + id + " — " + nome;
+      editTipoSelect.value = tipo === "varejo" ? "varejo" : "restaurante";
+      modalEditar.hidden = false;
+    }
+    function closeEditModal() {
+      modalEditar.hidden = true;
+      editIdCliente = null;
+    }
+
+    async function saveEditTipo() {
+      if (!editIdCliente) return;
+      hideAlert();
+      btnEditSave.disabled = true;
+      btnEditSave.textContent = "Salvando…";
+      try {
+        const r = await fetch("/api/admin/lojas/" + encodeURIComponent(String(editIdCliente)), {
+          method: "PATCH",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ tipo_negocio: editTipoSelect.value }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || d.sucesso === false) {
+          throw new Error((d && d.erro) || "Falha ao atualizar loja");
+        }
+        closeEditModal();
+        showAlert(
+          (d.mensagem || "Tipo atualizado.") +
+            " Peça ao gerente da loja recarregar o sistema para aplicar o novo modo.",
+          true
+        );
+        await loadLojas();
+      } catch (e) {
+        showAlert(e.message || "Erro ao salvar", false);
+      } finally {
+        btnEditSave.disabled = false;
+        btnEditSave.textContent = "Salvar";
+      }
+    }
+
+    btnEditCancel.addEventListener("click", closeEditModal);
+    btnEditSave.addEventListener("click", saveEditTipo);
+    modalEditar.addEventListener("click", function (ev) {
+      if (ev.target === modalEditar) closeEditModal();
+    });
 
     function showAlert(msg, ok) {
       alertBox.textContent = msg;
@@ -152,18 +238,31 @@
           listaHost.innerHTML = '<p class="empty">Nenhuma loja em dadosloja.</p>';
           return;
         }
-        let html = '<table><thead><tr><th>ID</th><th>Nome</th><th>Gerente</th><th>Cidade</th><th>Status</th></tr></thead><tbody>';
+        let html = '<table><thead><tr><th>ID</th><th>Nome</th><th>Tipo</th><th>Gerente</th><th>Cidade</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
         lojas.forEach(function (l) {
           const st = l.ativo === false ? "Inativo" : "Ativo";
+          const tipoRaw = l.tipo_negocio === "varejo" ? "varejo" : "restaurante";
+          const tipo = tipoRaw === "varejo" ? "Varejo" : "Restaurante";
           html +=
             "<tr><td><span class=\"pill\">" + esc(l.id_cliente) + "</span></td>" +
             "<td>" + esc(l.nome) + "</td>" +
+            "<td>" + esc(tipo) + "</td>" +
             "<td>" + esc(l.usuario_gerente || "—") + "</td>" +
             "<td>" + esc(l.cidade || "—") + "</td>" +
-            "<td>" + esc(st) + "</td></tr>";
+            "<td>" + esc(st) + "</td>" +
+            "<td><button type=\"button\" class=\"btn btn-ghost btn-edit\" data-id=\"" + esc(l.id_cliente) + "\" data-nome=\"" + esc(l.nome) + "\" data-tipo=\"" + esc(tipoRaw) + "\">Editar</button></td></tr>";
         });
         html += "</tbody></table>";
         listaHost.innerHTML = html;
+        listaHost.querySelectorAll(".btn-edit").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            openEditModal(
+              parseInt(btn.getAttribute("data-id"), 10),
+              btn.getAttribute("data-nome") || "",
+              btn.getAttribute("data-tipo") || "restaurante"
+            );
+          });
+        });
       } catch (e) {
         listaHost.innerHTML = '<p class="empty">' + esc(e.message || "Erro") + "</p>";
       }
@@ -187,6 +286,7 @@
         ddd: document.getElementById("ddd").value.trim(),
         telefone: document.getElementById("telefone").value.trim(),
         cidade: document.getElementById("cidade").value.trim(),
+        tipo_negocio: document.getElementById("tipo_negocio").value,
       };
       if (idClienteRaw) {
         payload.id_cliente = parseInt(idClienteRaw, 10);

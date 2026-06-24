@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+{% set label_classif = 'Categoria' if is_retail else 'Classificação' %}
+{% set label_classif_pl = 'Categorias' if is_retail else 'Classificações' %}
+{% set tbl_colspan = 3 if is_retail else 6 %}
 <head>
     <meta charset="UTF-8">
     <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastrar Classificação</title>
+    <title>Cadastrar {{ label_classif }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,7 +23,7 @@
     <header class="topbar">
         <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
         <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
-        <div class="brand">Classificações</div>
+        <div class="brand">{{ label_classif_pl }}</div>
         {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
         {% include 'partials/topbar_meta.html' %}
         <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
@@ -31,6 +34,7 @@
 
     <div class="shell">
         <section class="center">
+            {% if not is_retail %}
             <details class="details" id="mesaLegacyDetails">
                 <summary>Mesa (opcional)</summary>
                 <div style="display:grid; gap:10px; margin-top:10px;">
@@ -39,11 +43,12 @@
                     <div id="itensEnviadosMesa" style="display:none;"></div>
                 </div>
             </details>
+            {% endif %}
 
             <div class="field-group">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                    <p class="title" style="margin:0;">Classificações cadastradas</p>
-                    <button type="button" class="btn-purple" style="width:auto; padding:8px 12px;" onclick="novaClassificacao()">Nova</button>
+                    <p class="title" style="margin:0;">{{ label_classif_pl }} cadastradas</p>
+                    <button type="button" class="btn-purple" style="width:auto; padding:8px 12px;" onclick="novaClassificacao()">+ Nova {{ label_classif }}</button>
                 </div>
             </div>
 
@@ -52,18 +57,21 @@
                     <tr>
                         <th style="width: 90px;">Código</th>
                         <th>Nome</th>
+                        {% if not is_retail %}
                         <th style="width: 140px;">Qtd. partes</th>
                         <th style="width: 110px;">Nº foto</th>
                         <th style="width: 150px;">Forma</th>
+                        {% endif %}
                         <th style="width: 220px; text-align:center;">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabelaClassificacoes">
-                    <tr><td colspan="6" class="empty">Carregando...</td></tr>
+                    <tr><td colspan="{{ tbl_colspan }}" class="empty">Carregando...</td></tr>
                 </tbody>
             </table>
 
             <script>
+            {% if not is_retail %}
 
         // Buscar registros da mesa ao digitar, sair do campo ou clicar no botão
         document.addEventListener('DOMContentLoaded', function() {
@@ -280,6 +288,7 @@
         }
 
         // Removido } extra que causava erro de sintaxe
+            {% endif %}
     </script>
         </section>
 
@@ -287,16 +296,19 @@
             <div id="mensagem" class="mensagem" style="display:none;"></div>
 
             <div class="field-group" id="classificacaoFormPanel">
-                <p class="title">Cadastro</p>
+                <p class="title" id="formClassificacaoTitle">{% if is_retail %}Nova {{ label_classif }}{% else %}Cadastro{% endif %}</p>
                 <form id="formClassificacao" class="form">
                     <input type="hidden" id="chave" name="chave">
                     <input type="hidden" id="classe" name="classe">
 
                     <div class="row-split main-fields">
-                        <input type="text" id="nomeclassificacao" name="nomeclassificacao" required placeholder="Nome da classificação">
+                        <input type="text" id="nomeclassificacao" name="nomeclassificacao" required placeholder="Nome da {{ label_classif }}">
+                        {% if not is_retail %}
                         <input type="number" id="quantidadepartes" name="quantidadepartes" min="0" placeholder="Qtd. partes">
+                        {% endif %}
                     </div>
 
+                    {% if not is_retail %}
                     <div class="row-split main-fields">
                         <input type="number" id="nrofoto" name="nrofoto" min="0" placeholder="Número da foto">
                         <select id="formadecobrar" name="formadecobrar">
@@ -307,7 +319,7 @@
                     </div>
 
                     <div class="details" style="margin-top:6px;">
-                        <summary>Produtos desta classificação</summary>
+                        <summary>Produtos desta {{ label_classif|lower }}</summary>
                         <div style="margin-top:10px; display:grid; gap:8px;">
                             <select id="produtos" name="produtos" multiple style="min-height: 170px;">
                                 <option disabled>Carregando produtos...</option>
@@ -386,6 +398,7 @@
                         </details>
                         <div class="help">Para múltipla escolha, use “Quantidade de partes” e configure os adicionais aqui.</div>
                     </div>
+                    {% endif %}
 
                     <div class="actions">
                         <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
@@ -399,6 +412,22 @@
     </div>
 
     <script>
+        const IS_RETAIL = {{ 'true' if is_retail else 'false' }};
+        const LABEL_CLASSIF = window.LABEL_CLASSIF || {{ label_classif|tojson }};
+        const LABEL_CLASSIF_PL = window.LABEL_CLASSIF_PL || {{ label_classif_pl|tojson }};
+        const TBL_COLSPAN = IS_RETAIL ? 3 : 6;
+        const LABEL_CLASSIF_LOWER = IS_RETAIL ? 'categoria' : 'classificação';
+
+        function setFormTituloModo(modo) {
+            const el = document.getElementById('formClassificacaoTitle');
+            if (!el) return;
+            if (IS_RETAIL) {
+                el.textContent = modo === 'editar' ? `Editar ${LABEL_CLASSIF}` : `Nova ${LABEL_CLASSIF}`;
+            } else {
+                el.textContent = 'Cadastro';
+            }
+        }
+
         function normalizarListaProdutos(payload) {
             if (!payload) return [];
             if (Array.isArray(payload)) return payload;
@@ -429,12 +458,12 @@
             }
             try {
                 const response = await fetch(`/produtos_por_classificacao/${encodeURIComponent(nomeClassificacao)}`);
-                if (!response.ok) throw new Error('Erro ao buscar produtos por classificação');
+                if (!response.ok) throw new Error(`Erro ao buscar produtos por ${LABEL_CLASSIF.toLowerCase()}`);
                 const payload = await response.json();
                 const produtos = normalizarListaProdutos(payload);
                 preencherSelectProdutos(produtos);
             } catch (error) {
-                console.error('Erro ao carregar produtos por classificação:', error);
+                console.error(`Erro ao carregar produtos por ${LABEL_CLASSIF.toLowerCase()}:`, error);
                 preencherSelectProdutos([]);
             }
         }
@@ -442,6 +471,7 @@
         // Função auxiliar para preencher o select
         function preencherSelectProdutos(produtos) {
             const select = document.getElementById('produtos');
+            if (!select) return;
             if (!produtos || produtos.length === 0) {
                 select.innerHTML = '<option disabled>Nenhum produto encontrado</option>';
                 return;
@@ -579,7 +609,9 @@
         // Carregar classificações ao iniciar
         document.addEventListener('DOMContentLoaded', function() {
             carregarClassificacoes();
-            carregarProdutos();
+            if (document.getElementById('produtos')) {
+                carregarProdutos();
+            }
             initOpEditors();
             // Configurar navegação com Enter e converter para maiúsculo
             const inputs = document.querySelectorAll('#formClassificacao .main-fields input, #formClassificacao .main-fields select');
@@ -606,7 +638,7 @@
 
             // Atualizar produtos ao sair do campo Nome da Classificação
             const inputNomeClassificacao = document.getElementById('nomeclassificacao');
-            if (inputNomeClassificacao) {
+            if (!IS_RETAIL && inputNomeClassificacao) {
                 inputNomeClassificacao.addEventListener('blur', function() {
                     carregarProdutosPorClassificacao(this.value.trim().toUpperCase());
                 });
@@ -624,9 +656,7 @@
 
         function novaClassificacao() {
             limparFormulario();
-            // Pega o valor da label de classificação no topo da div cor de rosa
-            const labelClassificacao = document.querySelector('label[for="nomeclassificacao"]');
-
+            setFormTituloModo('novo');
             document.getElementById('nomeclassificacao').focus();
         }
 
@@ -635,22 +665,24 @@
             document.getElementById('chave').value = '';
             editandoId = null;
             renderAllOpLists();
+            setFormTituloModo('novo');
         }
 
         async function salvarClassificacao() {
             const chave = document.getElementById('chave').value;
             const nomeclassificacao = document.getElementById('nomeclassificacao').value.trim().toUpperCase();
-            const quantidadepartes = document.getElementById('quantidadepartes').value;
-            const nrofoto = document.getElementById('nrofoto').value;
-            const formadecobrar = document.getElementById('formadecobrar').value;
+            const quantidadepartes = document.getElementById('quantidadepartes')?.value || '';
+            const nrofoto = document.getElementById('nrofoto')?.value || '';
+            const formadecobrar = document.getElementById('formadecobrar')?.value || '';
             const op_tamanhos = (document.getElementById('op_tamanhos')?.value || '').trim();
             const op_massas = (document.getElementById('op_massas')?.value || '').trim();
             const op_bordas = (document.getElementById('op_bordas')?.value || '').trim();
             const op_coberturas = (document.getElementById('op_coberturas')?.value || '').trim();
             const op_adicionais = (document.getElementById('op_adicionais')?.value || '').trim();
             const produtosSelect = document.getElementById('produtos');
-            const produtosSelecionados = Array.from(produtosSelect.selectedOptions).map(opt => opt.value);
-            // Pega o valor da label de classificação no topo da div cor de rosa
+            const produtosSelecionados = produtosSelect
+                ? Array.from(produtosSelect.selectedOptions).map(opt => opt.value)
+                : [];
             let classe = '';
             const labelClassificacao = document.querySelector('label[for="nomeclassificacao"]');
             if (labelClassificacao) {
@@ -659,7 +691,7 @@
             document.getElementById('classe').value = classe;
 
             if (!nomeclassificacao) {
-                mostrarMensagem('Nome da classificação é obrigatório!', 'erro');
+                mostrarMensagem(`Nome da ${LABEL_CLASSIF} é obrigatório!`, 'erro');
                 return;
             }
 
@@ -711,11 +743,11 @@
                     limparFormulario();
                     carregarClassificacoes();
                 } else {
-                    mostrarMensagem(result.mensagem || 'Erro ao salvar classificação', 'erro');
+                    mostrarMensagem(result.mensagem || `Erro ao salvar ${LABEL_CLASSIF.toLowerCase()}`, 'erro');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                mostrarMensagem('Erro ao salvar classificação', 'erro');
+                mostrarMensagem(`Erro ao salvar ${LABEL_CLASSIF.toLowerCase()}`, 'erro');
             }
         }
 
@@ -725,20 +757,22 @@
                 const classificacoes = await response.json();
                 const tbody = document.getElementById('tabelaClassificacoes');
                 if (classificacoes.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma classificação cadastrada.</td></tr>';
+                    tbody.innerHTML = `<tr><td colspan="${TBL_COLSPAN}" class="empty">Nenhuma ${LABEL_CLASSIF_LOWER} cadastrada.</td></tr>`;
                     return;
                 }
-                
-                // Renderiza uma linha por classificação
+
                 tbody.innerHTML = classificacoes.map(c => {
                     const nome = JSON.stringify(c.nomeclassificacao || '');
+                    const colsExtras = IS_RETAIL ? '' : (
+                        `<td>${c.quantidadepartes || ''}</td>` +
+                        `<td>${c.nrofoto || ''}</td>` +
+                        `<td>${c.formadecobrar || ''}</td>`
+                    );
                     return (
                         `<tr>` +
                         `<td>${c.chave || ''}</td>` +
                         `<td>${c.nomeclassificacao || ''}</td>` +
-                        `<td>${c.quantidadepartes || ''}</td>` +
-                        `<td>${c.nrofoto || ''}</td>` +
-                        `<td>${c.formadecobrar || ''}</td>` +
+                        colsExtras +
                         `<td style="text-align:center;">` +
                         `<div class="tbl-actions">` +
                         `<button type="button" class="btn-mini" onclick="editarClassificacao(${c.chave})">Editar</button>` +
@@ -749,9 +783,9 @@
                     );
                 }).join('');
             } catch (error) {
-                console.error('Erro ao carregar classificações:', error);
-                document.getElementById('tabelaClassificacoes').innerHTML = 
-                    '<tr><td colspan="6" class="empty">Erro ao carregar classificações</td></tr>';
+                console.error(`Erro ao carregar ${LABEL_CLASSIF_LOWER}:`, error);
+                document.getElementById('tabelaClassificacoes').innerHTML =
+                    `<tr><td colspan="${TBL_COLSPAN}" class="empty">Erro ao carregar ${LABEL_CLASSIF_LOWER}</td></tr>`;
             }
         }
 
@@ -762,9 +796,12 @@
                 
                 document.getElementById('chave').value = classificacao.chave;
                 document.getElementById('nomeclassificacao').value = classificacao.nomeclassificacao;
-                document.getElementById('quantidadepartes').value = classificacao.quantidadepartes || '';
-                document.getElementById('nrofoto').value = classificacao.nrofoto || '';
-                document.getElementById('formadecobrar').value = classificacao.formadecobrar || '';
+                const qtdEl = document.getElementById('quantidadepartes');
+                if (qtdEl) qtdEl.value = classificacao.quantidadepartes || '';
+                const nroFotoEl = document.getElementById('nrofoto');
+                if (nroFotoEl) nroFotoEl.value = classificacao.nrofoto || '';
+                const formaEl = document.getElementById('formadecobrar');
+                if (formaEl) formaEl.value = classificacao.formadecobrar || '';
                 if (document.getElementById('op_tamanhos')) document.getElementById('op_tamanhos').value = classificacao.op_tamanhos || '';
                 if (document.getElementById('op_massas')) document.getElementById('op_massas').value = classificacao.op_massas || '';
                 if (document.getElementById('op_bordas')) document.getElementById('op_bordas').value = classificacao.op_bordas || '';
@@ -773,19 +810,20 @@
                 
                 editandoId = id;
                 renderAllOpLists();
+                setFormTituloModo('editar');
                 
                 // Scroll para o formulário
                 document.getElementById('classificacaoFormPanel')?.scrollIntoView({ behavior: 'smooth' });
                 document.getElementById('nomeclassificacao').focus();
             } catch (error) {
-                console.error('Erro ao carregar classificação:', error);
-                mostrarMensagem('Erro ao carregar classificação', 'erro');
+                console.error(`Erro ao carregar ${LABEL_CLASSIF.toLowerCase()}:`, error);
+                mostrarMensagem(`Erro ao carregar ${LABEL_CLASSIF.toLowerCase()}`, 'erro');
             }
         }
 
         async function excluirClassificacao(id, nome) {
             const nomeTxt = String(nome || '').trim();
-            if (!confirm(`Excluir a classificação "${nomeTxt || id}"?`)) return;
+            if (!confirm(`Excluir a ${LABEL_CLASSIF.toLowerCase()} "${nomeTxt || id}"?`)) return;
 
             try {
                 const response = await fetch(`/api/excluir-classificacao/${id}`, {
@@ -801,11 +839,11 @@
                         limparFormulario();
                     }
                 } else {
-                    mostrarMensagem(result.mensagem || 'Erro ao excluir classificação', 'erro');
+                    mostrarMensagem(result.mensagem || `Erro ao excluir ${LABEL_CLASSIF.toLowerCase()}`, 'erro');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                mostrarMensagem('Erro ao excluir classificação', 'erro');
+                mostrarMensagem(`Erro ao excluir ${LABEL_CLASSIF.toLowerCase()}`, 'erro');
             }
         }
 
@@ -820,8 +858,10 @@
             }, 4000);
         }
     </script>
+{% if not is_retail %}
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+{% endif %}
 <script>try { lucide.createIcons(); } catch (e) {}</script>
 </body>
 </html>

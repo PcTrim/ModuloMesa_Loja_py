@@ -31,7 +31,11 @@
   </header>
 
   <main class="cfg-content cfg-wrap">
+    {% if is_retail %}
+    <p class="cfg-intro">Cadastros e parâmetros do PDV de balcão. O fluxo de vendas permanece em <strong>/casa</strong>.</p>
+    {% else %}
     <p class="cfg-intro">Cadastros e parâmetros do sistema. O fluxo de pedidos permanece em <strong>/casa</strong> e <strong>/mesa</strong>.</p>
+    {% endif %}
 
     <section class="cfg-grid" aria-label="Módulos de configuração">
       <a class="cfg-card" href="{{ url_prefix }}/dados-loja">
@@ -58,11 +62,16 @@
       <a class="cfg-card" href="{{ url_prefix }}/cadastrar-classificacao">
         <span class="cfg-ico" aria-hidden="true"><i data-lucide="tags" width="22" height="22"></i></span>
         <div>
-          <h2>Classificação</h2>
-          <p>Grupos e regras de cobrança por categoria.</p>
+          <h2>{{ 'Categoria' if is_retail else 'Classificação' }}</h2>
+          <p>{{
+            'Grupos de produtos para organização no PDV.'
+            if is_retail
+            else
+            'Grupos e regras de cobrança por categoria.'
+          }}</p>
         </div>
       </a>
-      {% if papel == 'gerente' %}
+      {% if papel == 'gerente' and not is_retail %}
       <a class="cfg-card" href="{{ url_prefix }}/cadastrar-entregador">
         <span class="cfg-ico" aria-hidden="true"><i data-lucide="truck" width="22" height="22"></i></span>
         <div>
@@ -89,8 +98,10 @@
   </main>
   </div>
 
+  {% if not is_retail %}
   {% include 'partials/modal_despacho_delivery.html' %}
   <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+  {% endif %}
   <script>try { lucide.createIcons(); } catch (e) {}</script>
 </body>
 </html>

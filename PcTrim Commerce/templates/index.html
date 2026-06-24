@@ -62,6 +62,7 @@
     .search{display:flex;align-items:center;gap:8px;background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--muted);} 
     #busca-produto{flex:1;border:none;outline:none;background:transparent;font-family:inherit;font-size:13px;color:var(--text);} 
     .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;align-content:start;overflow-y:auto;min-height:0;}
+    .prod-empty{grid-column:1/-1;border:.5px dashed var(--line);border-radius:10px;padding:16px;background:var(--surface);color:var(--muted);font-size:12px;line-height:1.5;text-align:center;}
     .prod-card{background:var(--surface);border:.5px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;}
     .prod-card.sel-frac{border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.2);}
     .prod-card.sel-frac .code{color:var(--accent-soft);}
@@ -71,10 +72,12 @@
     #itens-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;}
     .item{background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:8px;font-size:12px;display:grid;gap:6px;}
     .item.ajuste-tecnico{border-color:var(--purple);background:rgba(124,58,237,.08);}
-    .item-top,.item-mid,.item-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-    .item-top>div{min-width:0;flex:1;}
-    .item-name{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
-    .item-desc{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+    .item-top{display:flex;flex-direction:column;gap:4px;}
+    .item-header{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}
+    .item-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px;}
+    .item-mid,.item-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .item-name{font-weight:700;font-size:12px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .item-desc{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .item-mid{color:var(--muted);}
     .item-qty{display:flex;align-items:center;gap:4px;}
     .qty-btn{min-width:24px;height:24px;border:.5px solid var(--line);border-radius:6px;background:var(--control-bg);color:var(--text);cursor:pointer;font-size:13px;line-height:1;padding:0 6px;}
@@ -86,9 +89,8 @@
     .item-obs-label{font-size:10px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .obs-save{height:26px;padding:0 8px;border:.5px solid var(--line);border-radius:6px;background:var(--btn-secondary);color:var(--accent-soft);cursor:pointer;font-size:11px;font-weight:700;}
     .item-v{color:var(--green);font-weight:700;font-size:12px;}
-    .del{width:24px;height:24px;padding:0;border-radius:6px;border:.5px solid var(--line);background:transparent;color:var(--danger);cursor:pointer;font-size:16px;line-height:1;}
-    .item.fracionado .item-name{max-width:150px;}
-    .item.fracionado .item-desc{max-width:150px;}
+    .del,.btn-remove{width:24px;height:24px;padding:0;margin:0;border:none;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .del:hover,.btn-remove:hover{color:var(--danger);}
     .item.fracionado .item-obs{grid-template-columns:1fr;gap:4px;}
 
     .tot{background:var(--surface);border:.5px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;}
@@ -244,7 +246,7 @@
   <main class="shell">
     <div id="banner-terminal-imp" class="status-line" style="display:none; margin:0 0 10px; padding:10px 12px; border-radius:8px; background:rgba(255,180,0,0.15); border:1px solid rgba(255,180,0,0.35);">
       <span id="banner-terminal-imp-text">Este terminal ainda não está configurado para impressão.</span>
-      <a href="{{ url_prefix }}/configuracoes-dados" style="margin-left:8px;">Configurar agora</a>
+      {% if not is_retail %}<a href="{{ url_prefix }}/configuracoes-dados" style="margin-left:8px;">Configurar agora</a>{% endif %}
     </div>
     <aside class="left">
       <p class="title">Cliente</p>
@@ -329,7 +331,9 @@
         <div class="sum total"><span>Total</span><strong id="total">R$ 0,00</strong></div>
         <button class="btn-pay" id="btn-pagamento-trigger" data-open-modal="modal-pag">Escolher pagamento</button>
         <button class="btn-outline" id="btn-imprimir">Imprimir</button>
+        {% if not is_retail %}
         <button class="btn-purple" id="btn-distribuir-preparo" style="display:none;">Distribuir preparo</button>
+        {% endif %}
       </div>
     </aside>
   </main>
@@ -619,14 +623,19 @@
   }
   function updatePrintState(){
     const btn=el("btn-imprimir");
-    if(!btn) return;
+    const btnPagamento=el("btn-pagamento-trigger");
     const tel=(el("cli-fone")?.value||"").trim();
     const pagamento=String(state.formaPagamento||"").trim();
     const temPedido = (Number(state.pedidoId)||0) > 0 && pedidoAtualTemItens();
-    const ok = state.modo!=="delivery"
+    const podeImprimir = state.modo!=="delivery"
       ? temPedido
       : (temPedido && !!tel && state.clienteLocalizado && !!pagamento);
-    btn.disabled = !ok;
+    if(btn) btn.disabled = !podeImprimir;
+    if(btnPagamento){
+      const podeEscolherPagamento = pedidoAtualTemItens() && !((state.modo==="balcao") && String(state.balcaoPagamentoMomento||"agora")==="agora");
+      btnPagamento.disabled = !podeEscolherPagamento;
+      btnPagamento.title = podeEscolherPagamento ? "" : "Adicione ao menos 1 item para escolher o pagamento.";
+    }
   }
   function labelOrigemHistorico(origem){
     const o=String(origem||"").trim().toUpperCase();
@@ -1153,7 +1162,7 @@
         grupos.delete(lanc);
       }
     });
-    simples.forEach((it)=>{ const id=pkItem(it); const qtd=Number(it.quantidade)||1; const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const desc=(it.descricao_produto||"").trim(); const ehAjuste=String(it.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO"; const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":""); row.innerHTML=`<div class="item-top"><div><span class="item-name">${escapeHtml(it.produto||it.nome||"-")}</span>${desc?`<div class="item-desc">${escapeHtml(desc)}</div>`:""}</div><div style="display:flex;gap:8px;align-items:center;">${dadosRaw?`<button class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button class="del" data-del="${id}">×</button></div></div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`; host.appendChild(row); });
+    simples.forEach((it)=>{ const id=pkItem(it); const qtd=Number(it.quantidade)||1; const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const desc=(it.descricao_produto||"").trim(); const ehAjuste=String(it.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO"; const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":""); row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name">${escapeHtml(it.produto||it.nome||"-")}</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del="${id}" aria-label="Remover item">×</button></div></div>${desc?`<div class="item-desc">${escapeHtml(desc)}</div>`:""}</div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`; host.appendChild(row); });
     grupos.forEach((itens,lanc)=>{
       const idRef=pkItem(itens[0]);
       const qtd=Number(itens[0]?.quantidade)||1;
@@ -1167,7 +1176,7 @@
       const bodyObs=itens.map((x,idxItem)=>{ const idx=pkItem(x); const ob=(x.obs_item||"").trim(); const sepClass=idxItem===0?"":" sep"; const label=nomeSemPrefixo(x.produto||x.nome||"-"); return `<div class="item-obs${sepClass}"><span class="item-obs-label">${escapeHtml(label)}</span><input data-obs-item-group="${idx}" placeholder="Observação do sabor" value="${escapeHtml(ob)}"></div>`; }).join("");
       const row=document.createElement("div");
       row.className="item fracionado";
-      row.innerHTML=`<div class="item-top"><div><span class="item-name" title="${escapeHtml(saboresLista.join(" | "))}">Pizza fracionada</span><div class="item-desc">${itens.length} sabor(es): ${escapeHtml(saboresPreview)}</div></div><div style="display:flex;gap:8px;align-items:center;">${dadosRaw?`<button class="obs-save" data-info-group="${lanc}" title="Detalhes do item">i</button>`:""}<button class="del" data-del-group="${idRef}">×</button></div></div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus-group="${lanc}">-</button><input class="qty-input" data-qtd-input-group="${lanc}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus-group="${lanc}">+</button></div><span class="unit-price">${money(totalGrupo/Math.max(1,qtd))}</span></div>${bodyObs}<div class="item-foot"><span></span><span class="item-v">${money(totalGrupo)}</span></div>`;
+      row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name" title="${escapeHtml(saboresLista.join(" | "))}">Pizza fracionada</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info-group="${lanc}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del-group="${idRef}" aria-label="Remover item">×</button></div></div><div class="item-desc">${itens.length} sabor(es): ${escapeHtml(saboresPreview)}</div></div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus-group="${lanc}">-</button><input class="qty-input" data-qtd-input-group="${lanc}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus-group="${lanc}">+</button></div><span class="unit-price">${money(totalGrupo/Math.max(1,qtd))}</span></div>${bodyObs}<div class="item-foot"><span></span><span class="item-v">${money(totalGrupo)}</span></div>`;
       host.appendChild(row);
     });
     host.querySelectorAll("[data-del]").forEach((b)=>{ b.onclick=async()=>{ const id=b.getAttribute("data-del"); if(!id)return; b.disabled=true; const r=await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"DELETE"}); if(!r.ok) alert("Não foi possível remover item."); await loadItens(modoCarga); }; });
@@ -1210,14 +1219,25 @@
     if(!wrap) return;
     wrap.innerHTML="";
     const draft=state.fracionadoDraftInline;
-    state.produtos
+    const produtosFiltrados = state.produtos
       .filter((p)=>{
         const nome=String(p.produto||p.nome||"").toLowerCase();
         const codigo=String(p.chave||p.codigoproduto||"").toLowerCase();
         const barcode=String(p.barcode||"").toLowerCase();
         return nome.includes(q)||codigo.includes(q)||(barcode&&barcode.includes(q));
-      })
-      .forEach((p)=>{
+      });
+    if(!produtosFiltrados.length){
+      const empty=document.createElement("div");
+      empty.className="prod-empty";
+      empty.textContent = q
+        ? "Nenhum produto encontrado para esta busca."
+        : "Nenhum produto cadastrado nesta classificacao.";
+      wrap.appendChild(empty);
+      renderFracionadoInlinePanel();
+      aplicarBloqueioCasaUi(null);
+      return;
+    }
+    produtosFiltrados.forEach((p)=>{
         const card=document.createElement("div");
         const codigo=String(p.chave||p.codigoproduto||"").trim();
         const desc=((p.observacao||p.descricao||"")+"").trim();
@@ -2878,13 +2898,35 @@
   el("cli-fone").addEventListener("blur",(e)=>{ if(e.relatedTarget && e.relatedTarget.id==="btn-localizar") return; if(state.modo==="delivery" && (el("cli-fone").value||"").trim()) localizarCliente(); });
   el("btn-salvar-cliente").onclick=salvarClienteEntrega;
   el("btn-salvar-obs-geral").onclick=salvarObsGeral;
+  async function buscarProdutoPorCodigo(codigo,inputEl){
+    try{
+      const r=await fetch(`/api/produto/codigo/${encodeURIComponent(codigo)}`);
+      const data=await r.json();
+      const p=data&&data.produto;
+      if(!r.ok||!p){ alert((data&&data.erro)||"Produto não encontrado"); return; }
+      if(p.classe&&p.classe!==state.classificacao) state.classificacao=p.classe;
+      const produto={ chave:p.chave, nome:p.nome||p.produto, produto:p.produto||p.nome, preco:p.preco, barcode:p.barcode, observacao:p.observacao||p.descricao };
+      await addItem(produto,null);
+      if(inputEl){ inputEl.value=""; inputEl.focus(); }
+      renderProdutos();
+    }catch(_e){
+      alert("Erro ao buscar produto");
+    }
+  }
   el("busca-produto").addEventListener("input",renderProdutos);
   el("busca-produto").addEventListener("keydown",async(e)=>{
     if(e.key!=="Enter") return;
     const q=(e.target.value||"").trim();
     if(!q) return;
+    e.preventDefault();
     const exact=state.produtos.find((p)=>String(p.chave||"")===q||String(p.barcode||"")===q);
-    if(exact){ e.preventDefault(); await addItem(exact,null); e.target.value=""; renderProdutos(); }
+    if(exact){
+      await addItem(exact,null);
+      if(e.target){ e.target.value=""; e.target.focus(); }
+      renderProdutos();
+      return;
+    }
+    if(/^\d+$/.test(q)){ await buscarProdutoPorCodigo(q,e.target); return; }
   });
   el("btn-recuperar-comanda").onclick=recuperarComanda;
   el("btn-ajuste-extra").onclick=ajustarTaxaOuDesconto;
@@ -2916,7 +2958,6 @@
   el("btn-salvar-imprimir").onclick=salvarEImprimir;
   el("btn-enviar-whatsapp").onclick=enviarPedidoWhatsapp;
   carregarWhatsappRecursos();
-  checarTerminalImpressao();
   const balcaoPag=el("balcao-pagamento-momento");
   if(balcaoPag){
     balcaoPag.querySelectorAll("[data-balcao-pag]").forEach((b)=>{

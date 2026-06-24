@@ -14,6 +14,7 @@ CREATE TABLE dadosloja (
     latitude VARCHAR(20) NOT NULL,
     longitude VARCHAR(20) NOT NULL,
     ddd VARCHAR(3),
+    tipo_negocio VARCHAR(20) NOT NULL DEFAULT 'restaurante',
     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

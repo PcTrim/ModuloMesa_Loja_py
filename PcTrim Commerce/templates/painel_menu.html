@@ -865,6 +865,7 @@
     window.applyRetailUi();
 
     var _fechamentoPreviewOk = false;
+    var _fechamentoPreviewData = null;
     var _fechamentoResumoData = null;
     var _fechamentoGerencialData = null;
 
@@ -897,6 +898,30 @@
         if (t) t.classList.toggle('on', s === step);
       }
     }
+    function fechamentoMotivoBloqueioArquivo() {
+      if (!_fechamentoPreviewData) return 'Use Pré-visualizar antes de avançar.';
+      if (Number(_fechamentoPreviewData.linhas || 0) <= 0) {
+        return 'Nao ha linhas elegiveis para arquivar neste periodo.';
+      }
+      if (_fechamentoPreviewData.pasta_relatorios_indisponivel) {
+        return 'A pasta de relatorios esta indisponivel. Verifique as permissoes antes de continuar.';
+      }
+      return '';
+    }
+    function fechamentoSyncActionState() {
+      var motivo = fechamentoMotivoBloqueioArquivo();
+      var podeArquivar = !motivo;
+      var b3 = document.getElementById('fechamento-btn-ir-passo3');
+      var be = document.getElementById('fechamento-btn-executar');
+      if (b3) {
+        b3.disabled = !podeArquivar;
+        b3.title = motivo;
+      }
+      if (be) {
+        be.disabled = !podeArquivar;
+        be.title = motivo;
+      }
+    }
     function abrirFechamentoModal() {
       var m = document.getElementById('fechamento-modal');
       if (!m) return;
@@ -908,9 +933,11 @@
       if (df) df.value = t;
       if (pv) pv.textContent = 'Clique em Pré-visualizar para ver totais.';
       _fechamentoPreviewOk = false;
+      _fechamentoPreviewData = null;
       _fechamentoResumoData = null;
       _fechamentoGerencialData = null;
       fechamentoSetStep(1);
+      fechamentoSyncActionState();
       var rb = document.getElementById('fechamento-resumo-box');
       if (rb) rb.textContent = '';
       var gb = document.getElementById('fechamento-gerencial-executivo');
@@ -945,10 +972,14 @@
       if (!a || !b) {
         alert('Informe data inicial e final.');
         _fechamentoPreviewOk = false;
+        _fechamentoPreviewData = null;
+        fechamentoSyncActionState();
         return;
       }
       pv.textContent = 'Carregando...';
       _fechamentoPreviewOk = false;
+      _fechamentoPreviewData = null;
+      fechamentoSyncActionState();
       fetch('/api/fechamento/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -959,14 +990,17 @@
           if (!d.sucesso) {
             pv.textContent = 'Erro: ' + (d.erro || 'Pré-visualização não disponível.');
             _fechamentoPreviewOk = false;
+            _fechamentoPreviewData = null;
+            fechamentoSyncActionState();
             return;
           }
           _fechamentoPreviewOk = true;
+          _fechamentoPreviewData = d;
           var lines = [];
           lines.push('Período: ' + (d.data_inicio || a) + ' a ' + (d.data_fim || b) + ' (fim do dia incluso).');
           lines.push('Linhas elegíveis: ' + String(d.linhas != null ? d.linhas : '?'));
           lines.push('Grupos origem+número (distintos): ' + String(d.pedidos_origem_numero_distintos != null ? d.pedidos_origem_numero_distintos : '?'));
-          if (d.pasta_relatorios) {
+          if (d.pasta_relatorios && !d.pasta_relatorios_indisponivel) {
             lines.push('Pasta de relatórios: ' + String(d.pasta_relatorios));
           }
           if (d.pasta_relatorios_erro) {
@@ -978,10 +1012,13 @@
             lines.push('  ' + (x.status || '-') + ': ' + String(x.linhas));
           });
           pv.textContent = lines.join('\n');
+          fechamentoSyncActionState();
         })
         .catch(function () {
           if (pv) pv.textContent = 'Falha de rede ao pré-visualizar.';
           _fechamentoPreviewOk = false;
+          _fechamentoPreviewData = null;
+          fechamentoSyncActionState();
         });
     }
     function fechamentoHtmlGerencialExecutivo(g) {
@@ -1111,6 +1148,11 @@
       fechamentoCarregarPasso2(a, b);
     }
     function fechamentoIrParaPasso3() {
+      var motivo = fechamentoMotivoBloqueioArquivo();
+      if (motivo) {
+        alert(motivo);
+        return;
+      }
       fechamentoSetStep(3);
     }
     function fechamentoImprimirResumo() {
@@ -1193,6 +1235,11 @@
         alert('Informe data inicial e final.');
         return;
       }
+      var motivoBloqueio = fechamentoMotivoBloqueioArquivo();
+      if (motivoBloqueio) {
+        alert(motivoBloqueio);
+        return;
+      }
       var msg =
         'Confirme que entende:\n\n' +
         '• No período ' +
@@ -1266,6 +1313,7 @@
         if (bv2) bv2.addEventListener('click', function () { fechamentoSetStep(2); });
         var be = document.getElementById('fechamento-btn-executar');
         if (be) be.addEventListener('click', fechamentoExecutar);
+        fechamentoSyncActionState();
         document.addEventListener('keydown', function (e) {
           if (e.key === 'Escape' && fm && !fm.hidden) fecharFechamentoModal();
         });

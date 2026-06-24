@@ -1,5 +1,5 @@
 /**
- * Modo varejo (BUSINESS_TYPE=retail): PDV balcão apenas.
+ * Modo varejo (dadosloja.tipo_negocio = varejo): PDV balcão apenas.
  * Requer window.__LOJA_RETAIL definido antes deste script (partial retail_mode.html).
  */
 (function (g) {
