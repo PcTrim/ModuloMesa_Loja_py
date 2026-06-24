@@ -11,3 +11,7 @@ loja_erros.log
 .idea
 .vscode
 pedidos_salvos_export
+output
+pedidos
+deploy/dist
+deploy/deploy.local.env

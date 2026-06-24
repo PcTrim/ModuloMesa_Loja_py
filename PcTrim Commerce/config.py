@@ -1,4 +1,6 @@
 """Application configuration from environment (python-dotenv)."""
+from __future__ import annotations
+
 import os
 
 from dotenv import load_dotenv

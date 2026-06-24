@@ -1,5 +1,8 @@
 loja_erros.log
 pedidos_salvos_export/
+deploy/dist/
+deploy/deploy.local.env
+output/
 .env
 .venv/
 .venv-1/

@@ -163,14 +163,28 @@ URL de teste: `https://pedidofacil.online/LojaOnline/login/form`
 
 ## 8. Atualizar versão (deploy contínuo)
 
-1. **FileZilla:** envie arquivos alterados (mesmas exclusões).
-2. **SSH:**
-   ```bash
-   cd /var/www/lojaonline
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   sudo systemctl restart lojaonline
+### Opção A — Automatizado (Windows + SSH)
+
+1. Copie [`deploy.local.env.example`](deploy.local.env.example) para `deploy/deploy.local.env` e preencha host/usuário.
+2. No PC:
+   ```powershell
+   cd "PcTrim Commerce"
+   powershell -ExecutionPolicy Bypass -File deploy\deploy_update.ps1
    ```
+   Isso executa: pack → backup no servidor → upload → `update_production.sh` → restart.
+
+### Opção B — Manual (FileZilla + SSH)
+
+1. **Empacotar (opcional):** `powershell -File deploy\pack_for_upload.ps1` → ZIP em `deploy/dist/`
+2. **FileZilla:** envie o conteúdo de `PcTrim Commerce/` para `/var/www/html/LojaOnline` (mesmas exclusões de [`FILEZILLA_EXCLUIR.txt`](FILEZILLA_EXCLUIR.txt)).
+3. **SSH:**
+   ```bash
+   cd /var/www/html/LojaOnline
+   sudo bash deploy/backup_production.sh
+   bash deploy/update_production.sh
+   ```
+
+Scripts novos: `backup_production.sh`, `update_production.sh`, `pack_for_upload.ps1`, `deploy_update.ps1`.
 
 ---
 
