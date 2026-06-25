@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_touch.css') }}">
   {% include 'partials/topbar_meta_assets.html' %}
+  {% include 'partials/context_hint_assets.html' %}
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     :root { --bg:#0f0f14; --surface:#1a1a28; --line:#2a2a40; --text:#e8e8f0; --muted:#888fa0; --purple:#7c3aed; --green:#10b981; --danger:#f87171; }
@@ -70,40 +71,40 @@
       <form id="form-nova-loja" class="grid grid-2">
         <div>
           <label for="id_cliente">ID cliente</label>
-          <input id="id_cliente" name="id_cliente" inputmode="numeric" pattern="[0-9]*" placeholder="Ex.: 2003 (vazio = automático)">
+          <input id="id_cliente" name="id_cliente" inputmode="numeric" pattern="[0-9]*" placeholder="Ex.: 2003 (vazio = automático)" data-hint="Código numérico da loja. Deixe vazio para o sistema gerar.">
           <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px;" id="id-cliente-hint">Deixe em branco para gerar automaticamente.</small>
         </div>
         <div>
           <label for="nome">Nome fantasia *</label>
-          <input id="nome" name="nome" required autocomplete="organization" placeholder="Ex.: Pizzaria do Centro">
+          <input id="nome" name="nome" required autocomplete="organization" placeholder="Ex.: Pizzaria do Centro" data-hint="Nome que aparece no sistema para esta loja.">
         </div>
         <div>
           <label for="cidade">Cidade</label>
-          <input id="cidade" name="cidade" autocomplete="address-level2" placeholder="Ex.: Picos">
+          <input id="cidade" name="cidade" autocomplete="address-level2" placeholder="Ex.: Picos" data-hint="Cidade principal da loja — referência inicial.">
         </div>
         <div>
           <label for="usuario">Login do gerente *</label>
-          <input id="usuario" name="usuario" required autocomplete="username" placeholder="Ex.: loja_centro">
+          <input id="usuario" name="usuario" required autocomplete="username" placeholder="Ex.: loja_centro" data-hint="Usuário de acesso do gerente desta loja.">
         </div>
         <div>
           <label for="ddd">DDD</label>
-          <input id="ddd" name="ddd" inputmode="numeric" maxlength="3" placeholder="89">
+          <input id="ddd" name="ddd" inputmode="numeric" maxlength="3" placeholder="89" data-hint="DDD da região da loja.">
         </div>
         <div>
           <label for="telefone">Telefone</label>
-          <input id="telefone" name="telefone" inputmode="tel" placeholder="99999-9999">
+          <input id="telefone" name="telefone" inputmode="tel" placeholder="99999-9999" data-hint="Telefone de contato da loja.">
         </div>
         <div>
           <label for="senha">Senha inicial *</label>
-          <input id="senha" name="senha" type="password" required minlength="4" autocomplete="new-password">
+          <input id="senha" name="senha" type="password" required minlength="4" autocomplete="new-password" data-hint="Senha inicial do gerente — peça para trocar no primeiro acesso.">
         </div>
         <div>
           <label for="senha2">Confirmar senha *</label>
-          <input id="senha2" name="senha2" type="password" required minlength="4" autocomplete="new-password">
+          <input id="senha2" name="senha2" type="password" required minlength="4" autocomplete="new-password" data-hint="Digite a mesma senha novamente.">
         </div>
         <div>
           <label for="tipo_negocio">Tipo de negócio *</label>
-          <select id="tipo_negocio" name="tipo_negocio" required>
+          <select id="tipo_negocio" name="tipo_negocio" required data-hint="Restaurante: mesa e delivery. Varejo: PDV de balcão.">
             <option value="restaurante">Restaurante</option>
             <option value="varejo">Varejo</option>
           </select>
@@ -127,7 +128,7 @@
       <h3 id="modal-editar-title">Editar tipo de negócio</h3>
       <p class="modal-meta" id="modal-editar-meta"></p>
       <label for="edit-tipo-negocio">Tipo de negócio *</label>
-      <select id="edit-tipo-negocio" required>
+      <select id="edit-tipo-negocio" required data-hint="Restaurante: mesa e delivery. Varejo: PDV de balcão.">
         <option value="restaurante">Restaurante</option>
         <option value="varejo">Varejo</option>
       </select>
@@ -326,5 +327,6 @@
     document.getElementById("btn-refresh").addEventListener("click", loadLojas);
     loadLojas();
   </script>
+  {% include 'partials/context_hint_bar.html' %}
 </body>
 </html>

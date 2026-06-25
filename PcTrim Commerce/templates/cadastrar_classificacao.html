@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
 </head>
@@ -308,16 +309,16 @@
                     <input type="hidden" id="classe" name="classe">
 
                     <div class="row-split main-fields">
-                        <input type="text" id="nomeclassificacao" name="nomeclassificacao" required placeholder="Nome da {{ label_classif }}">
+                        <input type="text" id="nomeclassificacao" name="nomeclassificacao" required placeholder="Nome da {{ label_classif }}" data-hint="Nome do grupo — é o que aparece nas abas do PDV.">
                         {% if not is_retail %}
-                        <input type="number" id="quantidadepartes" name="quantidadepartes" min="0" placeholder="Qtd. partes">
+                        <input type="number" id="quantidadepartes" name="quantidadepartes" min="0" placeholder="Qtd. partes" data-hint="Para pizza fracionada: quantos sabores o cliente pode escolher.">
                         {% endif %}
                     </div>
 
                     {% if not is_retail %}
                     <div class="row-split main-fields">
-                        <input type="number" id="nrofoto" name="nrofoto" min="0" placeholder="Número da foto">
-                        <select id="formadecobrar" name="formadecobrar">
+                        <input type="number" id="nrofoto" name="nrofoto" min="0" placeholder="Número da foto" data-hint="Número da imagem no cardápio digital, se usar.">
+                        <select id="formadecobrar" name="formadecobrar" data-hint="Como cobrar pizza fracionada: média ou maior valor.">
                             <option value="">Forma de cobrar...</option>
                             <option value="MEDIA">MEDIA</option>
                             <option value="MAIOR">MAIOR</option>
@@ -327,7 +328,7 @@
                     <div class="details" style="margin-top:6px;">
                         <summary>Produtos desta {{ label_classif|lower }}</summary>
                         <div style="margin-top:10px; display:grid; gap:8px;">
-                            <select id="produtos" name="produtos" multiple style="min-height: 170px;">
+                            <select id="produtos" name="produtos" multiple style="min-height: 170px;" data-hint="Produtos que entram nesta classificação. Segure Ctrl para escolher vários.">
                                 <option disabled>Carregando produtos...</option>
                             </select>
                             <div class="help">Segure Ctrl (ou Cmd) para selecionar múltiplos produtos.</div>
@@ -900,5 +901,6 @@
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
 {% endif %}
 <script>try { lucide.createIcons(); } catch (e) {}</script>
+{% include 'partials/context_hint_bar.html' %}
 </body>
 </html>

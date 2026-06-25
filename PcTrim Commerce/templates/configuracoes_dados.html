@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_dados.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
 </head>
@@ -52,16 +53,16 @@
                     <div class="row-split">
                         <div data-field="nromesa">
                             <p class="title">Nº mesas</p>
-                            <input type="number" id="nromesa" min="0" step="1" placeholder="Ex: 100">
+                            <input type="number" id="nromesa" min="0" step="1" placeholder="Ex: 100" data-hint="Quantas mesas existem no salão — usado no mapa de mesas.">
                         </div>
                         <div data-field="servicomesa">
                             <p class="title">Serviço mesa (%)</p>
-                            <input type="number" id="servicomesa" min="0" step="0.01" placeholder="Ex: 10">
+                            <input type="number" id="servicomesa" min="0" step="0.01" placeholder="Ex: 10" data-hint="Percentual de taxa de serviço aplicado na conta da mesa.">
                         </div>
                     </div>
                     <div data-field="calculodistancia">
                         <p class="title">Calcular distância (taxa)</p>
-                        <select id="calculodistancia">
+                        <select id="calculodistancia" data-hint="Se Sim, a taxa de entrega é calculada pela distância do cliente.">
                             <option value="Sim">Sim</option>
                             <option value="Nao">Não</option>
                         </select>
@@ -143,7 +144,7 @@
                 </div>
 
                 <div class="row-split" style="margin-top:10px;">
-                    <input type="text" id="waNomeInstancia" placeholder="Nome da instância (ex: minha-loja)" autocomplete="off">
+                    <input type="text" id="waNomeInstancia" placeholder="Nome da instância (ex: minha-loja)" autocomplete="off" data-hint="Identificador único da loja no WhatsApp — use algo simples, sem espaços.">
                     <button type="button" class="btn-modal" id="btnWaCriar" onclick="waCriarInstancia()">Criar instância</button>
                 </div>
                 <div class="help">Criar instância só é necessário uma vez por loja (precisa do admintoken no .env).</div>
@@ -163,7 +164,7 @@
 
                 <p class="title">Enviar teste</p>
                 <div class="row-split">
-                    <input type="text" id="waTesteTelefone" placeholder="Telefone (ex: 89999999999)" autocomplete="off">
+                    <input type="text" id="waTesteTelefone" placeholder="Telefone (ex: 89999999999)" autocomplete="off" data-hint="Seu celular com DDD para testar se o WhatsApp está enviando.">
                     <button type="button" class="btn-modal" id="btnWaTeste" onclick="waEnviarTeste()">Enviar teste</button>
                 </div>
 
@@ -171,22 +172,22 @@
 
                 <p class="title">Notificações automáticas</p>
                 <label class="cfg-dados-check">
-                    <input type="checkbox" id="waAtivo"> Ativar WhatsApp nesta loja
+                    <input type="checkbox" id="waAtivo" data-hint="Liga ou desliga todas as mensagens automáticas do WhatsApp."> Ativar WhatsApp nesta loja
                 </label>
                 {% if not is_retail %}
                 <label class="cfg-dados-check">
-                    <input type="checkbox" id="waNotifDespacho"> Avisar cliente no despacho (delivery a caminho)
+                    <input type="checkbox" id="waNotifDespacho" data-hint="Envia mensagem ao cliente quando o pedido sair para entrega."> Avisar cliente no despacho (delivery a caminho)
                 </label>
                 <label class="cfg-dados-check">
-                    <input type="checkbox" id="waNotifDeliveryCopia"> Botão de enviar cópia do pedido (delivery)
+                    <input type="checkbox" id="waNotifDeliveryCopia" data-hint="Mostra botão para enviar resumo do pedido por WhatsApp."> Botão de enviar cópia do pedido (delivery)
                 </label>
                 {% endif %}
                 <label class="cfg-dados-check">
-                    <input type="checkbox" id="waNotifBalcaoPronto"> Botão de avisar pedido pronto (balcão)
+                    <input type="checkbox" id="waNotifBalcaoPronto" data-hint="Permite avisar o cliente por WhatsApp quando o pedido de balcão ficar pronto."> Botão de avisar pedido pronto (balcão)
                 </label>
                 {% if not is_retail %}
                 <label class="cfg-dados-check" id="waNotifMesaContaWrap" data-ctx="mesa">
-                    <input type="checkbox" id="waNotifMesaConta"> Enviar cópia da conta no fechamento da mesa
+                    <input type="checkbox" id="waNotifMesaConta" data-hint="Envia a conta da mesa por WhatsApp ao fechar."> Enviar cópia da conta no fechamento da mesa
                 </label>
                 {% endif %}
                 <div class="cfg-dados-actions">
@@ -207,22 +208,22 @@
             <div id="impressorasFormPanel">
                 <form id="formImpressora" class="form">
                     <input type="hidden" id="printerId" value="">
-                    <input type="text" id="printerCaminho" list="printersDatalist" placeholder="Caminho (Windows) ou http://..." autocomplete="off">
-                    <input type="text" id="printerNome" placeholder="Nome (apelido)" autocomplete="off">
+                    <input type="text" id="printerCaminho" list="printersDatalist" placeholder="Caminho (Windows) ou http://..." autocomplete="off" data-hint="Nome exato da impressora no Windows ou URL do Print Bridge.">
+                    <input type="text" id="printerNome" placeholder="Nome (apelido)" autocomplete="off" data-hint="Apelido para reconhecer esta impressora no sistema.">
                     <div class="row-split">
-                        <input type="number" id="printerNro" min="0" step="1" placeholder="Nro (imprenro)">
+                        <input type="number" id="printerNro" min="0" step="1" placeholder="Nro (imprenro)" data-hint="Número lógico da impressora — usado para rotear comandas.">
                         <div data-ctx="mesa">
-                            <select id="printerContaMesa">
+                            <select id="printerContaMesa" data-hint="Sim se esta impressora imprime a conta da mesa.">
                                 <option value="N">Conta mesa: Não</option>
                                 <option value="S">Conta mesa: Sim</option>
                             </select>
                         </div>
                     </div>
-                    <select id="printerComandaDelivery">
+                    <select id="printerComandaDelivery" data-hint="Sim se imprime comanda completa de delivery ou balcão.">
                         <option value="N">Comanda delivery/balcão: Não</option>
                         <option value="S">Comanda delivery/balcão: Sim</option>
                     </select>
-                    <input type="number" id="printerFeedFinal" min="0" max="20" step="1" placeholder="Avanço final (ESC d) — 0 a 20">
+                    <input type="number" id="printerFeedFinal" min="0" max="20" step="1" placeholder="Avanço final (ESC d) — 0 a 20" data-hint="Linhas em branco após imprimir — ajuda a cortar o papel.">
                     <div class="help">Conta mesa: imprime a conta da mesa. Comanda delivery/balcão: imprime a comanda completa do pedido.</div>
                     <div class="help" id="printerDefaultHint" style="display:none;"></div>
                     <div class="cfg-dados-actions">
@@ -874,6 +875,7 @@
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
 {% endif %}
 <script>try { lucide.createIcons(); } catch (e) {}</script>
+{% include 'partials/context_hint_bar.html' %}
 
 {% endif %}
 </body>

@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
 </head>
@@ -67,8 +68,8 @@
             </div>
             <div id="formaFormPanel">
                 <form id="formForma" class="form" onsubmit="salvarFormaPagamento(event)">
-                    <input type="text" id="formaNome" required placeholder="Forma (ex: PIX)">
-                    <select id="formaTroco">
+                    <input type="text" id="formaNome" required placeholder="Forma (ex: PIX)" data-hint="Nome que o operador verá na hora de fechar o pedido.">
+                    <select id="formaTroco" data-hint="Marque Sim se essa forma aceita troco (ex.: dinheiro).">
                         <option value="N">Troco: Não</option>
                         <option value="S">Troco: Sim</option>
                     </select>
@@ -236,5 +237,6 @@
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
 <script>try { lucide.createIcons(); } catch (e) {}</script>
+{% include 'partials/context_hint_bar.html' %}
 </body>
 </html>

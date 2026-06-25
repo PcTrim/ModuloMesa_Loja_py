@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   {% include 'partials/topbar_meta_assets.html' %}
+  {% include 'partials/context_hint_assets.html' %}
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     :root { --bg:#0f0f14; --surface:#1a1a28; --side:#13131f; --line:#2a2a40; --text:#e8e8f0; --muted:#888fa0; --purple:#7c3aed; --green:#10b981; --amber:#f59e0b; --livre:#2a2a40; --danger:#f87171; --input-bg:#10101a; --control-bg:#151522; --btn-secondary:#171726; --collapse-bg:#141422; --accent-soft:#ddd6fe; --tab-active:#e9d5ff; --outline-fg:#ddd6fe; --sum-open:#c4b5fd; --on-primary:#fff; }
@@ -204,7 +205,7 @@
     <aside class="left"><p class="title">Mesas</p><div id="mesas-grid" class="mesas"></div></aside>
     <section class="center">
       <div id="class-tabs"></div>
-      <div class="search"><i data-lucide="search" width="16" height="16"></i><input id="busca-produto" placeholder="Busca em tempo real..." autocomplete="off"></div>
+      <div class="search"><i data-lucide="search" width="16" height="16"></i><input id="busca-produto" placeholder="Busca em tempo real..." autocomplete="off" data-hint="Digite parte do nome do produto para filtrar o cardápio."></div>
       <div id="frac-inline" class="frac-inline" aria-live="polite">
         <div class="frac-inline-top">
           <span id="frac-inline-pie" class="frac-inline-pie" aria-hidden="true"></span>
@@ -240,7 +241,7 @@
           </div>
         </details>
         <div class="sum total"><span>Total</span><strong id="total">R$ 0,00</strong></div>
-        <div class="sum" id="sum-pessoas"><span>Pessoas</span><div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;"><input id="mesa-pessoas" type="number" min="1" step="1" value="1" style="width:72px;padding:8px 10px;border-radius:6px;border:.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;text-align:center;"><button type="button" class="btn-modal" id="btn-salvar-pessoas" style="width:auto;min-width:64px;padding:8px 10px;">OK</button></div></div>
+        <div class="sum" id="sum-pessoas"><span>Pessoas</span><div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;"><input id="mesa-pessoas" type="number" min="1" step="1" value="1" style="width:72px;padding:8px 10px;border-radius:6px;border:.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;text-align:center;" data-hint="Quantas pessoas na mesa — usado para dividir a conta."><button type="button" class="btn-modal" id="btn-salvar-pessoas" style="width:auto;min-width:64px;padding:8px 10px;">OK</button></div></div>
         <div class="sum" id="sum-por-pessoa" style="display:none;"><span>Por pessoa</span><strong id="total-por-pessoa">R$ 0,00</strong></div>
         <button type="button" class="btn-purple" id="btn-distribuir-preparo-mesa" style="display:none;">Distribuir preparo</button>
         <button type="button" class="btn-outline" data-open-modal="modal-print" id="btn-imprimir-conta">Imprimir</button>
@@ -1761,5 +1762,6 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
 </script>
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+{% include 'partials/context_hint_bar.html' %}
 </body>
 </html>

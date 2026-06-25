@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   {% include 'partials/topbar_meta_assets.html' %}
+  {% include 'partials/context_hint_assets.html' %}
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     :root { --bg:#0f0f14; --surface:#1a1a28; --side:#13131f; --line:#2a2a40; --text:#e8e8f0; --muted:#888fa0; --purple:#7c3aed; --green:#10b981; --danger:#f87171; --input-bg:#10101a; --control-bg:#151522; --btn-secondary:#171726; --collapse-bg:#141422; --accent-soft:#ddd6fe; --tab-active:#e9d5ff; --outline-fg:#ddd6fe; --pay-selected-fg:#d1fae5; --sum-open:#c4b5fd; --on-primary:#fff; }
@@ -253,17 +254,17 @@
       <div class="form" id="delivery-form" data-retail-hide autocomplete="off">
         <div class="field-group">
           <p class="title">Contato</p>
-          <div class="row"><input id="cli-fone" name="telefone_contato_operacional" placeholder="Telefone (sem DDD)" type="text" autocomplete="new-password" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="numeric"><button type="button" class="btn-mini" id="btn-localizar">Localizar</button><span class="status-dot" id="cliente-localizado-ok" title="Cliente não localizado"></span><button type="button" class="history-btn" id="btn-historico-cliente" title="Ver histórico do cliente" style="display:none;"><i data-lucide="history" width="14" height="14"></i></button></div>
+          <div class="row"><input id="cli-fone" name="telefone_contato_operacional" placeholder="Telefone (sem DDD)" type="text" autocomplete="new-password" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="numeric" data-hint="Telefone do cliente sem DDD — clique Localizar se já comprou antes."><button type="button" class="btn-mini" id="btn-localizar">Localizar</button><span class="status-dot" id="cliente-localizado-ok" title="Cliente não localizado"></span><button type="button" class="history-btn" id="btn-historico-cliente" title="Ver histórico do cliente" style="display:none;"><i data-lucide="history" width="14" height="14"></i></button></div>
           <div class="status-row"><span class="status-line" id="cliente-pedidos-info">Pedidos anteriores: -</span><button type="button" class="btn-mini" id="btn-editar-cliente">Editar</button></div>
         </div>
         <div class="field-group">
           <p class="title">Endereço</p>
-          <div class="cep-row"><input id="cli-cep" placeholder="CEP" inputmode="numeric" autocomplete="new-password"><span class="cep-status" id="cep-status"></span></div>
-          <input id="cli-nome" placeholder="Nome">
-          <input id="cli-end" placeholder="Endereço">
-          <div class="row-split"><input id="cli-nrocasa" placeholder="Nº"><input id="cli-complemento" placeholder="Complemento"></div>
-          <textarea id="cli-ref" placeholder="Referência"></textarea>
-          <div class="row-thirds"><input id="cli-bairro" placeholder="Bairro"><input id="cli-cidade" placeholder="Cidade"><input id="cli-uf" placeholder="UF" maxlength="2"></div>
+          <div class="cep-row"><input id="cli-cep" placeholder="CEP" inputmode="numeric" autocomplete="new-password" data-hint="CEP com 8 dígitos — preenche endereço automaticamente."><span class="cep-status" id="cep-status"></span></div>
+          <input id="cli-nome" placeholder="Nome" data-hint="Nome do cliente para a entrega.">
+          <input id="cli-end" placeholder="Endereço" data-hint="Rua e número onde entregar.">
+          <div class="row-split"><input id="cli-nrocasa" placeholder="Nº" data-hint="Número da casa ou prédio."><input id="cli-complemento" placeholder="Complemento" data-hint="Apto, bloco, sala — o que ajudar a achar."></div>
+          <textarea id="cli-ref" placeholder="Referência" data-hint="Ponto de referência para o entregador."></textarea>
+          <div class="row-thirds"><input id="cli-bairro" placeholder="Bairro" data-hint="Bairro do endereço."><input id="cli-cidade" placeholder="Cidade" data-hint="Cidade de entrega."><input id="cli-uf" placeholder="UF" maxlength="2" data-hint="Estado com 2 letras (ex.: PI)."></div>
         </div>
         <div class="field-group">
           <p class="title">Entrega</p>
@@ -272,8 +273,8 @@
         </div>
       </div>
       <div class="form" id="balcao-form" style="display:{% if IS_RETAIL %}grid{% else %}none{% endif %};">
-        <input id="balcao-nome" placeholder="Nome do cliente (opcional)">
-        <input id="balcao-fone" placeholder="Celular (opcional, para avisar quando pronto)" type="text" inputmode="numeric" autocomplete="off">
+        <input id="balcao-nome" placeholder="Nome do cliente (opcional)" data-hint="Opcional — ajuda a chamar o cliente na hora de retirar.">
+        <input id="balcao-fone" placeholder="Celular (opcional, para avisar quando pronto)" type="text" inputmode="numeric" autocomplete="off" data-hint="Com WhatsApp ativo, avisamos quando o pedido ficar pronto.">
         <div class="field-group" style="margin-top:10px;">
           <p class="title">Pagamento</p>
           <div class="pay-list" id="balcao-pagamento-momento">
@@ -3032,5 +3033,6 @@
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
 {% endif %}
+{% include 'partials/context_hint_bar.html' %}
 </body>
 </html>

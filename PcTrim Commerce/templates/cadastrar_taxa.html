@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
 </head>
@@ -92,7 +93,7 @@
                 <form id="formTaxa" class="form">
                     <input type="hidden" id="chave" value="1">
                     <div class="row-split">
-                        <select id="faixa_num">
+                        <select id="faixa_num" data-hint="Escolha qual faixa de distância você quer configurar.">
                             <option value="1">Faixa 1</option>
                             <option value="2">Faixa 2</option>
                             <option value="3">Faixa 3</option>
@@ -104,9 +105,9 @@
                             <option value="9">Faixa 9</option>
                             <option value="10">Faixa 10</option>
                         </select>
-                        <input type="number" step="0.01" id="faixa_d" placeholder="Até (km)">
+                        <input type="number" step="0.01" id="faixa_d" placeholder="Até (km)" data-hint="Distância máxima desta faixa, em quilômetros.">
                     </div>
-                    <input type="number" step="0.01" id="faixa_v" placeholder="Valor (R$)">
+                    <input type="number" step="0.01" id="faixa_v" placeholder="Valor (R$)" data-hint="Quanto cobrar de taxa até essa distância.">
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                         <span class="pill" id="faixa_de_pill">De 0,00 km</span>
                     </div>
@@ -384,6 +385,7 @@
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
 <script>try { lucide.createIcons(); } catch (e) {}</script>
+{% include 'partials/context_hint_bar.html' %}
 
 {% endif %}
 </body>

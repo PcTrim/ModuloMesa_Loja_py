@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
 </head>
@@ -72,14 +73,14 @@
             </div>
             <div id="produtoFormPanel">
                 <form id="formProduto" class="form" onsubmit="salvarProduto(event)">
-                    <input type="number" id="codigo" min="1" step="1" required placeholder="Código do produto">
+                    <input type="number" id="codigo" min="1" step="1" required placeholder="Código do produto" data-hint="Número único do produto. Sugerimos o próximo disponível.">
                     <div class="help" style="margin-top:-4px;margin-bottom:8px;">Sugestão automática. Informe o código do cardápio se já tiver um definido.</div>
-                    <input type="text" id="nome" required placeholder="Nome do produto">
-                    <input type="text" id="barcode" maxlength="50" placeholder="Código de barras (opcional)">
+                    <input type="text" id="nome" required placeholder="Nome do produto" data-hint="Nome que o operador verá no PDV.">
+                    <input type="text" id="barcode" maxlength="50" placeholder="Código de barras (opcional)" data-hint="Código de barras, se o produto tiver.">
 
                     <div class="row-split">
-                        <input type="number" id="preco" step="0.01" required placeholder="Preço (R$)">
-                        <select id="classificacaoSelect" required>
+                        <input type="number" id="preco" step="0.01" required placeholder="Preço (R$)" data-hint="Valor de venda em reais.">
+                        <select id="classificacaoSelect" required data-hint="Grupo do produto no cardápio ou PDV.">
                             <option value="">{{ label_classif }}...</option>
                         </select>
                     </div>
@@ -113,15 +114,15 @@
                     {% set papel = (session.get('funcao') or 'gerente')|lower %}
                     {% if papel == 'gerente' %}
                     <div class="row-split">
-                        <input type="text" id="cfop" value="5102" maxlength="4" placeholder="CFOP">
-                        <input type="text" id="ncm" maxlength="20" placeholder="NCM">
+                        <input type="text" id="cfop" value="5102" maxlength="4" placeholder="CFOP" data-hint="Código fiscal da operação — em geral 5102 para venda.">
+                        <input type="text" id="ncm" maxlength="20" placeholder="NCM" data-hint="Classificação fiscal do produto, se souber.">
                     </div>
                     {% else %}
                     <input type="hidden" id="cfop" value="5102">
                     <input type="hidden" id="ncm" value="">
                     {% endif %}
 
-                    <textarea id="descricao" rows="3" maxlength="250" placeholder="Descrição (opcional)"></textarea>
+                    <textarea id="descricao" rows="3" maxlength="250" placeholder="Descrição (opcional)" data-hint="Detalhes opcionais — aparecem na conferência."></textarea>
 
                     <input type="hidden" id="chaveEdicao" value="">
 
@@ -582,5 +583,6 @@
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
 {% endif %}
 <script>try { lucide.createIcons(); } catch (e) {}</script>
+{% include 'partials/context_hint_bar.html' %}
 </body>
 </html>

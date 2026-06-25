@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
 </head>
@@ -78,10 +79,10 @@
             </div>
             <div id="entregadorFormPanel">
                 <form id="formEntregador" class="form" onsubmit="salvarEntregador(event)">
-                    <input type="text" id="nome" required placeholder="Nome (ex: JOÃO SILVA)">
+                    <input type="text" id="nome" required placeholder="Nome (ex: JOÃO SILVA)" data-hint="Nome completo do entregador — aparece na hora de despachar pedidos.">
                     <div class="row-split">
-                        <input type="text" id="telefone" placeholder="Telefone (ex: 11 98765-4321)">
-                        <input type="text" id="endereco" placeholder="Endereço (ex: RUA DAS FLORES, 123)">
+                        <input type="text" id="telefone" placeholder="Telefone (ex: 11 98765-4321)" data-hint="Celular para contato com o entregador.">
+                        <input type="text" id="endereco" placeholder="Endereço (ex: RUA DAS FLORES, 123)" data-hint="Endereço de referência, se quiser registrar.">
                     </div>
                     <input type="hidden" id="chaveEdicao" value="">
                     <div class="cfg-cadastro-actions">
@@ -286,6 +287,7 @@
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
 <script>try { lucide.createIcons(); } catch (e) {}</script>
+{% include 'partials/context_hint_bar.html' %}
 
 {% endif %}
 </body>

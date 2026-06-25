@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_touch.css') }}">
   {% include 'partials/topbar_meta_assets.html' %}
+  {% include 'partials/context_hint_assets.html' %}
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     * { box-sizing: border-box; }
@@ -228,13 +229,13 @@
 
       <div class="login-field-wrap">
         <label for="usuario" class="login-label">Usuário</label>
-        <input type="text" class="login-input" id="usuario" name="usuario" autocomplete="username" required>
+        <input type="text" class="login-input" id="usuario" name="usuario" autocomplete="username" required data-hint="Digite seu usuário de acesso à loja.">
       </div>
 
       <div class="login-field-wrap">
         <label for="senha" class="login-label">Senha</label>
         <div class="senha-row">
-          <input type="password" class="login-input" id="senha" name="senha" autocomplete="current-password" required>
+          <input type="password" class="login-input" id="senha" name="senha" autocomplete="current-password" required data-hint="Sua senha pessoal. Não compartilhe com outras pessoas.">
           <button type="button" class="senha-toggle" id="togglePassword" aria-label="Mostrar senha" title="Mostrar senha">
             <i data-lucide="eye"></i>
           </button>
@@ -340,5 +341,6 @@
       }
     });
   </script>
+  {% include 'partials/context_hint_bar.html' %}
 </body>
 </html>

@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
     {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
     <style>
@@ -53,11 +54,11 @@
             <div class="cfg-grid-fields">
                 <div class="cfg-field">
                     <label class="cfg-label cfg-required" for="nome">Nome fantasia</label>
-                    <input class="cfg-input" type="text" id="nome" name="nome" required placeholder="Nome da loja">
+                    <input class="cfg-input" type="text" id="nome" name="nome" required placeholder="Nome da loja" data-hint="Nome que aparece no sistema e nos comprovantes.">
                 </div>
                 <div class="cfg-field">
                     <label class="cfg-label" for="cnpj">CNPJ/CPF</label>
-                    <input class="cfg-input" type="text" id="cnpj" name="cnpj" placeholder="CNPJ ou CPF">
+                    <input class="cfg-input" type="text" id="cnpj" name="cnpj" placeholder="CNPJ ou CPF" data-hint="CNPJ ou CPF da loja, se tiver.">
                 </div>
             </div>
         </section>
@@ -67,20 +68,20 @@
             <div class="cfg-grid-fields">
                 <div class="cfg-field">
                     <label class="cfg-label cfg-required" for="cep">CEP</label>
-                    <input class="cfg-input" type="text" id="cep" name="cep" required placeholder="00000-000" maxlength="10">
+                    <input class="cfg-input" type="text" id="cep" name="cep" required placeholder="00000-000" maxlength="10" data-hint="CEP com 8 dígitos — ajuda a preencher o endereço.">
                     <p class="cfg-help">Ao completar o CEP, endereço e DDD são preenchidos automaticamente.</p>
                 </div>
                 <div class="cfg-field" style="grid-column: 1 / -1;">
                     <label class="cfg-label cfg-required" for="endereco">Endereço</label>
-                    <input class="cfg-input" type="text" id="endereco" name="endereco" required placeholder="Rua, número">
+                    <input class="cfg-input" type="text" id="endereco" name="endereco" required placeholder="Rua, número" data-hint="Rua e número onde a loja fica.">
                 </div>
                 <div class="cfg-field">
                     <label class="cfg-label" for="bairro">Bairro</label>
-                    <input class="cfg-input" type="text" id="bairro" name="bairro" placeholder="Bairro">
+                    <input class="cfg-input" type="text" id="bairro" name="bairro" placeholder="Bairro" data-hint="Bairro do endereço da loja.">
                 </div>
                 <div class="cfg-field">
                     <label class="cfg-label cfg-required" for="cidade">Cidade - UF</label>
-                    <input class="cfg-input" type="text" id="cidade" name="cidade" required placeholder="Cidade - UF">
+                    <input class="cfg-input" type="text" id="cidade" name="cidade" required placeholder="Cidade - UF" data-hint="Cidade e estado, no formato Cidade - UF.">
                 </div>
             </div>
         </section>
@@ -90,11 +91,11 @@
             <div class="cfg-grid-fields">
                 <div class="cfg-field">
                     <label class="cfg-label cfg-required" for="telefone">Telefone / WhatsApp</label>
-                    <input class="cfg-input" type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000">
+                    <input class="cfg-input" type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000" data-hint="Telefone ou WhatsApp principal da loja.">
                 </div>
                 <div class="cfg-field">
                     <label class="cfg-label cfg-required" for="ddd">DDD</label>
-                    <input class="cfg-input" type="text" id="ddd" name="ddd" required placeholder="00" maxlength="3">
+                    <input class="cfg-input" type="text" id="ddd" name="ddd" required placeholder="00" maxlength="3" data-hint="DDD da região — costuma vir do CEP automaticamente.">
                 </div>
             </div>
         </section>
@@ -106,11 +107,11 @@
             <div class="cfg-grid-fields">
                 <div class="cfg-field">
                     <label class="cfg-label cfg-required" for="latitude">Latitude</label>
-                    <input class="cfg-input" type="text" id="latitude" name="latitude" required placeholder="Latitude" readonly>
+                    <input class="cfg-input" type="text" id="latitude" name="latitude" required placeholder="Latitude" readonly data-hint="Preenchido automaticamente pelo CEP. Só confira se estiver certo.">
                 </div>
                 <div class="cfg-field">
                     <label class="cfg-label cfg-required" for="longitude">Longitude</label>
-                    <input class="cfg-input" type="text" id="longitude" name="longitude" required placeholder="Longitude" readonly>
+                    <input class="cfg-input" type="text" id="longitude" name="longitude" required placeholder="Longitude" readonly data-hint="Preenchido automaticamente pelo CEP. Só confira se estiver certo.">
                 </div>
             </div>
         </section>
@@ -423,5 +424,6 @@
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
 <script>try { lucide.createIcons(); } catch (e) {}</script>
+{% include 'partials/context_hint_bar.html' %}
 </body>
 </html>
