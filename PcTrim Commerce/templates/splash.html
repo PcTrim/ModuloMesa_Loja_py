@@ -153,7 +153,8 @@
     </style>
 </head>
 <body>
-    <span class="top-meta-badge app-version-badge splash-version-fixed" title="Versão da aplicação">v{{ app_version }}</span>
+    {% set version_badge_class = 'splash-version-fixed' %}
+    {% include 'partials/app_version_badge.html' %}
     <main class="splash-card ui-card">
         <img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt="Logo PcTrim Tecnologia" class="logo">
         <h1 class="title">Bem-vindo ao sistema</h1>

@@ -1,5 +1,5 @@
 {% set papel = (session.get('funcao') or 'gerente')|lower %}
-<span class="top-meta-badge app-version-badge" title="Versão da aplicação">v{{ app_version }}</span>
+{% include 'partials/app_version_badge.html' %}
 {% if session.get('usuario_logado') %}
 <span class="top-meta-badge cfg-papel-badge" title="Função do usuário">{{ papel }}</span>
 {% endif %}

@@ -48,3 +48,21 @@ else
   echo "AVISO: HTTP inesperado. Verifique: journalctl -u lojaonline -n 80 --no-pager"
   exit 1
 fi
+
+echo ""
+echo "==> Versao em version.py:"
+grep -E '^APP_VERSION' version.py || true
+
+BUILD_BODY="$(curl -s http://127.0.0.1:8001/loja-build || true)"
+echo "==> /loja-build:"
+echo "$BUILD_BODY" | head -n 8
+
+FILE_VER="$(grep -E '^APP_VERSION' version.py | sed -n 's/.*"\([^"]*\)".*/\1/p')"
+RUN_VER="$(echo "$BUILD_BODY" | sed -n 's/^APP_VERSION=//p' | head -n 1)"
+if [ -n "$FILE_VER" ] && [ -n "$RUN_VER" ] && [ "$FILE_VER" != "$RUN_VER" ]; then
+  echo "AVISO: versao no disco ($FILE_VER) difere da versao em execucao ($RUN_VER). Reinicie lojaonline."
+  exit 1
+fi
+if [ -n "$RUN_VER" ]; then
+  echo "==> Versao ativa confirmada: $RUN_VER"
+fi

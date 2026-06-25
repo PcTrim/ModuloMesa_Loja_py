@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_dados.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
@@ -26,7 +27,7 @@
     </div></main>
 {% else %}
 
-    <div class="pdv">
+    <div class="cfg-page">
     <header class="topbar">
         <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
         <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
@@ -39,10 +40,14 @@
         </button>
     </header>
 
-    <div class="shell">
-        <section class="center">
-            <div class="field-group" id="sistemaPanel">
-                <p class="title">Configuração do sistema</p>
+    <main class="cfg-content cfg-dados-page">
+        <div class="cfg-wrap cfg-dados-wrap">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+
+            {% if not is_retail %}
+            <details class="cfg-dados-accordion cfg-section-card" id="sistemaPanel">
+                <summary class="cfg-dados-accordion-summary">Configuração do sistema</summary>
+                <div class="cfg-dados-accordion-body">
                 <form id="formSistema" class="form">
                     <div class="row-split">
                         <div data-field="nromesa">
@@ -61,101 +66,80 @@
                             <option value="Nao">Não</option>
                         </select>
                     </div>
-                    <div class="actions" style="margin-top:8px;">
+                    <div class="cfg-dados-sistema-actions">
                         <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
                         <button type="submit" class="btn-green" id="btnSalvarSistema">Salvar</button>
                     </div>
                 </form>
-            </div>
-        </section>
-
-        <aside class="right">
-            <div id="mensagem" class="mensagem" style="display:none;"></div>
-
-            <div class="field-group" id="impressorasListPanel">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                    <p class="title" style="margin:0;">Impressoras cadastradas</p>
-                    <button type="button" class="btn-mini" style="width:auto;" onclick="novaImpressora()">Nova</button>
                 </div>
-                <table class="tbl" style="margin-top:8px;">
-                    <thead>
-                        <tr>
-                            <th style="width:70px;">ID</th>
-                            <th>Nome (apelido)</th>
-                            <th>Caminho (Windows)</th>
-                            <th style="width:80px; text-align:center;">Nro</th>
-                            <th style="width:70px; text-align:center;">Feed</th>
-                            <th style="width:120px; text-align:center;">Conta mesa</th>
-                            <th style="width:180px; text-align:center;">Comanda delivery/balcão</th>
-                            <th style="width:220px; text-align:center;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbodyImpressoras">
-                        <tr><td colspan="8" class="empty">Carregando...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+            </details>
+            {% endif %}
+
+            <details class="cfg-dados-accordion cfg-section-card" id="impressorasListPanel" open>
+                <summary class="cfg-dados-accordion-summary cfg-dados-accordion-summary--actions">
+                    <span>Impressoras cadastradas</span>
+                    <button type="button" class="btn-mini cfg-dados-btn-inline" onclick="event.stopPropagation(); novaImpressora()">Nova</button>
+                </summary>
+                <div class="cfg-dados-accordion-body">
+                <div class="cfg-dados-table-wrap">
+                    <table class="tbl cfg-table">
+                        <thead id="theadImpressoras">
+                            <tr>
+                                <th style="width:70px;">ID</th>
+                                <th>Nome (apelido)</th>
+                                <th>Caminho (Windows)</th>
+                                <th style="width:80px; text-align:center;">Nro</th>
+                                <th style="width:70px; text-align:center;">Feed</th>
+                                <th id="thContaMesa" style="width:120px; text-align:center;">Conta mesa</th>
+                                <th style="width:180px; text-align:center;">Comanda delivery/balcão</th>
+                                <th style="width:220px; text-align:center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyImpressoras">
+                            <tr><td colspan="8" class="empty">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                </div>
+            </details>
 
             <datalist id="printersDatalist"></datalist>
 
-            <div class="field-group" id="impressorasFormPanel">
-                <p class="title">Cadastro de impressora</p>
-                <form id="formImpressora" class="form">
-                    <input type="hidden" id="printerId" value="">
-                    <input type="text" id="printerCaminho" list="printersDatalist" placeholder="Caminho (Windows) ou http://..." autocomplete="off">
-                    <input type="text" id="printerNome" placeholder="Nome (apelido)" autocomplete="off">
-                    <div class="row-split">
-                        <input type="number" id="printerNro" min="0" step="1" placeholder="Nro (imprenro)">
-                        <select id="printerContaMesa">
-                            <option value="N">Conta mesa: Não</option>
-                            <option value="S">Conta mesa: Sim</option>
-                        </select>
-                    </div>
-                    <select id="printerComandaDelivery">
-                        <option value="N">Comanda delivery/balcão: Não</option>
-                        <option value="S">Comanda delivery/balcão: Sim</option>
-                    </select>
-                    <input type="number" id="printerFeedFinal" min="0" max="20" step="1" placeholder="Avanço final (ESC d) — 0 a 20">
-                    <div class="help">Conta mesa: imprime a conta da mesa. Comanda delivery/balcão: imprime a comanda completa do pedido.</div>
-                    <div class="help" id="printerDefaultHint" style="display:none;"></div>
-                    <div class="actions">
-                        <button type="button" class="btn-modal" id="btnAtualizarPrinters">Atualizar lista do Windows</button>
-                        <button type="submit" class="btn-green" id="btnSalvarImpressora">Salvar</button>
-                        <button type="button" class="btn-modal" id="btnCancelarImpressora" onclick="cancelarEdicaoImpressora()" style="display:none;">Cancelar</button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="field-group" id="terminalImpressaoPanel">
-                <p class="title">Impressão deste terminal</p>
+            <details class="cfg-dados-accordion cfg-section-card" id="terminalImpressaoPanel">
+                <summary class="cfg-dados-accordion-summary">Impressão deste terminal</summary>
+                <div class="cfg-dados-accordion-body">
                 <div class="help">Cada PC tem caminhos Windows próprios. O identificador vem do Print Bridge (hostname + usuário).</div>
                 <p class="help" id="termImpStatus">Detectando terminal...</p>
                 <p class="help"><strong id="termImpId">—</strong></p>
-                <table class="tbl" style="margin-top:8px;">
-                    <thead>
-                        <tr>
-                            <th style="width:70px;">ID</th>
-                            <th>Impressora lógica</th>
-                            <th>Caminho local (Windows)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbodyTerminalImpressoras">
-                        <tr><td colspan="3" class="empty">Carregando...</td></tr>
-                    </tbody>
-                </table>
-                <div class="actions" style="margin-top:10px;">
+                <div class="cfg-dados-table-wrap">
+                    <table class="tbl cfg-table">
+                        <thead>
+                            <tr>
+                                <th style="width:70px;">ID</th>
+                                <th>Impressora lógica</th>
+                                <th>Caminho local (Windows)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyTerminalImpressoras">
+                            <tr><td colspan="3" class="empty">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="cfg-dados-actions">
                     <button type="button" class="btn-green" id="btnSalvarTerminalImp">Salvar deste terminal</button>
                 </div>
-            </div>
+                </div>
+            </details>
 
-            <div class="field-group" id="whatsappPanel">
-                <p class="title">WhatsApp (uazapi)</p>
+            <details class="cfg-dados-accordion cfg-section-card" id="whatsappPanel">
+                <summary class="cfg-dados-accordion-summary">WhatsApp (uazapi)</summary>
+                <div class="cfg-dados-accordion-body">
                 <div class="help">Conecte o WhatsApp desta loja e ative as notificações automáticas.</div>
 
-                <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
-                    <span class="title" style="margin:0;">Status:</span>
+                <div class="cfg-dados-status-row">
+                    <span class="title">Status:</span>
                     <span id="waStatusPill" class="pill bad">desconhecido</span>
-                    <button type="button" class="btn-mini" style="width:auto;" onclick="waVerificarStatus()">Atualizar</button>
+                    <button type="button" class="btn-mini cfg-dados-btn-inline" onclick="event.stopPropagation(); waVerificarStatus()">Atualizar</button>
                 </div>
 
                 <div class="row-split" style="margin-top:10px;">
@@ -164,56 +148,110 @@
                 </div>
                 <div class="help">Criar instância só é necessário uma vez por loja (precisa do admintoken no .env).</div>
 
-                <div class="actions" style="margin-top:10px;">
+                <div class="cfg-dados-actions">
                     <button type="button" class="btn-green" id="btnWaConectar" onclick="waConectar()">Conectar (gerar QR)</button>
                     <button type="button" class="btn-modal" id="btnWaDesconectar" onclick="waDesconectar()">Desconectar</button>
                 </div>
 
-                <div id="waQrBox" style="display:none; margin-top:12px; text-align:center;">
+                <div id="waQrBox" class="cfg-dados-wa-qr">
                     <p class="help">Abra o WhatsApp no celular da loja > Aparelhos conectados > Conectar aparelho e escaneie:</p>
-                    <img id="waQrImg" alt="QR code" style="max-width:260px; width:100%; background:#fff; padding:8px; border-radius:8px;">
+                    <img id="waQrImg" alt="QR code">
                     <p class="help" id="waPairCode" style="display:none;"></p>
                 </div>
 
-                <hr style="border-color:rgba(255,255,255,0.08); margin:14px 0;">
+                <hr class="cfg-dados-divider">
 
-                <p class="title" style="margin-bottom:6px;">Enviar teste</p>
+                <p class="title">Enviar teste</p>
                 <div class="row-split">
                     <input type="text" id="waTesteTelefone" placeholder="Telefone (ex: 89999999999)" autocomplete="off">
                     <button type="button" class="btn-modal" id="btnWaTeste" onclick="waEnviarTeste()">Enviar teste</button>
                 </div>
 
-                <hr style="border-color:rgba(255,255,255,0.08); margin:14px 0;">
+                <hr class="cfg-dados-divider">
 
-                <p class="title" style="margin-bottom:6px;">Notificações automáticas</p>
-                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                <p class="title">Notificações automáticas</p>
+                <label class="cfg-dados-check">
                     <input type="checkbox" id="waAtivo"> Ativar WhatsApp nesta loja
                 </label>
-                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                {% if not is_retail %}
+                <label class="cfg-dados-check">
                     <input type="checkbox" id="waNotifDespacho"> Avisar cliente no despacho (delivery a caminho)
                 </label>
-                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                <label class="cfg-dados-check">
                     <input type="checkbox" id="waNotifDeliveryCopia"> Botão de enviar cópia do pedido (delivery)
                 </label>
-                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                {% endif %}
+                <label class="cfg-dados-check">
                     <input type="checkbox" id="waNotifBalcaoPronto"> Botão de avisar pedido pronto (balcão)
                 </label>
-                <label style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+                {% if not is_retail %}
+                <label class="cfg-dados-check" id="waNotifMesaContaWrap" data-ctx="mesa">
                     <input type="checkbox" id="waNotifMesaConta"> Enviar cópia da conta no fechamento da mesa
                 </label>
-                <div class="actions" style="margin-top:10px;">
+                {% endif %}
+                <div class="cfg-dados-actions">
                     <button type="button" class="btn-green" id="btnWaSalvarCfg" onclick="waSalvarConfig()">Salvar configurações</button>
                 </div>
+                </div>
+            </details>
+        </div>
+    </main>
+
+    <div id="impressoraModal" class="cfg-dados-modal" aria-hidden="true">
+        <div class="cfg-dados-modal-backdrop" data-close-impressora-modal tabindex="-1"></div>
+        <div class="cfg-dados-modal-card" role="dialog" aria-modal="true" aria-labelledby="impressoraModalTitle">
+            <div class="cfg-dados-modal-head">
+                <h2 id="impressoraModalTitle" class="cfg-section-title">Nova impressora</h2>
+                <button type="button" class="cfg-dados-modal-close" data-close-impressora-modal aria-label="Fechar">&times;</button>
             </div>
-        </aside>
+            <div id="impressorasFormPanel">
+                <form id="formImpressora" class="form">
+                    <input type="hidden" id="printerId" value="">
+                    <input type="text" id="printerCaminho" list="printersDatalist" placeholder="Caminho (Windows) ou http://..." autocomplete="off">
+                    <input type="text" id="printerNome" placeholder="Nome (apelido)" autocomplete="off">
+                    <div class="row-split">
+                        <input type="number" id="printerNro" min="0" step="1" placeholder="Nro (imprenro)">
+                        <div data-ctx="mesa">
+                            <select id="printerContaMesa">
+                                <option value="N">Conta mesa: Não</option>
+                                <option value="S">Conta mesa: Sim</option>
+                            </select>
+                        </div>
+                    </div>
+                    <select id="printerComandaDelivery">
+                        <option value="N">Comanda delivery/balcão: Não</option>
+                        <option value="S">Comanda delivery/balcão: Sim</option>
+                    </select>
+                    <input type="number" id="printerFeedFinal" min="0" max="20" step="1" placeholder="Avanço final (ESC d) — 0 a 20">
+                    <div class="help">Conta mesa: imprime a conta da mesa. Comanda delivery/balcão: imprime a comanda completa do pedido.</div>
+                    <div class="help" id="printerDefaultHint" style="display:none;"></div>
+                    <div class="cfg-dados-actions">
+                        <button type="button" class="btn-modal" id="btnAtualizarPrinters">Atualizar lista do Windows</button>
+                        <button type="button" class="btn-modal" id="btnCancelarImpressora" onclick="cancelarEdicaoImpressora()">Cancelar</button>
+                        <button type="submit" class="btn-green" id="btnSalvarImpressora">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
     </div>
 
     <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=10"></script>
     <script>
+        const IS_RETAIL = {{ 'true' if is_retail else 'false' }};
         let sistemaCampos = [];
         let printersDisponiveis = [];
         let impressorasRows = [];
+        let hasMesaCtx = !IS_RETAIL;
+
+        function impressorasColCount() {
+            return hasMesaCtx ? 8 : 7;
+        }
+
+        function setCtxVisible(el, visible) {
+            if (!el) return;
+            el.classList.toggle('cfg-dados-ctx-hidden', !visible);
+        }
 
         function showMsg(texto, tipo) {
             const el = document.getElementById('mensagem');
@@ -227,6 +265,25 @@
             const el = document.querySelector(`[data-field="${field}"]`);
             if (!el) return;
             el.style.display = visible ? '' : 'none';
+        }
+
+        function syncSistemaPanelVisibility() {
+            const panel = document.getElementById('sistemaPanel');
+            if (!panel) return;
+            const fields = panel.querySelectorAll('[data-field]');
+            const anyVisible = Array.from(fields).some(el => el.style.display !== 'none');
+            panel.style.display = anyVisible ? '' : 'none';
+        }
+
+        function syncContextVisibility() {
+            hasMesaCtx = !IS_RETAIL && sistemaCampos.includes('nromesa');
+            const thMesa = document.getElementById('thContaMesa');
+            if (thMesa) thMesa.style.display = hasMesaCtx ? '' : 'none';
+            setCtxVisible(document.getElementById('waNotifMesaContaWrap'), hasMesaCtx);
+            document.querySelectorAll('[data-ctx="mesa"]').forEach(el => setCtxVisible(el, hasMesaCtx));
+            const loadingCell = document.querySelector('#tbodyImpressoras td.empty');
+            if (loadingCell) loadingCell.colSpan = impressorasColCount();
+            if (impressorasRows.length) renderImpressorasTabela();
         }
 
         async function fetchJsonSafe(url, options) {
@@ -251,6 +308,10 @@
         }
 
         async function carregarSistema() {
+            if (!document.getElementById('sistemaPanel')) {
+                syncContextVisibility();
+                return;
+            }
             try {
                 const data = await fetchJsonSafe('/api/configuracao-sistema');
                 if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao carregar configuração.');
@@ -264,6 +325,8 @@
                 if (sistemaCampos.includes('nromesa')) document.getElementById('nromesa').value = dados.nromesa ?? '';
                 if (sistemaCampos.includes('servicomesa')) document.getElementById('servicomesa').value = dados.servicomesa ?? '';
                 if (sistemaCampos.includes('calculodistancia')) document.getElementById('calculodistancia').value = (dados.calculodistancia || 'Sim');
+                syncSistemaPanelVisibility();
+                syncContextVisibility();
             } catch (e) {
                 console.error(e);
                 try {
@@ -276,6 +339,8 @@
                         if (sistemaCampos.includes('nromesa')) document.getElementById('nromesa').value = cfg.nromesa ?? '';
                         if (sistemaCampos.includes('servicomesa')) document.getElementById('servicomesa').value = cfg.servicomesa ?? '';
                         if (sistemaCampos.includes('calculodistancia')) document.getElementById('calculodistancia').value = (cfg.calculodistancia || 'Sim');
+                        syncSistemaPanelVisibility();
+                        syncContextVisibility();
                         showMsg('Configuração carregada via /api/buscar-configuracao.', 'sucesso');
                         return;
                     }
@@ -332,14 +397,16 @@
 
         function renderImpressorasTabela() {
             const tbody = document.getElementById('tbodyImpressoras');
+            const cols = impressorasColCount();
             if (!Array.isArray(impressorasRows) || impressorasRows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma impressora cadastrada.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="${cols}" class="empty">Nenhuma impressora cadastrada.</td></tr>`;
                 return;
             }
             tbody.innerHTML = impressorasRows.map(r => {
                 const mesa = String(r.conta_mesa || '').toUpperCase() === 'S' ? '<span class="pill ok">Sim</span>' : '<span class="pill bad">Não</span>';
                 const del = String(r.comanda_delivery || '').toUpperCase() === 'S' ? '<span class="pill ok">Sim</span>' : '<span class="pill bad">Não</span>';
                 const feed = (r.feed_final_linhas ?? '');
+                const mesaCol = hasMesaCtx ? `<td style="text-align:center;">${mesa}</td>` : '';
                 return `
                     <tr>
                         <td class="kcell">#${r.id}</td>
@@ -347,7 +414,7 @@
                         <td>${String(r.caminho || '')}</td>
                         <td style="text-align:center;">${(r.imprenro ?? '')}</td>
                         <td style="text-align:center;">${feed}</td>
-                        <td style="text-align:center;">${mesa}</td>
+                        ${mesaCol}
                         <td style="text-align:center;">${del}</td>
                         <td style="text-align:center;">
                             <div class="tbl-actions">
@@ -372,7 +439,24 @@
             }
         }
 
-        function novaImpressora() {
+        function openImpressoraModal() {
+            const acc = document.getElementById('impressorasListPanel');
+            if (acc && acc.tagName === 'DETAILS') acc.open = true;
+            const modal = document.getElementById('impressoraModal');
+            if (!modal) return;
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.getElementById('printerCaminho')?.focus();
+        }
+
+        function closeImpressoraModal() {
+            const modal = document.getElementById('impressoraModal');
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function resetImpressoraForm() {
             document.getElementById('printerId').value = '';
             document.getElementById('printerCaminho').value = '';
             document.getElementById('printerNome').value = '';
@@ -381,9 +465,13 @@
             document.getElementById('printerComandaDelivery').value = 'N';
             document.getElementById('printerFeedFinal').value = '6';
             document.getElementById('btnSalvarImpressora').textContent = 'Salvar';
-            document.getElementById('btnCancelarImpressora').style.display = 'none';
-            document.getElementById('impressorasFormPanel')?.scrollIntoView({ behavior: 'smooth' });
-            document.getElementById('printerCaminho')?.focus();
+            const title = document.getElementById('impressoraModalTitle');
+            if (title) title.textContent = 'Nova impressora';
+        }
+
+        function novaImpressora(openModal) {
+            resetImpressoraForm();
+            if (openModal !== false) openImpressoraModal();
         }
 
         let terminalImpRows = [];
@@ -481,13 +569,14 @@
             document.getElementById('printerCaminho').value = String(r.caminho || '');
             document.getElementById('printerNome').value = String(r.nomedaimpressora || '');
             document.getElementById('printerNro').value = String(Number(r.imprenro || 0));
-            document.getElementById('printerContaMesa').value = String(r.conta_mesa || 'N').toUpperCase() === 'S' ? 'S' : 'N';
+            const contaMesaEl = document.getElementById('printerContaMesa');
+            if (contaMesaEl) contaMesaEl.value = String(r.conta_mesa || 'N').toUpperCase() === 'S' ? 'S' : 'N';
             document.getElementById('printerComandaDelivery').value = String(r.comanda_delivery || 'N').toUpperCase() === 'S' ? 'S' : 'N';
             document.getElementById('printerFeedFinal').value = String(Number.isFinite(Number(r.feed_final_linhas)) ? Number(r.feed_final_linhas) : 6);
             document.getElementById('btnSalvarImpressora').textContent = 'Atualizar';
-            document.getElementById('btnCancelarImpressora').style.display = 'block';
-            document.getElementById('impressorasFormPanel')?.scrollIntoView({ behavior: 'smooth' });
-            document.getElementById('printerCaminho')?.focus();
+            const title = document.getElementById('impressoraModalTitle');
+            if (title) title.textContent = 'Editar impressora';
+            openImpressoraModal();
         }
 
         async function excluirImpressora(id) {
@@ -500,7 +589,8 @@
                 showMsg(data?.mensagem || 'Impressora removida.', 'sucesso');
                 await carregarImpressorasCadastro();
                 if (String(document.getElementById('printerId').value) === String(id)) {
-                    novaImpressora();
+                    closeImpressoraModal();
+                    resetImpressoraForm();
                 }
             } catch (e) {
                 console.error(e);
@@ -509,7 +599,8 @@
         }
 
         function cancelarEdicaoImpressora() {
-            novaImpressora();
+            resetImpressoraForm();
+            closeImpressoraModal();
         }
 
         async function salvarImpressora() {
@@ -521,7 +612,7 @@
                     caminho: document.getElementById('printerCaminho').value.trim(),
                     nomedaimpressora: document.getElementById('printerNome').value.trim(),
                     imprenro: document.getElementById('printerNro').value,
-                    conta_mesa: document.getElementById('printerContaMesa').value,
+                    conta_mesa: document.getElementById('printerContaMesa')?.value || 'N',
                     comanda_delivery: document.getElementById('printerComandaDelivery').value,
                     feed_final_linhas: document.getElementById('printerFeedFinal').value
                 };
@@ -537,6 +628,9 @@
                 await carregarImpressorasCadastro();
                 if (!id && data?.id) {
                     editarImpressora(data.id);
+                } else {
+                    closeImpressoraModal();
+                    resetImpressoraForm();
                 }
             } catch (e) {
                 console.error(e);
@@ -678,15 +772,25 @@
             }
         }
 
+        function waSetCheckbox(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.checked = !!val;
+        }
+
+        function waGetCheckbox(id) {
+            const el = document.getElementById(id);
+            return el && el.checked ? 1 : 0;
+        }
+
         async function waCarregarConfig() {
             try {
                 const data = await fetchJsonSafe('/api/whatsapp/config');
                 if (!data?.sucesso) return;
-                document.getElementById('waAtivo').checked = !!data.ativo;
-                document.getElementById('waNotifDespacho').checked = !!data.notif_despacho;
-                document.getElementById('waNotifDeliveryCopia').checked = !!data.notif_delivery_copia;
-                document.getElementById('waNotifBalcaoPronto').checked = !!data.notif_balcao_pronto;
-                document.getElementById('waNotifMesaConta').checked = !!data.notif_mesa_conta;
+                waSetCheckbox('waAtivo', data.ativo);
+                waSetCheckbox('waNotifDespacho', data.notif_despacho);
+                waSetCheckbox('waNotifDeliveryCopia', data.notif_delivery_copia);
+                waSetCheckbox('waNotifBalcaoPronto', data.notif_balcao_pronto);
+                waSetCheckbox('waNotifMesaConta', data.notif_mesa_conta);
                 if (data.instancia_nome) document.getElementById('waNomeInstancia').value = data.instancia_nome;
             } catch (e) {
                 console.error(e);
@@ -698,11 +802,11 @@
             btn.disabled = true;
             try {
                 const payload = {
-                    ativo: document.getElementById('waAtivo').checked ? 1 : 0,
-                    notif_despacho: document.getElementById('waNotifDespacho').checked ? 1 : 0,
-                    notif_delivery_copia: document.getElementById('waNotifDeliveryCopia').checked ? 1 : 0,
-                    notif_balcao_pronto: document.getElementById('waNotifBalcaoPronto').checked ? 1 : 0,
-                    notif_mesa_conta: document.getElementById('waNotifMesaConta').checked ? 1 : 0
+                    ativo: waGetCheckbox('waAtivo'),
+                    notif_despacho: waGetCheckbox('waNotifDespacho'),
+                    notif_delivery_copia: waGetCheckbox('waNotifDeliveryCopia'),
+                    notif_balcao_pronto: waGetCheckbox('waNotifBalcaoPronto'),
+                    notif_mesa_conta: waGetCheckbox('waNotifMesaConta')
                 };
                 const data = await fetchJsonSafe('/api/whatsapp/config', {
                     method: 'POST',
@@ -720,16 +824,27 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            document.getElementById('formSistema').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await salvarSistema();
-            });
+            const formSistema = document.getElementById('formSistema');
+            if (formSistema) {
+                formSistema.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await salvarSistema();
+                });
+            }
             document.getElementById('formImpressora').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await salvarImpressora();
             });
             document.getElementById('btnAtualizarPrinters').addEventListener('click', async () => {
                 await atualizarListaPrinters();
+            });
+            document.querySelectorAll('[data-close-impressora-modal]').forEach(el => {
+                el.addEventListener('click', cancelarEdicaoImpressora);
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('impressoraModal')?.classList.contains('open')) {
+                    cancelarEdicaoImpressora();
+                }
             });
             const btnTermImp = document.getElementById('btnSalvarTerminalImp');
             if (btnTermImp) btnTermImp.addEventListener('click', salvarTerminalImpressao);
@@ -738,7 +853,7 @@
             await carregarPrintersDisponiveis();
             await carregarImpressorasCadastro();
             await carregarTerminalImpressao();
-            novaImpressora();
+            resetImpressoraForm();
             await waCarregarConfig();
             await waVerificarStatus();
         });
@@ -754,8 +869,10 @@
         window.waEnviarTeste = waEnviarTeste;
         window.waSalvarConfig = waSalvarConfig;
     </script>
+{% if not is_retail %}
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+{% endif %}
 <script>try { lucide.createIcons(); } catch (e) {}</script>
 
 {% endif %}

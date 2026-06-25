@@ -23,7 +23,7 @@ from datetime import date, datetime, time as dt_time
 from urllib.parse import quote
 
 from config import Config
-from version import APP_VERSION
+from version import get_app_version
 from database import conectar
 from auth_routes import auth_bp
 from blueprints import register_domain_blueprints
@@ -122,7 +122,7 @@ register_domain_blueprints(app)
 def inject_app_globals():
     retail = is_retail()
     return {
-        "app_version": APP_VERSION,
+        "app_version": get_app_version(),
         "url_prefix": Config.URL_PREFIX,
         "business_type": "varejo" if retail else "restaurante",
         "is_retail": retail,
@@ -139,6 +139,7 @@ def _evitar_cache_html(response):
         response.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+        response.headers["X-App-Version"] = get_app_version()
     return response
 
 
@@ -195,7 +196,6 @@ def configuracoes():
 
 @app.route("/configuracoes-dados")
 @login_required
-@restaurant_only
 def configuracoes_dados():
     """Tabela de configurações (JSON) — link a partir do painel de configurações."""
     return render_template("configuracoes_dados.html")
@@ -4912,7 +4912,7 @@ def _loja_diagnostico_texto():
     _pm = os.path.join(_BASE_DIR, "templates", "painel_menu.html")
     return "\n".join(
         [
-            "LOJA_BUILD=14",
+            f"APP_VERSION={get_app_version()}",
             "rotas_diagnostico=/onde-esta-o-servidor /loja-build /__loja_build",
             f"app_py={os.path.abspath(__file__)}",
             f"app_mtime={int(os.path.getmtime(os.path.abspath(__file__)))}",
@@ -4925,17 +4925,23 @@ def _loja_diagnostico_texto():
     )
 
 
+def _loja_diagnostico_response():
+    resp = Response(_loja_diagnostico_texto(), mimetype="text/plain; charset=utf-8")
+    resp.headers["X-App-Version"] = get_app_version()
+    return resp
+
+
 @app.route("/onde-esta-o-servidor", methods=["GET"])
 def onde_esta_o_servidor():
     """Confirma em texto plano qual app.py está a servir a porta (alinhar com a pasta que o Cursor abre)."""
-    return Response(_loja_diagnostico_texto(), mimetype="text/plain; charset=utf-8")
+    return _loja_diagnostico_response()
 
 
 @app.route("/loja-build", methods=["GET"])
 @app.route("/__loja_build", methods=["GET"])
 def loja_build_info():
     """Diagnóstico: mesmo conteúdo que /onde-esta-o-servidor (/loja-build evita bloqueios a URLs com __)."""
-    return Response(_loja_diagnostico_texto(), mimetype="text/plain; charset=utf-8")
+    return _loja_diagnostico_response()
 
 
 @app.route("/")
@@ -4952,7 +4958,7 @@ def index():
         _painel_template=os.path.abspath(_pm),
     )
     resp = make_response(html)
-    resp.headers["X-Loja-Inicio"] = "painel-menu-build-13"
+    resp.headers["X-App-Version"] = get_app_version()
     return resp
 
 @app.route("/logout")

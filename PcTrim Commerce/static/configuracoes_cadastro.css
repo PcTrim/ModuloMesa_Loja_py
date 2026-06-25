@@ -1,0 +1,151 @@
+/* Telas de cadastro em configurações — coluna única + modal (escopado) */
+
+.cfg-cadastro-page .cfg-cadastro-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 24px;
+}
+
+.cfg-cadastro-page .cfg-section-card {
+  margin-bottom: 0;
+}
+
+.cfg-cadastro-page .cfg-section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.cfg-cadastro-page .cfg-cadastro-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.cfg-cadastro-page .cfg-cadastro-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cfg-cadastro-page .cfg-cadastro-table-wrap .tbl,
+.cfg-cadastro-page .cfg-cadastro-table-wrap .cfg-table {
+  min-width: 640px;
+}
+
+.cfg-cadastro-page .cfg-cadastro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.cfg-cadastro-page .cfg-cadastro-actions .btn-outline,
+.cfg-cadastro-page .cfg-cadastro-actions .btn-green,
+.cfg-cadastro-page .cfg-cadastro-actions .btn-modal,
+.cfg-cadastro-page .cfg-cadastro-actions .btn-purple {
+  width: auto;
+  min-width: 120px;
+}
+
+.cfg-cadastro-page .btn-mini.cfg-cadastro-btn-inline,
+.cfg-cadastro-page .btn-purple.cfg-cadastro-btn-inline {
+  width: auto;
+  padding: 8px 12px;
+}
+
+.cfg-cadastro-page #codigo[readonly] {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+/* Modal de cadastro */
+.cfg-cadastro-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.cfg-cadastro-modal.open {
+  display: flex;
+}
+
+.cfg-cadastro-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.cfg-cadastro-modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--surface);
+  border: 0.5px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.cfg-cadastro-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cfg-cadastro-modal-head .cfg-section-title {
+  margin: 0;
+}
+
+.cfg-cadastro-modal-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  font-family: inherit;
+}
+
+.cfg-cadastro-modal-close:hover {
+  color: var(--text);
+}
+
+.cfg-cadastro-loja-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cfg-cadastro-loja-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cfg-cadastro-modal-card--xl {
+  width: min(900px, 100%);
+}

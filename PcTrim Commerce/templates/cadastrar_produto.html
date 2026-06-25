@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
@@ -31,39 +32,48 @@
         </button>
     </header>
 
-    <div class="shell">
-        <section class="center">
-            <div class="field-group">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                    <p class="title" style="margin:0;">Produtos cadastrados</p>
-                    <button type="button" class="btn-purple" style="width:auto; padding:8px 12px;" onclick="novoRegistro()">Novo</button>
+    <main class="cfg-content cfg-cadastro-page">
+        <div class="cfg-wrap cfg-cadastro-wrap">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+
+            <section class="cfg-section-card" id="produtosListPanel">
+                <div class="cfg-cadastro-head">
+                    <h2 class="cfg-section-title">Produtos cadastrados</h2>
+                    <button type="button" class="btn-purple cfg-cadastro-btn-inline" onclick="novoRegistro()">Novo</button>
                 </div>
+                <div class="cfg-cadastro-table-wrap">
+                    <table class="tbl cfg-table" id="tabelaProdutos">
+                        <thead>
+                            <tr>
+                                <th style="width: 90px;">Código</th>
+                                <th>Produto</th>
+                                <th style="width: 110px;">Preço</th>
+                                <th style="width: 130px;">{{ label_classif if is_retail else 'Classe' }}</th>
+                                <th style="width: 110px;">Por kilo</th>
+                                <th style="width: 120px;">Venda</th>
+                                <th style="width: 220px; text-align: center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabela">
+                            <tr><td colspan="7" class="empty">Carregando produtos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="produtoModal" class="cfg-cadastro-modal" aria-hidden="true">
+        <div class="cfg-cadastro-modal-backdrop" data-close-produto-modal tabindex="-1"></div>
+        <div class="cfg-cadastro-modal-card cfg-cadastro-modal-card--wide" role="dialog" aria-modal="true" aria-labelledby="produtoModalTitle">
+            <div class="cfg-cadastro-modal-head">
+                <h2 id="produtoModalTitle" class="cfg-section-title">Novo produto</h2>
+                <button type="button" class="cfg-cadastro-modal-close" data-close-produto-modal aria-label="Fechar">&times;</button>
             </div>
-
-            <table class="tbl" id="tabelaProdutos">
-                <thead>
-                    <tr>
-                        <th style="width: 90px;">Código</th>
-                        <th>Produto</th>
-                        <th style="width: 110px;">Preço</th>
-                        <th style="width: 130px;">{{ label_classif if is_retail else 'Classe' }}</th>
-                        <th style="width: 110px;">Por kilo</th>
-                        <th style="width: 120px;">Venda</th>
-                        <th style="width: 220px; text-align: center;">Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="corpoTabela">
-                    <tr><td colspan="7" class="empty">Carregando produtos...</td></tr>
-                </tbody>
-            </table>
-        </section>
-
-        <aside class="right">
-            <div id="mensagem" class="mensagem" style="display: none;"></div>
-
-            <div class="field-group" id="produtoFormPanel">
-                <p class="title">Cadastro de produto</p>
+            <div id="produtoFormPanel">
                 <form id="formProduto" class="form" onsubmit="salvarProduto(event)">
+                    <input type="number" id="codigo" min="1" step="1" required placeholder="Código do produto">
+                    <div class="help" style="margin-top:-4px;margin-bottom:8px;">Sugestão automática. Informe o código do cardápio se já tiver um definido.</div>
                     <input type="text" id="nome" required placeholder="Nome do produto">
                     <input type="text" id="barcode" maxlength="50" placeholder="Código de barras (opcional)">
 
@@ -115,14 +125,14 @@
 
                     <input type="hidden" id="chaveEdicao" value="">
 
-                    <div class="actions">
+                    <div class="cfg-cadastro-actions">
                         <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
+                        <button type="button" class="btn-modal" id="btnCancelar" onclick="cancelarEdicao()">Cancelar</button>
                         <button type="submit" class="btn-green" id="btnSalvar">Salvar</button>
-                        <button type="button" class="btn-modal" id="btnCancelar" onclick="cancelarEdicao()" style="display: none;">Cancelar</button>
                     </div>
                 </form>
             </div>
-        </aside>
+        </div>
     </div>
     </div>
 
@@ -138,6 +148,63 @@
             mensagemDiv.className = `mensagem ${tipo}`;
             mensagemDiv.textContent = texto;
             mensagemDiv.style.display = 'block';
+            setTimeout(() => { mensagemDiv.style.display = 'none'; }, 3500);
+        }
+
+        function openProdutoModal(focusNome) {
+            const modal = document.getElementById('produtoModal');
+            if (!modal) return;
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            if (focusNome !== false) {
+                document.getElementById('nome')?.focus();
+            }
+        }
+
+        function closeProdutoModal() {
+            const modal = document.getElementById('produtoModal');
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function setCodigoSomenteLeitura(locked) {
+            const codigoEl = document.getElementById('codigo');
+            if (!codigoEl) return;
+            codigoEl.readOnly = locked;
+            codigoEl.setAttribute('aria-readonly', locked ? 'true' : 'false');
+            if (locked) {
+                codigoEl.removeAttribute('required');
+            } else {
+                codigoEl.setAttribute('required', 'required');
+            }
+        }
+
+        async function carregarCodigoSugerido() {
+            const codigoEl = document.getElementById('codigo');
+            if (!codigoEl) return;
+            try {
+                const resp = await fetch('/api/proximo-codigo-produto');
+                const data = await resp.json();
+                if (data.sucesso && data.codigo_sugerido) {
+                    codigoEl.value = data.codigo_sugerido;
+                }
+            } catch (e) {
+                console.error('Erro ao sugerir código do produto:', e);
+            }
+        }
+
+        function resetProdutoForm() {
+            document.getElementById('formProduto').reset();
+            document.getElementById('chaveEdicao').value = '';
+            document.getElementById('btnSalvar').textContent = 'Salvar';
+            const title = document.getElementById('produtoModalTitle');
+            if (title) title.textContent = 'Novo produto';
+            const cfop = document.getElementById('cfop');
+            if (cfop && cfop.type !== 'hidden') cfop.value = '5102';
+            const codigoEl = document.getElementById('codigo');
+            if (codigoEl) codigoEl.value = '';
+            setCodigoSomenteLeitura(false);
         }
 
         function sincronizarClasseDoSelect() {
@@ -165,12 +232,13 @@
 
         function configurarValidacaoPtBr() {
             const mensagens = {
+                codigo: 'Informe o código do produto.',
                 nome: 'Informe o nome do produto.',
                 preco: 'Informe o preco do produto.',
                 classificacaoSelect: `Selecione uma ${LABEL_CLASSIF_LOWER}.`,
                 classe: `Selecione uma ${LABEL_CLASSIF_LOWER}.`
             };
-            ['nome', 'preco', 'classificacaoSelect', 'classe'].forEach(id => {
+            ['codigo', 'nome', 'preco', 'classificacaoSelect', 'classe'].forEach(id => {
                 const campo = document.getElementById(id);
                 if (!campo) return;
                 const atualizarMensagem = () => {
@@ -179,6 +247,8 @@
                         mensagem = mensagens[id] || 'Preencha este campo.';
                     } else if (id === 'preco' && campo.validity.badInput) {
                         mensagem = 'Informe um preco valido.';
+                    } else if (id === 'codigo' && (campo.validity.badInput || campo.validity.rangeUnderflow)) {
+                        mensagem = 'Informe um código válido (maior que zero).';
                     }
                     campo.setCustomValidity(mensagem);
                 };
@@ -190,9 +260,18 @@
 
         // Inicialização ao carregar a página
         document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-close-produto-modal]').forEach(el => {
+                el.addEventListener('click', cancelarEdicao);
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('produtoModal')?.classList.contains('open')) {
+                    cancelarEdicao();
+                }
+            });
             configurarValidacaoPtBr();
             // Configurar navegação por Enter
             const ordemCampos = [
+                'codigo',
                 'nome',
                 'barcode',
                 'preco',
@@ -350,6 +429,8 @@
                 if (result.sucesso && result.produto) {
                     const p = result.produto;
                     document.getElementById('chaveEdicao').value = p.chave;
+                    document.getElementById('codigo').value = p.chave;
+                    setCodigoSomenteLeitura(true);
                     document.getElementById('nome').value = p.produto;
                     document.getElementById('barcode').value = p.barcode || '';
                     document.getElementById('preco').value = p.preco;
@@ -376,11 +457,9 @@
                     }
                     
                     document.getElementById('btnSalvar').textContent = 'Atualizar';
-                    document.getElementById('btnCancelar').style.display = 'block';
-                    
-                    // Scroll para o formulário
-                    document.getElementById('produtoFormPanel')?.scrollIntoView({ behavior: 'smooth' });
-                    document.getElementById('nome').focus();
+                    const title = document.getElementById('produtoModalTitle');
+                    if (title) title.textContent = 'Editar produto';
+                    openProdutoModal();
                 }
             } catch (erro) {
                 console.error('Erro ao carregar produto:', erro);
@@ -400,43 +479,31 @@
                 });
                 
                 const result = await response.json();
-                const mensagemDiv = document.getElementById('mensagem');
                 
                 if (result.sucesso) {
-                    mensagemDiv.className = 'mensagem sucesso';
-                    mensagemDiv.textContent = result.mensagem;
-                    mensagemDiv.style.display = 'block';
-                    
+                    mostrarMensagem(result.mensagem || 'Excluído.', 'sucesso');
+                    if (String(document.getElementById('chaveEdicao').value) === String(chave)) {
+                        cancelarEdicao();
+                    }
                     carregarProdutos();
-                    
-                    setTimeout(() => {
-                        mensagemDiv.style.display = 'none';
-                    }, 3000);
                 } else {
-                    mensagemDiv.className = 'mensagem erro';
-                    mensagemDiv.textContent = (result.erro || 'Erro ao excluir produto');
-                    mensagemDiv.style.display = 'block';
+                    mostrarMensagem(result.erro || 'Erro ao excluir produto', 'erro');
                 }
             } catch (erro) {
                 console.error('Erro ao excluir produto:', erro);
-                alert('Erro ao excluir produto');
+                mostrarMensagem('Erro ao excluir produto', 'erro');
             }
         }
         
-        // Novo registro
-        function novoRegistro() {
-            cancelarEdicao();
-            document.getElementById('produtoFormPanel')?.scrollIntoView({ behavior: 'smooth' });
-            document.getElementById('nome').focus();
+        async function novoRegistro() {
+            resetProdutoForm();
+            await carregarCodigoSugerido();
+            openProdutoModal();
         }
         
-        // Cancelar edição
         function cancelarEdicao() {
-            document.getElementById('formProduto').reset();
-            document.getElementById('chaveEdicao').value = '';
-            document.getElementById('btnSalvar').textContent = 'Salvar';
-            document.getElementById('btnCancelar').style.display = 'none';
-            document.getElementById('nome').focus();
+            resetProdutoForm();
+            closeProdutoModal();
         }
         
         async function salvarProduto(event) {
@@ -467,6 +534,16 @@
                 ncm: document.getElementById('ncm').value.trim().toUpperCase() || '',
                 descricao: document.getElementById('descricao').value.trim().toUpperCase() || ''
             };
+
+            if (!chaveEdicao) {
+                const codigoNum = parseInt(document.getElementById('codigo').value, 10);
+                if (!Number.isFinite(codigoNum) || codigoNum < 1) {
+                    mostrarMensagem('Informe um código de produto válido (maior que zero).', 'erro');
+                    document.getElementById('codigo')?.focus();
+                    return;
+                }
+                dados.chave = codigoNum;
+            }
             
             try {
                 let url = '/api/salvar-produto';
@@ -485,34 +562,18 @@
                 });
                 
                 const result = await response.json();
-                const mensagemDiv = document.getElementById('mensagem');
                 
                 if (result.sucesso) {
-                    mensagemDiv.className = 'mensagem sucesso';
-                    mensagemDiv.textContent = result.mensagem;
-                    mensagemDiv.style.display = 'block';
-                    
-                    // Limpa o formulário
-                    cancelarEdicao();
-                    
-                    // Recarrega a lista
+                    mostrarMensagem(result.mensagem || 'Salvo.', 'sucesso');
+                    closeProdutoModal();
+                    resetProdutoForm();
                     carregarProdutos();
-                    
-                    // Esconde a mensagem após 3 segundos
-                    setTimeout(() => {
-                        mensagemDiv.style.display = 'none';
-                    }, 3000);
                 } else {
-                    mensagemDiv.className = 'mensagem erro';
-                    mensagemDiv.textContent = (result.erro || 'Erro ao salvar produto');
-                    mensagemDiv.style.display = 'block';
+                    mostrarMensagem(result.erro || 'Erro ao salvar produto', 'erro');
                 }
             } catch (erro) {
                 console.error('Erro ao salvar produto:', erro);
-                const mensagemDiv = document.getElementById('mensagem');
-                mensagemDiv.className = 'mensagem erro';
-                mensagemDiv.textContent = 'Erro ao conectar com o servidor';
-                mensagemDiv.style.display = 'block';
+                mostrarMensagem('Erro ao conectar com o servidor', 'erro');
             }
         }
     </script>

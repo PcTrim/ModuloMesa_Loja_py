@@ -13,13 +13,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
-    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
 </head>
 <body class="cfg-body">
-    <div class="pdv">
+    <div class="cfg-page">
     <header class="topbar">
         <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
         <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
@@ -32,10 +32,12 @@
         </button>
     </header>
 
-    <div class="shell">
-        <section class="center">
+    <main class="cfg-content cfg-cadastro-page">
+        <div class="cfg-wrap cfg-cadastro-wrap">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+
             {% if not is_retail %}
-            <details class="details" id="mesaLegacyDetails">
+            <details class="details cfg-section-card" id="mesaLegacyDetails">
                 <summary>Mesa (opcional)</summary>
                 <div style="display:grid; gap:10px; margin-top:10px;">
                     <div id="registrosMesa" style="display:none;"></div>
@@ -45,14 +47,13 @@
             </details>
             {% endif %}
 
-            <div class="field-group">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                    <p class="title" style="margin:0;">{{ label_classif_pl }} cadastradas</p>
-                    <button type="button" class="btn-purple" style="width:auto; padding:8px 12px;" onclick="novaClassificacao()">+ Nova {{ label_classif }}</button>
+            <section class="cfg-section-card" id="classificacoesListPanel">
+                <div class="cfg-cadastro-head">
+                    <h2 class="cfg-section-title">{{ label_classif_pl }} cadastradas</h2>
+                    <button type="button" class="btn-purple cfg-cadastro-btn-inline" onclick="novaClassificacao()">+ Nova {{ label_classif }}</button>
                 </div>
-            </div>
-
-            <table class="tbl" id="tabelaListaClassificacoes">
+                <div class="cfg-cadastro-table-wrap">
+                    <table class="tbl cfg-table" id="tabelaListaClassificacoes">
                 <thead>
                     <tr>
                         <th style="width: 90px;">Código</th>
@@ -68,10 +69,14 @@
                 <tbody id="tabelaClassificacoes">
                     <tr><td colspan="{{ tbl_colspan }}" class="empty">Carregando...</td></tr>
                 </tbody>
-            </table>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
 
-            <script>
-            {% if not is_retail %}
+    {% if not is_retail %}
+    <script>
 
         // Buscar registros da mesa ao digitar, sair do campo ou clicar no botão
         document.addEventListener('DOMContentLoaded', function() {
@@ -287,16 +292,17 @@
             }
         }
 
-        // Removido } extra que causava erro de sintaxe
-            {% endif %}
     </script>
-        </section>
+    {% endif %}
 
-        <aside class="right">
-            <div id="mensagem" class="mensagem" style="display:none;"></div>
-
-            <div class="field-group" id="classificacaoFormPanel">
-                <p class="title" id="formClassificacaoTitle">{% if is_retail %}Nova {{ label_classif }}{% else %}Cadastro{% endif %}</p>
+    <div id="classificacaoModal" class="cfg-cadastro-modal" aria-hidden="true">
+        <div class="cfg-cadastro-modal-backdrop" data-close-classificacao-modal tabindex="-1"></div>
+        <div class="cfg-cadastro-modal-card cfg-cadastro-modal-card--xl" role="dialog" aria-modal="true" aria-labelledby="formClassificacaoTitle">
+            <div class="cfg-cadastro-modal-head">
+                <h2 id="formClassificacaoTitle" class="cfg-section-title">{% if is_retail %}Nova {{ label_classif }}{% else %}Cadastro{% endif %}</h2>
+                <button type="button" class="cfg-cadastro-modal-close" data-close-classificacao-modal aria-label="Fechar">&times;</button>
+            </div>
+            <div id="classificacaoFormPanel">
                 <form id="formClassificacao" class="form">
                     <input type="hidden" id="chave" name="chave">
                     <input type="hidden" id="classe" name="classe">
@@ -407,7 +413,7 @@
                     </div>
                 </form>
             </div>
-        </aside>
+        </div>
     </div>
     </div>
 
@@ -426,6 +432,26 @@
             } else {
                 el.textContent = 'Cadastro';
             }
+        }
+
+        function openClassificacaoModal() {
+            const modal = document.getElementById('classificacaoModal');
+            if (!modal) return;
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.getElementById('nomeclassificacao')?.focus();
+        }
+
+        function closeClassificacaoModal() {
+            const modal = document.getElementById('classificacaoModal');
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function cancelarClassificacaoEdicao() {
+            limparFormulario();
+            closeClassificacaoModal();
         }
 
         function normalizarListaProdutos(payload) {
@@ -646,6 +672,15 @@
                     carregarProdutosPorClassificacao(this.value.trim().toUpperCase());
                 });
             }
+
+            document.querySelectorAll('[data-close-classificacao-modal]').forEach(el => {
+                el.addEventListener('click', cancelarClassificacaoEdicao);
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('classificacaoModal')?.classList.contains('open')) {
+                    cancelarClassificacaoEdicao();
+                }
+            });
         });
 
         // Submeter formulário
@@ -657,7 +692,7 @@
         function novaClassificacao() {
             limparFormulario();
             setFormTituloModo('novo');
-            document.getElementById('nomeclassificacao').focus();
+            openClassificacaoModal();
         }
 
         function limparFormulario() {
@@ -741,6 +776,7 @@
                 
                 if (result.sucesso) {
                     limparFormulario();
+                    closeClassificacaoModal();
                     carregarClassificacoes();
                 } else {
                     mostrarMensagem(result.mensagem || `Erro ao salvar ${LABEL_CLASSIF.toLowerCase()}`, 'erro');
@@ -749,6 +785,10 @@
                 console.error('Erro:', error);
                 mostrarMensagem(`Erro ao salvar ${LABEL_CLASSIF.toLowerCase()}`, 'erro');
             }
+        }
+
+        function escapeJsString(val) {
+            return String(val || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         }
 
         async function carregarClassificacoes() {
@@ -762,7 +802,7 @@
                 }
 
                 tbody.innerHTML = classificacoes.map(c => {
-                    const nome = JSON.stringify(c.nomeclassificacao || '');
+                    const nomeEsc = escapeJsString(c.nomeclassificacao);
                     const colsExtras = IS_RETAIL ? '' : (
                         `<td>${c.quantidadepartes || ''}</td>` +
                         `<td>${c.nrofoto || ''}</td>` +
@@ -776,7 +816,7 @@
                         `<td style="text-align:center;">` +
                         `<div class="tbl-actions">` +
                         `<button type="button" class="btn-mini" onclick="editarClassificacao(${c.chave})">Editar</button>` +
-                        `<button type="button" class="btn-mini btn-mini-danger" onclick="excluirClassificacao(${c.chave}, ${nome})">Excluir</button>` +
+                        `<button type="button" class="btn-mini btn-mini-danger" onclick="excluirClassificacao(${c.chave}, '${nomeEsc}')">Excluir</button>` +
                         `</div>` +
                         `</td>` +
                         `</tr>`
@@ -811,10 +851,7 @@
                 editandoId = id;
                 renderAllOpLists();
                 setFormTituloModo('editar');
-                
-                // Scroll para o formulário
-                document.getElementById('classificacaoFormPanel')?.scrollIntoView({ behavior: 'smooth' });
-                document.getElementById('nomeclassificacao').focus();
+                openClassificacaoModal();
             } catch (error) {
                 console.error(`Erro ao carregar ${LABEL_CLASSIF.toLowerCase()}:`, error);
                 mostrarMensagem(`Erro ao carregar ${LABEL_CLASSIF.toLowerCase()}`, 'erro');
@@ -836,7 +873,7 @@
                     carregarClassificacoes();
                     // Se estava editando esta classificação, limpar o formulário
                     if (editandoId === id) {
-                        limparFormulario();
+                        cancelarClassificacaoEdicao();
                     }
                 } else {
                     mostrarMensagem(result.mensagem || `Erro ao excluir ${LABEL_CLASSIF.toLowerCase()}`, 'erro');

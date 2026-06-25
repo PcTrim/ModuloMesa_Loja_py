@@ -1,0 +1,264 @@
+/* /configuracoes-dados — coluna única centralizada (escopado) */
+
+.cfg-dados-page .cfg-dados-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 24px;
+}
+
+.cfg-dados-page .cfg-section-card {
+  margin-bottom: 0;
+}
+
+/* Acordeão */
+.cfg-dados-page .cfg-dados-accordion {
+  display: block;
+}
+
+.cfg-dados-page .cfg-dados-accordion > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  user-select: none;
+}
+
+.cfg-dados-page .cfg-dados-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cfg-dados-page .cfg-dados-accordion > summary::after {
+  content: "▸";
+  float: right;
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.cfg-dados-page .cfg-dados-accordion[open] > summary {
+  color: var(--text);
+}
+
+.cfg-dados-page .cfg-dados-accordion[open] > summary::after {
+  content: "▾";
+}
+
+.cfg-dados-page .cfg-dados-accordion-summary--actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cfg-dados-page .cfg-dados-accordion-summary--actions::after {
+  display: none;
+}
+
+.cfg-dados-page .cfg-dados-accordion-summary--actions > span::after {
+  content: "▸";
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cfg-dados-page .cfg-dados-accordion-summary--actions > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.cfg-dados-page details.cfg-dados-accordion[open] .cfg-dados-accordion-summary--actions > span::after {
+  content: "▾";
+}
+
+.cfg-dados-page .cfg-dados-accordion-body {
+  padding-top: 12px;
+}
+
+.cfg-dados-page [data-ctx="mesa"].cfg-dados-ctx-hidden {
+  display: none !important;
+}
+
+.cfg-dados-page .cfg-section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.cfg-dados-page .cfg-dados-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cfg-dados-page .cfg-dados-head .cfg-section-title {
+  margin: 0;
+}
+
+.cfg-dados-page .cfg-dados-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cfg-dados-page .cfg-dados-table-wrap .tbl,
+.cfg-dados-page .cfg-dados-table-wrap .cfg-table {
+  min-width: 720px;
+}
+
+.cfg-dados-page .cfg-dados-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.cfg-dados-page .cfg-dados-actions .btn-outline,
+.cfg-dados-page .cfg-dados-actions .btn-green,
+.cfg-dados-page .cfg-dados-actions .btn-modal {
+  width: auto;
+  min-width: 120px;
+}
+
+.cfg-dados-page .btn-mini.cfg-dados-btn-inline {
+  width: auto;
+}
+
+.cfg-dados-page .cfg-dados-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.cfg-dados-page .cfg-dados-wa-qr {
+  display: none;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.cfg-dados-page .cfg-dados-wa-qr img {
+  max-width: 260px;
+  width: 100%;
+  background: #fff;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.cfg-dados-page .cfg-dados-divider {
+  border: none;
+  border-top: 0.5px solid var(--line);
+  margin: 14px 0;
+}
+
+.cfg-dados-page .cfg-dados-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.cfg-dados-page #sistemaPanel .row-split {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.cfg-dados-page #sistemaPanel .cfg-dados-sistema-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.cfg-dados-page #sistemaPanel .cfg-dados-sistema-actions .btn-outline,
+.cfg-dados-page #sistemaPanel .cfg-dados-sistema-actions .btn-green {
+  width: auto;
+  min-width: 120px;
+}
+
+/* Modal — cadastro de impressora */
+.cfg-dados-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.cfg-dados-modal.open {
+  display: flex;
+}
+
+.cfg-dados-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.cfg-dados-modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--surface);
+  border: 0.5px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.cfg-dados-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cfg-dados-modal-head .cfg-section-title {
+  margin: 0;
+}
+
+.cfg-dados-modal-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  font-family: inherit;
+}
+
+.cfg-dados-modal-close:hover {
+  color: var(--text);
+}
+
+.cfg-dados-modal-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+  border-radius: 4px;
+}
+
+.cfg-dados-modal #impressorasFormPanel .cfg-dados-actions {
+  margin-top: 16px;
+}

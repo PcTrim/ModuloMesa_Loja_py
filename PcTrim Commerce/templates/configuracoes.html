@@ -86,11 +86,13 @@
           <p>Valores e faixas para entrega.</p>
         </div>
       </a>
+      {% endif %}
+      {% if papel == 'gerente' %}
       <a class="cfg-card" href="{{ url_prefix }}/configuracoes-dados">
         <span class="cfg-ico" aria-hidden="true"><i data-lucide="sliders" width="22" height="22"></i></span>
         <div>
-          <h2>Tabela configurações</h2>
-          <p>Parâmetros gerais salvos na base.</p>
+          <h2>{% if is_retail %}Impressoras e integrações{% else %}Tabela configurações{% endif %}</h2>
+          <p>{% if is_retail %}Impressoras, terminal e WhatsApp da loja.{% else %}Parâmetros gerais salvos na base.{% endif %}</p>
         </div>
       </a>
       {% endif %}

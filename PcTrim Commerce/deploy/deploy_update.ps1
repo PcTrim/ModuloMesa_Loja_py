@@ -1,12 +1,21 @@
 # Deploy completo: pack local + scp + backup + update no servidor Hostinger
-# Pre-requisito: copie deploy.local.env.example para deploy.local.env e preencha SSH.
+# Pre-requisito: copie deploy.local.env.example para deploy/deploy.local.env e preencha SSH.
 #
-# Uso: powershell -ExecutionPolicy Bypass -File deploy\deploy_update.ps1
+# Uso:
+#   powershell -ExecutionPolicy Bypass -File deploy\deploy_update.ps1
+#   powershell -ExecutionPolicy Bypass -File deploy\deploy_update.ps1 -BumpVersion
+#   powershell -ExecutionPolicy Bypass -File deploy\deploy_update.ps1 -NoBumpVersion
+
+param(
+    [switch]$BumpVersion,
+    [switch]$NoBumpVersion
+)
 
 $ErrorActionPreference = "Stop"
 $DeployDir = $PSScriptRoot
 $AppRoot = Split-Path -Parent $DeployDir
 $EnvFile = Join-Path $DeployDir "deploy.local.env"
+$BumpScript = Join-Path $DeployDir "bump_version.ps1"
 
 function Load-DeployEnv {
     if (-not (Test-Path $EnvFile)) {
@@ -27,7 +36,33 @@ function Load-DeployEnv {
     if (-not $DEPLOY_SSH_PORT) { $script:DEPLOY_SSH_PORT = "22" }
 }
 
+function Get-CurrentAppVersion {
+    $versionFile = Join-Path $AppRoot "version.py"
+    if (-not (Test-Path $versionFile)) { return "?" }
+    $content = Get-Content -Raw $versionFile
+    if ($content -match 'APP_VERSION\s*=\s*["''](\d+-\d+)["'']') {
+        return $Matches[1]
+    }
+    return "?"
+}
+
 Load-DeployEnv
+
+Write-Host "==> Versao atual: v$(Get-CurrentAppVersion)"
+if ($BumpVersion) {
+    Write-Host "==> Incrementando versao (flag -BumpVersion)..."
+    & powershell -ExecutionPolicy Bypass -File $BumpScript
+} elseif (-not $NoBumpVersion) {
+    $current = Get-CurrentAppVersion
+    $ans = Read-Host "Incrementar versao minor antes do deploy? (atual: v$current) (S/N)"
+    if ($ans -eq "S" -or $ans -eq "s") {
+        & powershell -ExecutionPolicy Bypass -File $BumpScript
+    } else {
+        Write-Host "    Versao mantida: v$(Get-CurrentAppVersion)"
+    }
+} else {
+    Write-Host "    Versao mantida (flag -NoBumpVersion): v$(Get-CurrentAppVersion)"
+}
 
 Write-Host "==> Fase 0: Empacotar arquivos locais"
 & powershell -ExecutionPolicy Bypass -File (Join-Path $DeployDir "pack_for_upload.ps1")
@@ -66,7 +101,7 @@ Write-Host "==> Fase 3-4: Update + restart no servidor"
 $UpdateCmd = "cd '$DEPLOY_REMOTE_PATH' && bash deploy/update_production.sh"
 ssh @SshOpts $SshTarget $UpdateCmd
 
-Write-Host "==> Deploy concluido."
+Write-Host "==> Deploy concluido (versao empacotada: v$(Get-CurrentAppVersion))."
 if ($DEPLOY_PUBLIC_URL) {
     Write-Host "    Valide: $DEPLOY_PUBLIC_URL"
 } else {

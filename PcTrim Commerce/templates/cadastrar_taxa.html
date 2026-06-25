@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
-    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
@@ -26,7 +26,7 @@
     </div></main>
 {% else %}
 
-    <div class="pdv">
+    <div class="cfg-page">
     <header class="topbar">
         <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
         <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
@@ -39,16 +39,17 @@
         </button>
     </header>
 
-    <div class="shell">
-        <section class="center">
-            <div class="field-group">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                    <p class="title" style="margin:0;">Dados da loja</p>
-                    <a href="{{ url_prefix }}/dados-loja" class="btn-mini" style="width:auto; text-decoration:none;">Editar</a>
+    <main class="cfg-content cfg-cadastro-page">
+        <div class="cfg-wrap cfg-cadastro-wrap">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+
+            <section class="cfg-section-card" id="lojaInfoPanel">
+                <div class="cfg-cadastro-loja-head">
+                    <h2 class="cfg-section-title">Dados da loja</h2>
+                    <a href="{{ url_prefix }}/dados-loja" class="btn-mini cfg-cadastro-btn-inline" style="text-decoration:none;">Editar</a>
                 </div>
                 <div class="help" id="lojaInfoNome" style="margin-top:6px;">Dados da Loja</div>
-
-                <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="cfg-cadastro-loja-grid">
                     <div><p class="title">Endereço</p><div id="lojaInfoEndereco" class="help">-</div></div>
                     <div><p class="title">Bairro</p><div id="lojaInfoBairro" class="help">-</div></div>
                     <div><p class="title">Cidade</p><div id="lojaInfoCidade" class="help">-</div></div>
@@ -56,32 +57,38 @@
                     <div><p class="title">DDD</p><div id="lojaInfoDdd" class="help">-</div></div>
                     <div><p class="title">Coordenadas</p><div id="lojaInfoCoordenadas" class="help">-</div></div>
                 </div>
+            </section>
+
+            <section class="cfg-section-card" id="taxasListPanel">
+                <h2 class="cfg-section-title">Taxas configuradas</h2>
+                <div class="cfg-cadastro-table-wrap">
+                    <table class="tbl cfg-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 130px;">Faixa</th>
+                                <th style="text-align:center; width: 120px;">De (km)</th>
+                                <th style="text-align:center; width: 120px;">Até (km)</th>
+                                <th style="text-align:center; width: 140px;">Valor (R$)</th>
+                                <th style="text-align:center; width: 220px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyTaxas">
+                            <tr><td colspan="5" class="empty">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="taxaModal" class="cfg-cadastro-modal" aria-hidden="true">
+        <div class="cfg-cadastro-modal-backdrop" data-close-taxa-modal tabindex="-1"></div>
+        <div class="cfg-cadastro-modal-card" role="dialog" aria-modal="true" aria-labelledby="taxaModalTitle">
+            <div class="cfg-cadastro-modal-head">
+                <h2 id="taxaModalTitle" class="cfg-section-title">Editar faixa</h2>
+                <button type="button" class="cfg-cadastro-modal-close" data-close-taxa-modal aria-label="Fechar">&times;</button>
             </div>
-
-            <div class="field-group">
-                <p class="title">Taxas configuradas</p>
-                <table class="tbl">
-                    <thead>
-                        <tr>
-                            <th style="width: 130px;">Faixa</th>
-                            <th style="text-align:center; width: 120px;">De (km)</th>
-                            <th style="text-align:center; width: 120px;">Até (km)</th>
-                            <th style="text-align:center; width: 140px;">Valor (R$)</th>
-                            <th style="text-align:center; width: 220px;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbodyTaxas">
-                        <tr><td colspan="5" class="empty">Carregando...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <aside class="right">
-            <div id="mensagem" class="mensagem" style="display:none;"></div>
-
-            <div class="field-group" id="taxaFormPanel">
-                <p class="title">Cadastro</p>
+            <div id="taxaFormPanel">
                 <form id="formTaxa" class="form">
                     <input type="hidden" id="chave" value="1">
                     <div class="row-split">
@@ -103,14 +110,14 @@
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                         <span class="pill" id="faixa_de_pill">De 0,00 km</span>
                     </div>
-                    <div class="actions">
+                    <div class="cfg-cadastro-actions">
                         <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
+                        <button type="button" class="btn-modal" id="btnCancelarTaxa" onclick="cancelarEdicaoTaxa()">Cancelar</button>
                         <button type="submit" class="btn-green" id="btnSalvarTaxa">Salvar</button>
-                        <button type="button" class="btn-modal" id="btnCancelarTaxa" onclick="cancelarEdicaoTaxa()" style="display:none;">Cancelar</button>
                     </div>
                 </form>
             </div>
-        </aside>
+        </div>
     </div>
     </div>
     
@@ -145,6 +152,23 @@
             const n = Number(v);
             if (!Number.isFinite(n)) return '-';
             return n.toFixed(2).replace('.', ',');
+        }
+
+        function openTaxaModal() {
+            const modal = document.getElementById('taxaModal');
+            if (!modal) return;
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            const title = document.getElementById('taxaModalTitle');
+            if (title) title.textContent = `Editar faixa ${faixaSelecionada}`;
+            document.getElementById('faixa_d')?.focus();
+        }
+
+        function closeTaxaModal() {
+            const modal = document.getElementById('taxaModal');
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
         }
 
         function showMsg(texto, tipo) {
@@ -292,6 +316,7 @@
                 const data = await res.json();
                 if (data?.sucesso) {
                     showMsg('Taxas de entrega salvas com sucesso!', 'sucesso');
+                    closeTaxaModal();
                     await carregarTaxaState();
                     renderTabela();
                     preencherFormDaFaixa(faixaSelecionada);
@@ -309,18 +334,24 @@
         function editarFaixa(i) {
             preencherFormDaFaixa(i);
             document.getElementById('btnSalvarTaxa').textContent = 'Atualizar';
-            document.getElementById('btnCancelarTaxa').style.display = 'block';
-            document.getElementById('taxaFormPanel')?.scrollIntoView({ behavior: 'smooth' });
-            document.getElementById('faixa_d')?.focus();
+            openTaxaModal();
         }
 
         function cancelarEdicaoTaxa() {
             document.getElementById('btnSalvarTaxa').textContent = 'Salvar';
-            document.getElementById('btnCancelarTaxa').style.display = 'none';
             preencherFormDaFaixa(faixaSelecionada);
+            closeTaxaModal();
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            document.querySelectorAll('[data-close-taxa-modal]').forEach(el => {
+                el.addEventListener('click', cancelarEdicaoTaxa);
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('taxaModal')?.classList.contains('open')) {
+                    cancelarEdicaoTaxa();
+                }
+            });
             document.getElementById('faixa_num').addEventListener('change', (e) => {
                 preencherFormDaFaixa(e.target.value);
             });

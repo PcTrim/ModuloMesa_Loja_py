@@ -55,7 +55,7 @@ if "%VERMODE%"=="ASK" (
   if /i "!BUMP!"=="S" set "VERMODE=YES"
 )
 if "%VERMODE%"=="YES" (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "$p='version.py'; $c=Get-Content -Raw $p; if($c -match 'APP_VERSION = .(\d+)-(\d+).'){ $maj=$matches[1]; $min=[int]$matches[2]+1; $q=[char]34; $new='APP_VERSION = '+$q+$maj+'-'+$min+$q; $c=[regex]::Replace($c,'APP_VERSION = .\d+-\d+.',$new); Set-Content -NoNewline -Path $p -Value $c; Write-Host ('   Nova versao: '+$maj+'-'+$min) } else { Write-Host '   Padrao de versao nao reconhecido - nada alterado' }"
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0deploy\bump_version.ps1"
 ) else (
   echo   Versao nao alterada.
 )
