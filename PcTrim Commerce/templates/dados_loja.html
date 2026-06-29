@@ -101,6 +101,17 @@
         </section>
 
         <section class="cfg-section-card">
+            <h2 class="cfg-section-title">Operação — varejo (balcão)</h2>
+            <div class="cfg-field">
+                <label class="cfg-label" for="cliente_obrigatorio_balcao">
+                    <input type="checkbox" id="cliente_obrigatorio_balcao" name="cliente_obrigatorio_balcao" style="margin-right:8px;">
+                    Cliente obrigatório no balcão
+                </label>
+                <p class="cfg-help">Quando ativo, o PDV de varejo exige localizar ou cadastrar o cliente antes de finalizar a venda.</p>
+            </div>
+        </section>
+
+        <section class="cfg-section-card">
             <h2 class="cfg-section-title">Coordenadas</h2>
             <p class="cfg-help" style="margin-top:0;margin-bottom:12px;">Se não encontrar automaticamente, a tela libera edição manual.</p>
             <button type="button" class="cfg-btn cfg-btn-primary" id="btnGeocode" onclick="buscarCoordenadas(event)" style="margin-bottom:16px;width:100%;max-width:280px;">Buscar coordenadas</button>
@@ -290,6 +301,10 @@
                     document.getElementById('latitude').value = dados.latitude || '';
                     document.getElementById('longitude').value = dados.longitude || '';
                     document.getElementById('ddd').value = dados.ddd || '';
+                    const chkObrig = document.getElementById('cliente_obrigatorio_balcao');
+                    if (chkObrig) {
+                        chkObrig.checked = !!(dados.cliente_obrigatorio_balcao == 1 || dados.cliente_obrigatorio_balcao === true);
+                    }
                 }
             } catch (erro) {
                 console.error('Erro ao carregar dados:', erro);
@@ -340,7 +355,8 @@
                 cnpj: document.getElementById('cnpj').value,
                 latitude: document.getElementById('latitude').value,
                 longitude: document.getElementById('longitude').value,
-                ddd: document.getElementById('ddd').value
+                ddd: document.getElementById('ddd').value,
+                cliente_obrigatorio_balcao: document.getElementById('cliente_obrigatorio_balcao').checked
             };
 
             try {

@@ -252,7 +252,7 @@
 </div>
 
 <div class="modal" id="modal-print"><div class="modal-card"><h3>Imprimir</h3><p class="muted">Confirme antes de enviar à impressora</p><div class="modal-actions"><button type="button" class="btn-modal" id="btn-enviar-print">Imprimir</button><button type="button" class="btn-modal" data-close-modal>Fechar</button></div></div></div>
-<div class="modal" id="modal-receber"><div class="modal-card"><h3>Receber pedido</h3><div class="muted" id="receber-resumo" style="margin:6px 0 10px;"></div><div id="receber-prim" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div><button type="button" class="btn-icon-mini" id="btn-receber-mais">Outras formas</button><div id="receber-mais-wrap" hidden style="margin-top:10px;"><div id="receber-mais" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div></div><div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px;"><button type="button" class="btn-outline" id="btn-receber-limpar">Limpar</button><button type="button" class="btn-purple" id="btn-receber-confirmar" disabled>Marcar RECEBIDO</button><button type="button" class="btn-outline" data-close-modal>Fechar</button></div></div></div>
+<div class="modal" id="modal-receber"><div class="modal-card"><h3>Receber pedido</h3><div class="muted" id="receber-resumo" style="margin:6px 0 10px;"></div><div id="receber-prim" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div><button type="button" class="btn-icon-mini" id="btn-receber-mais">Outras formas</button><div id="receber-mais-wrap" hidden style="margin-top:10px;"><div id="receber-mais" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div></div><div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px;"><button type="button" class="btn-outline" id="btn-receber-limpar">Limpar</button><button type="button" class="btn-purple" id="btn-receber-confirmar" disabled>Marcar RECEBIDO <kbd>End</kbd></button><button type="button" class="btn-outline" data-close-modal>Fechar</button></div></div></div>
 <div class="modal" id="modal-conferencia-mesa"><div class="modal-card mesa-conf-card"><header class="mesa-conf-head"><h2 class="mesa-conf-title" id="mesa-conf-titulo">Mesa</h2><p class="mesa-conf-sub" id="mesa-conf-subtitulo">Conferência da conta em leitura ampliada.</p></header><div class="mesa-conf-resumo" id="mesa-conf-resumo"></div><div class="mesa-conf-body" id="mesa-conf-body"></div><div class="mesa-conf-actions"><button type="button" class="btn-modal" data-close-modal>Fechar</button></div></div></div>
 
 <div class="modal" id="modal-opcoes-item"><div class="modal-card"><h3>Montagem do item</h3><p class="muted" id="opcoes-sub">Selecione as opções e confirme</p><div id="opcoes-body" class="opt-grid"></div><div class="opt-footer"><div class="opt-total" id="opcoes-total">+ R$ 0,00</div><div style="display:flex;gap:10px;align-items:center;"><button class="btn-modal" id="btn-opcoes-confirmar">Confirmar</button><button class="btn-modal" id="btn-opcoes-cancelar" data-close-modal>Cancelar</button></div></div></div></div>
@@ -261,7 +261,10 @@
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
 <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=9"></script>
+{% include 'partials/print_context.html' %}
 <script src="{{ url_for('static', filename='print-format.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='print-header.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='receber-hotkeys.js') }}?v=1"></script>
 {% include 'partials/retail_mode.html' %}
 <span id="pdv-boot" hidden data-json='{{ {"nromesa": (config.nromesa if config and config.nromesa else 100) | int, "mesasComRegistro": (mesas_com_registro | list)} | tojson | safe }}'></span>
 <script>
@@ -270,6 +273,23 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
   const IS_RETAIL = window.IS_RETAIL;
   const el=(id)=>document.getElementById(id);
   const money=(n)=>"R$ "+Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2});
+  function getPrintMetaSyncMesa(){
+    const H=window.lojaPrintHeader;
+    const nro=Number(state.mesa)||0;
+    if(H && H.getCachedPrintMeta(nro, "MESA")) return H.getCachedPrintMeta(nro, "MESA");
+    return {
+      data_criacao: new Date().toISOString(),
+      atendente: String((window.LOJA_PRINT_CTX||{}).usuario||"").trim()||"-"
+    };
+  }
+  async function ensurePrintMetaMesa(){
+    const H=window.lojaPrintHeader;
+    if(!H) return getPrintMetaSyncMesa();
+    await H.ensureLojaDados();
+    const meta=await H.refreshPrintMeta(Number(state.mesa)||0, "MESA");
+    H.setPrintMeta(Number(state.mesa)||0, "MESA", meta);
+    return meta;
+  }
   const numOrZero=(v)=>{ const n=Number(v); return Number.isFinite(n)?n:0; };
   const state={ mesa:null, mesaStatus:"ATIVA", pessoasMesa:1, classificacao:null, produtos:[], servicoPct:0, classMeta:{}, fracionadoDraftInline:null, opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, preparoPendentesCount:0 };
   let impressoraMesaFeed=6;
@@ -895,6 +915,7 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     const serv=state.servicoPct>0?subtotal*(state.servicoPct/100):0; el("subtotal").textContent=money(subtotal); el("servico").textContent=money(serv); el("total").textContent=money(subtotal+serv);
     _updatePorPessoa();
     updateDistribuirPreparoUiMesa();
+    if((Number(state.mesa)||0)>0){ try{ await ensurePrintMetaMesa(); }catch(_e){} }
   }
 
   async function _carregarImpressorasCadastro(){
@@ -944,7 +965,12 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     out.push(ESC+"a"+String.fromCharCode(1));
     out.push((ESC+"!"+String.fromCharCode(0x30))+String(titulo||"")+(ESC+"!"+String.fromCharCode(0x00)));
     out.push(ESC+"a"+String.fromCharCode(0));
-    out.push(hr("-"));
+    const H=window.lojaPrintHeader;
+    if(H && H.buildPrintHeaderPreparo){
+      H.buildPrintHeaderPreparo({ meta: getPrintMetaSyncMesa() }).forEach((ln)=>{ out.push(ln); });
+    }else{
+      out.push(hr("-"));
+    }
     (itens||[]).forEach((it)=>{
       const qtd=Math.max(1,Math.floor(Number(it.qtd)||1));
       const nome=String(it.nome||"-").trim();
@@ -983,6 +1009,7 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     if(!state.mesa){ alert("Selecione uma mesa."); return; }
     if(btn){ btn.disabled=true; btn.textContent="Distribuindo..."; }
     try{
+      await ensurePrintMetaMesa();
       const pendIds=_preparoPendentesIdsMesa();
       if(!pendIds.length){ alert("Nenhum item pendente de distribuição."); updateDistribuirPreparoUiMesa(); return; }
       let rows=[];
@@ -1257,9 +1284,17 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     const block=(t)=> (F&&F.blockTitle)?F.blockTitle(t,W):[hr("-"),String(t||""),hr("-")];
 
     out.push(ESC+"a"+String.fromCharCode(1));
-    out.push((ESC+"!"+String.fromCharCode(0x30))+`MESA ${state.mesa||"-"}`+(ESC+"!"+String.fromCharCode(0x00)));
-    out.push(ESC+"a"+String.fromCharCode(0));
-    out.push(hr("-"));
+    const H=window.lojaPrintHeader;
+    if(H && H.buildPrintHeaderFull){
+      H.buildPrintHeaderFull({
+        tituloPedido: `MESA ${state.mesa||"-"}`,
+        meta: getPrintMetaSyncMesa()
+      }).forEach((ln)=>{ out.push(ln); });
+    }else{
+      out.push((ESC+"!"+String.fromCharCode(0x30))+`MESA ${state.mesa||"-"}`+(ESC+"!"+String.fromCharCode(0x00)));
+      out.push(ESC+"a"+String.fromCharCode(0));
+      out.push(hr("-"));
+    }
     block("ITENS").forEach((ln)=>{ if(String(ln||"").trim()) out.push(ln); });
     el("itens-list").querySelectorAll(".item").forEach((row)=>{
       const nm=row.querySelector(".item-name");
@@ -1338,6 +1373,7 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
   }
   async function imprimir(){
     if(!state.mesa){ alert("Selecione uma mesa."); return; }
+    await ensurePrintMetaMesa();
     const conteudo=textoImpressao();
     let ok=false;
     const imp=await (window.lojaImprimir?window.lojaImprimir({conteudo:conteudo,copias:1,origem:"mesa"}):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({conteudo:conteudo,copias:1,origem:"mesa"})}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j}))));
@@ -1567,6 +1603,8 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
       ip.inputMode="decimal";
       ip.autocomplete="off";
       ip.placeholder="0,00";
+      ip.setAttribute("data-receber-valor","1");
+      ip.setAttribute("data-forma-key",f.key);
       ip.value = receberState.valores[f.key] || "";
       ip.addEventListener("input",()=>{
         receberState.valores[f.key]=ip.value;
@@ -1742,7 +1780,27 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     ipPessoas.addEventListener("change",_updatePorPessoa);
     ipPessoas.addEventListener("keydown",(ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); salvarPessoasMesa(); } });
   }
+  function syncMesaReceberValsFromDom(){
+    ["receber-prim","receber-mais"].forEach((id)=>{
+      el(id)?.querySelectorAll("[data-receber-valor]").forEach((ip)=>{
+        const k=ip.getAttribute("data-forma-key");
+        if(k) receberState.valores[k]=ip.value||"";
+      });
+    });
+    _updateReceberResumo();
+  }
+  if(window.lojaReceberHotkeys){
+    window.lojaReceberHotkeys.register({
+      id:"mesa-receber",
+      isActive:()=>!!el("modal-receber")?.classList.contains("open"),
+      isValueInput:(t)=>!!t?.closest?.("#receber-prim, #receber-mais") && t.matches("input[data-receber-valor]"),
+      canConfirm:()=>{ const b=el("btn-receber-confirmar"); return !!(b && !b.disabled); },
+      syncBeforeConfirm:syncMesaReceberValsFromDom,
+      onConfirm:()=>{ el("btn-receber-confirmar")?.click(); },
+    });
+  }
   document.addEventListener("DOMContentLoaded",async()=>{
+    if(window.lojaPrintHeader) window.lojaPrintHeader.ensureLojaDados();
     window.applyRetailUi();
     if(IS_RETAIL){ window.retailGoCasa(); return; }
     await refreshTaxaServico();

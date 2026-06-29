@@ -4,6 +4,7 @@ from functools import wraps
 from flask import jsonify, redirect, request, session, url_for
 
 from config import Config
+from models import normalize_funcao
 from services.business_mode import is_retail
 
 
@@ -48,6 +49,20 @@ def restaurant_only(f):
             if request.path.startswith("/api/") or request.is_json:
                 return jsonify({"sucesso": False, "erro": "Recurso indisponível no modo varejo."}), 403
             return redirect(url_for("casa") + "?modo=balcao")
+        return f(*args, **kwargs)
+
+    return wrapped
+
+
+def gerente_required(f):
+    """Restringe rotas a usuários com funcao gerente na sessão."""
+
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        if normalize_funcao(session.get("funcao")) != "gerente":
+            if request.path.startswith("/api/") or request.is_json:
+                return jsonify({"sucesso": False, "erro": "Acesso restrito a gerentes."}), 403
+            return redirect(url_for("configuracoes"))
         return f(*args, **kwargs)
 
     return wrapped

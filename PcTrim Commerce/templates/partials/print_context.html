@@ -1,0 +1,6 @@
+<script>
+  window.LOJA_PRINT_CTX = {
+    usuario: {{ session.get('usuario_logado')|tojson }},
+    id_cliente: {{ (id_cliente if id_cliente is defined else session.get('id_cliente'))|tojson }}
+  };
+</script>

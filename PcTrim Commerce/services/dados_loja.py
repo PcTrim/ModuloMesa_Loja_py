@@ -19,6 +19,7 @@ def obter_dados_loja(id_cliente=None):
         "ddd": "89",
         "cnpj": "",
         "tipo_negocio": "restaurante",
+        "cliente_obrigatorio_balcao": False,
     }
     conn = None
     cursor = None

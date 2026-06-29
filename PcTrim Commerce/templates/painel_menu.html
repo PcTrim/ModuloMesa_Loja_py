@@ -855,6 +855,7 @@
   </div>
   <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
   <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=9"></script>
+  <script src="{{ url_for('static', filename='receber-hotkeys.js') }}?v=1"></script>
   {% include 'partials/retail_mode.html' %}
   <script>
     lucide.createIcons();
@@ -2577,7 +2578,7 @@
             '<div class="baixa-actions">' +
               '<button type="button" class="ui-mini-btn ui-focus" id="baixa-trocar">Trocar pedido</button>' +
               '<button type="button" class="ui-mini-btn ui-focus" id="baixa-limpar">Limpar</button>' +
-              '<button type="button" class="ui-mini-btn ui-focus" id="baixa-confirmar">Marcar RECEBIDO</button>' +
+              '<button type="button" class="ui-mini-btn ui-focus" id="baixa-confirmar">Marcar RECEBIDO <kbd>End</kbd></button>' +
             "</div>";
 
           var wrap = el("baixa-pay-wrap");
@@ -2634,6 +2635,7 @@
             ip.setAttribute("inputmode", "decimal");
             ip.setAttribute("placeholder", "0,00");
             ip.setAttribute("data-baixa-valor", nm);
+            ip.setAttribute("data-receber-valor", "1");
             ip.value = st.valores[nm] != null ? String(st.valores[nm]) : "";
             ip.addEventListener("input", function () {
               var totalNow = Number(st.sel && st.sel.total) || 0;
@@ -2779,6 +2781,7 @@
           var btn = el("baixa-confirmar");
           if (btn) btn.disabled = !ok;
         }
+        st.updateResumo = updateResumo;
 
         var t = el("baixa-pedido-title");
         var o = el("baixa-pedido-origem");
@@ -2965,6 +2968,36 @@
       if (rEl) rEl.addEventListener("click", function () {
         Promise.all([loadPedidos()]).finally(function () { renderList(); });
       });
+
+      function syncBaixaPainelValsFromDom() {
+        document.querySelectorAll("#baixa-pay-wrap [data-baixa-valor]").forEach(function (ip) {
+          var nm = ip.getAttribute("data-baixa-valor");
+          if (nm) st.valores[nm] = ip.value || "";
+        });
+        if (typeof st.updateResumo === "function") st.updateResumo();
+      }
+
+      if (window.lojaReceberHotkeys) {
+        window.lojaReceberHotkeys.register({
+          id: "dashboard-baixa-pedido",
+          isActive: function () {
+            var m = el("baixa-modal");
+            return !!(m && !m.hidden && st.sel);
+          },
+          isValueInput: function (t) {
+            return !!(t && t.matches && t.matches("input[data-receber-valor]"));
+          },
+          canConfirm: function () {
+            var b = el("baixa-confirmar");
+            return !!(b && !b.disabled);
+          },
+          syncBeforeConfirm: syncBaixaPainelValsFromDom,
+          onConfirm: function () {
+            var b = el("baixa-confirmar");
+            if (b) b.click();
+          },
+        });
+      }
     })();
   </script>
 {% include 'partials/modal_despacho_delivery.html' %}

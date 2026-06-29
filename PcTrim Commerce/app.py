@@ -27,11 +27,13 @@ from version import get_app_version
 from database import conectar
 from auth_routes import auth_bp
 from blueprints import register_domain_blueprints
-from decorators import login_required, restaurant_only
+from decorators import login_required, restaurant_only, gerente_required
 from services.business_mode import is_retail
 from services.dados_loja import obter_dados_loja
+from services.impressao_layout import get_impressao_meta
 from services import uazapi as uazapi_service
 from services import terminal_impressao as terminal_impressao_service
+from services.usuarios_loja import UsuariosLojaError, create_usuario, list_usuarios, update_usuario
 from services.fechamento_periodo import (
     ensure_pedido_periodos_table,
     ensure_purge_event,
@@ -711,6 +713,55 @@ def _assert_casa_editavel(cur, id_cliente, nropedido, origem=None):
     return None
 
 
+def _ensure_contadorpedido_row(id_cliente):
+    """Garante linha do contador (commit imediato, fora da transação do pedido)."""
+    conn = None
+    cur = None
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT IGNORE INTO contadorpedido (contador, id_cliente) VALUES (0, %s)",
+            (id_cliente,),
+        )
+        conn.commit()
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def _alocar_proximo_nropedido(cur, id_cliente):
+    """Incremento atômico via LAST_INSERT_ID; executar dentro da transação do pedido."""
+    for attempt in range(4):
+        try:
+            cur.execute(
+                "UPDATE contadorpedido SET contador = LAST_INSERT_ID(contador + 1) WHERE id_cliente = %s",
+                (id_cliente,),
+            )
+            cur.execute("SELECT LAST_INSERT_ID() AS n")
+            row = cur.fetchone() or {}
+            n = int(row.get("n") or 0)
+            if n <= 0:
+                raise RuntimeError("Falha ao alocar nropedido")
+            return n
+        except mysql.connector.Error as e:
+            if getattr(e, "errno", None) == 1213 and attempt < 3:
+                time.sleep(0.02 * (2 ** attempt))
+                continue
+            raise
+
+
+def _preview_proximo_nropedido(cur, id_cliente):
+    """Próximo número estimado (preview), sem incrementar o contador."""
+    cur.execute("SELECT contador FROM contadorpedido WHERE id_cliente = %s", (id_cliente,))
+    resultado = cur.fetchone()
+    if resultado:
+        return int(resultado["contador"]) + 1
+    return 1
+
+
 def _ensure_status_comanda_column():
     conn = None
     cur = None
@@ -1125,9 +1176,63 @@ def _ensure_tipo_negocio_column():
             conn.close()
 
 
+def _ensure_cliente_obrigatorio_balcao_column():
+    conn = None
+    cur = None
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute("SHOW COLUMNS FROM dadosloja LIKE 'cliente_obrigatorio_balcao'")
+        if cur.fetchone() is None:
+            cur.execute(
+                "ALTER TABLE dadosloja ADD COLUMN cliente_obrigatorio_balcao TINYINT(1) NOT NULL DEFAULT 0"
+            )
+        conn.commit()
+    except Exception as e:
+        try:
+            if conn:
+                conn.rollback()
+        except Exception:
+            pass
+        print("[DADOSLOJA CLIENTE_OBRIGATORIO_BALCAO COLUNA ERRO]", e, flush=True)
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def _ensure_clientes_cpf_cnpj_column():
+    conn = None
+    cur = None
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute("SHOW COLUMNS FROM clientes LIKE 'cpf_cnpj'")
+        if cur.fetchone() is None:
+            cur.execute(
+                "ALTER TABLE clientes ADD COLUMN cpf_cnpj VARCHAR(20) DEFAULT NULL"
+            )
+        conn.commit()
+    except Exception as e:
+        try:
+            if conn:
+                conn.rollback()
+        except Exception:
+            pass
+        print("[CLIENTES CPF_CNPJ COLUNA ERRO]", e, flush=True)
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
 def bootstrap_schema():
     try:
         _ensure_tipo_negocio_column()
+        _ensure_cliente_obrigatorio_balcao_column()
+        _ensure_clientes_cpf_cnpj_column()
         _ensure_obs_columns()
         _ensure_produtos_barcode_column()
         _ensure_status_comanda_column()
@@ -1432,9 +1537,8 @@ def api_casa_pedidos_aguarde():
 
 @app.route("/api/casa/buscar-cep", methods=["GET"])
 @login_required
-@restaurant_only
 def api_casa_buscar_cep():
-    """Consulta ViaCEP e retorna campos de endereço para preenchimento automático no /casa."""
+    """Consulta ViaCEP e retorna campos de endereço (delivery e balcão varejo)."""
     cep_raw = request.args.get("cep", "").strip()
     cep_digits = "".join(ch for ch in cep_raw if ch.isdigit())
     if len(cep_digits) != 8:
@@ -1480,6 +1584,7 @@ def api_casa_add_item():
         id_cliente = session.get("id_cliente")
         if not id_cliente:
             return jsonify({"sucesso": False, "erro": "Sessão inválida: id_cliente não encontrado. Faça login novamente."}), 401
+        _ensure_contadorpedido_row(id_cliente)
         conn = conectar()
         try:
             conn.start_transaction()
@@ -1516,18 +1621,48 @@ def api_casa_add_item():
                 nropedido_int = 0
         if origem == "MESA" and not nropedido_int:
             return jsonify({"sucesso": False, "erro": "nropedido é obrigatório"}), 400
+        if origem == "DELIVERY":
+            telefone_digits = "".join(ch for ch in str(telefone or "") if ch.isdigit())
+            if not telefone_digits:
+                return jsonify({"sucesso": False, "erro": "Telefone inválido para Delivery."}), 400
+            pedido_aguarde = _buscar_nropedido_aguarde_por_telefone(cur, id_cliente, telefone_digits)
+            if not pedido_aguarde:
+                pedido_aguarde = _buscar_nropedido_aguarde_por_telefone(cur, id_cliente, telefone)
+            if pedido_aguarde:
+                nropedido_int = int(pedido_aguarde)
+        if origem == "BALCAO" and not nropedido_int and is_retail():
+            dados_loja_cfg = obter_dados_loja(id_cliente) or {}
+            if dados_loja_cfg.get("cliente_obrigatorio_balcao"):
+                tel_check = _normalizar_telefone_balcao(telefone, 0, id_cliente)
+                nome_cli = (data.get("nome") or data.get("cliente") or "").strip()
+                if not _telefone_whatsapp_valido(tel_check):
+                    return jsonify({
+                        "sucesso": False,
+                        "erro": "Cliente obrigatório no balcão: informe e localize ou cadastre o cliente.",
+                    }), 400
+                if not nome_cli:
+                    return jsonify({
+                        "sucesso": False,
+                        "erro": "Cliente obrigatório no balcão: informe o nome do cliente.",
+                    }), 400
+        if origem in ("BALCAO", "DELIVERY") and not nropedido_int:
+            nropedido_int = _alocar_proximo_nropedido(cur, id_cliente)
         if origem == "BALCAO":
-            if not nropedido_int:
-                cur.execute("SELECT contador FROM contadorpedido WHERE id_cliente = %s FOR UPDATE", (id_cliente,))
-                resultado_cnt = cur.fetchone()
-                if resultado_cnt:
-                    novo_numero = int(resultado_cnt["contador"]) + 1
-                    cur.execute("UPDATE contadorpedido SET contador = %s WHERE id_cliente = %s", (novo_numero, id_cliente))
-                    nropedido_int = novo_numero
-                else:
-                    cur.execute("INSERT INTO contadorpedido (contador, id_cliente) VALUES (1, %s)", (id_cliente,))
-                    nropedido_int = 1
             telefone = _normalizar_telefone_balcao(telefone, nropedido_int, id_cliente)
+            if is_retail():
+                dados_loja_cfg = obter_dados_loja(id_cliente) or {}
+                if dados_loja_cfg.get("cliente_obrigatorio_balcao"):
+                    nome_cli = (data.get("nome") or data.get("cliente") or "").strip()
+                    if not _telefone_whatsapp_valido(telefone):
+                        return jsonify({
+                            "sucesso": False,
+                            "erro": "Cliente obrigatório no balcão: informe e localize ou cadastre o cliente.",
+                        }), 400
+                    if not nome_cli:
+                        return jsonify({
+                            "sucesso": False,
+                            "erro": "Cliente obrigatório no balcão: informe o nome do cliente.",
+                        }), 400
             if _telefone_whatsapp_valido(telefone):
                 _propagar_telefone_balcao_pedido(
                     cur,
@@ -1538,24 +1673,6 @@ def api_casa_add_item():
                     cliente=(data.get("cliente") or data.get("nome") or "").strip(),
                 )
         if origem == "DELIVERY":
-            telefone_digits = "".join(ch for ch in str(telefone or "") if ch.isdigit())
-            if not telefone_digits:
-                return jsonify({"sucesso": False, "erro": "Telefone inválido para Delivery."}), 400
-            pedido_aguarde = _buscar_nropedido_aguarde_por_telefone(cur, id_cliente, telefone_digits)
-            if not pedido_aguarde:
-                pedido_aguarde = _buscar_nropedido_aguarde_por_telefone(cur, id_cliente, telefone)
-            if pedido_aguarde:
-                nropedido_int = int(pedido_aguarde)
-            elif not nropedido_int:
-                cur.execute("SELECT contador FROM contadorpedido WHERE id_cliente = %s FOR UPDATE", (id_cliente,))
-                resultado_cnt = cur.fetchone()
-                if resultado_cnt:
-                    novo_numero = int(resultado_cnt["contador"]) + 1
-                    cur.execute("UPDATE contadorpedido SET contador = %s WHERE id_cliente = %s", (novo_numero, id_cliente))
-                    nropedido_int = novo_numero
-                else:
-                    cur.execute("INSERT INTO contadorpedido (contador, id_cliente) VALUES (1, %s)", (id_cliente,))
-                    nropedido_int = 1
             status_clause = (
                 " AND origem = 'DELIVERY' "
                 " AND UPPER(COALESCE(status_pedido, '')) = 'AGUARDE' "
@@ -4980,7 +5097,11 @@ def casa():
     id_cliente = session.get("id_cliente")
     dados_loja = obter_dados_loja(id_cliente) or {}
     nome_fantasia = dados_loja.get("nome", "Minha Loja")
-    return render_template("index.html", nome_fantasia=nome_fantasia)
+    return render_template(
+        "index.html",
+        id_cliente=id_cliente,
+        nome_fantasia=nome_fantasia,
+    )
 
 @app.route("/delivery-pendente-view")
 @login_required
@@ -5103,6 +5224,115 @@ def listar_entregadores():
             cursor.close()
         if conn:
             conn.close()
+
+
+@app.route("/cadastrar-usuario")
+@login_required
+@gerente_required
+def cadastrar_usuario():
+    """Página de cadastro de usuários da loja (tabela usuarios)."""
+    id_cliente = session.get("id_cliente")
+    dados_loja = obter_dados_loja(id_cliente)
+    nome_fantasia = dados_loja.get("nome", "Minha Loja")
+    return render_template(
+        "cadastrar_usuario.html",
+        id_cliente=id_cliente,
+        nome_fantasia=nome_fantasia,
+        usuario_logado=session.get("usuario_logado"),
+    )
+
+
+@app.route("/api/usuarios-loja", methods=["GET"])
+@login_required
+@gerente_required
+def api_usuarios_loja_list():
+    id_cliente = session.get("id_cliente")
+    if not id_cliente:
+        return jsonify({"sucesso": False, "erro": "Sessão inválida."}), 401
+    try:
+        usuarios = list_usuarios(int(id_cliente))
+        return jsonify({"sucesso": True, "usuarios": usuarios})
+    except UsuariosLojaError as e:
+        return jsonify({"sucesso": False, "erro": e.message}), e.status
+    except Exception as e:
+        print("[USUARIOS_LOJA LIST]", e, flush=True)
+        traceback.print_exc()
+        return jsonify({"sucesso": False, "erro": "Erro ao listar usuários."}), 500
+
+
+@app.route("/api/usuarios-loja", methods=["POST"])
+@login_required
+@gerente_required
+def api_usuarios_loja_create():
+    id_cliente = session.get("id_cliente")
+    if not id_cliente:
+        return jsonify({"sucesso": False, "erro": "Sessão inválida."}), 401
+    data = request.get_json(silent=True) or {}
+    senha = data.get("senha") or ""
+    senha2 = data.get("senha_confirmacao") or data.get("senha2") or ""
+    if senha != senha2:
+        return jsonify({"sucesso": False, "erro": "Senha e confirmação não conferem."}), 400
+    try:
+        created = create_usuario(
+            int(id_cliente),
+            data.get("usuario"),
+            senha,
+            data.get("funcao") or "atendente",
+        )
+        return jsonify(
+            {
+                "sucesso": True,
+                "mensagem": f"Usuário '{created['usuario']}' cadastrado com sucesso.",
+                "usuario": created,
+            }
+        )
+    except UsuariosLojaError as e:
+        return jsonify({"sucesso": False, "erro": e.message}), e.status
+    except Exception as e:
+        print("[USUARIOS_LOJA CREATE]", e, flush=True)
+        traceback.print_exc()
+        return jsonify({"sucesso": False, "erro": "Erro ao cadastrar usuário."}), 500
+
+
+@app.route("/api/usuarios-loja/<int:chave>", methods=["PATCH"])
+@login_required
+@gerente_required
+def api_usuarios_loja_update(chave):
+    id_cliente = session.get("id_cliente")
+    if not id_cliente:
+        return jsonify({"sucesso": False, "erro": "Sessão inválida."}), 401
+    data = request.get_json(silent=True) or {}
+    senha = data.get("senha")
+    senha2 = data.get("senha_confirmacao") or data.get("senha2")
+    if senha or senha2:
+        if senha != senha2:
+            return jsonify({"sucesso": False, "erro": "Senha e confirmação não conferem."}), 400
+    ativo_raw = data.get("ativo")
+    ativo = None
+    if ativo_raw is not None:
+        ativo = 1 if str(ativo_raw).strip().lower() in ("1", "true", "s", "sim", "yes") else 0
+    try:
+        updated = update_usuario(
+            int(id_cliente),
+            chave,
+            funcao=data.get("funcao"),
+            ativo=ativo,
+            senha=senha if senha else None,
+            usuario_logado=session.get("usuario_logado"),
+        )
+        return jsonify(
+            {
+                "sucesso": True,
+                "mensagem": "Usuário atualizado com sucesso.",
+                "usuario": updated,
+            }
+        )
+    except UsuariosLojaError as e:
+        return jsonify({"sucesso": False, "erro": e.message}), e.status
+    except Exception as e:
+        print("[USUARIOS_LOJA UPDATE]", e, flush=True)
+        traceback.print_exc()
+        return jsonify({"sucesso": False, "erro": "Erro ao atualizar usuário."}), 500
 
 
 @app.route("/api/delivery-pedidos-despacho", methods=["GET"])
@@ -5678,6 +5908,7 @@ def salvar_dados_loja():
         latitude = dados.get("latitude", "")
         longitude = dados.get("longitude", "")
         ddd = dados.get("ddd", "")
+        cliente_obrigatorio_balcao = 1 if dados.get("cliente_obrigatorio_balcao") else 0
 
         id_cliente = session.get('id_cliente')
         if not id_cliente:
@@ -5694,15 +5925,15 @@ def salvar_dados_loja():
             # Atualiza
             cursor.execute("""
                 UPDATE dadosloja 
-                SET nome = %s, endereco = %s, bairro = %s, cidade = %s, cep = %s, telefone = %s, cnpj = %s, latitude = %s, longitude = %s, ddd = %s
+                SET nome = %s, endereco = %s, bairro = %s, cidade = %s, cep = %s, telefone = %s, cnpj = %s, latitude = %s, longitude = %s, ddd = %s, cliente_obrigatorio_balcao = %s
                 WHERE id_cliente = %s
-            """, (nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, id_cliente))
+            """, (nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao, id_cliente))
         else:
             # Insere
             cursor.execute("""
-                INSERT INTO dadosloja (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd))
+                INSERT INTO dadosloja (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao))
 
             # Cria registro na tabela contadorpedido para este id_cliente, se não existir
             cursor.execute("SELECT id_cliente FROM contadorpedido WHERE id_cliente = %s", (id_cliente,))
@@ -5775,6 +6006,32 @@ def dados_loja_info():
         return jsonify({"sucesso": True, "dados": dados})
     except Exception as e:
         print(f"[ERRO] {e}")
+        return jsonify({"sucesso": False, "erro": str(e)}), 500
+
+
+@app.route("/api/impressao-meta", methods=["GET"])
+@login_required
+def api_impressao_meta():
+    """Metadados do pedido para cabeçalho de impressão (atendente + data/hora)."""
+    try:
+        id_cliente = session.get("id_cliente")
+        if not id_cliente:
+            return jsonify({"sucesso": False, "erro": "Sessão inválida."}), 401
+        try:
+            nropedido = int(request.args.get("nropedido") or 0)
+        except (TypeError, ValueError):
+            nropedido = 0
+        origem = request.args.get("origem")
+        meta = get_impressao_meta(
+            int(id_cliente),
+            nropedido,
+            origem,
+            session.get("usuario_logado"),
+        )
+        return jsonify({"sucesso": True, **meta})
+    except Exception as e:
+        print(f"[IMPRESSAO META ERRO] {e}", flush=True)
+        traceback.print_exc()
         return jsonify({"sucesso": False, "erro": str(e)}), 500
 
 @app.route("/api/salvar-taxa", methods=["POST"])
@@ -7339,6 +7596,7 @@ def proximo_pedido():
     conn = None
     cursor = None
     try:
+        print("[WARN] /proximo-pedido — não reserva número; alocação em POST /api/casa/item", flush=True)
         conn = conectar()
         cursor = conn.cursor(dictionary=True)
         
@@ -7346,21 +7604,7 @@ def proximo_pedido():
         if not id_cliente:
             return jsonify({"erro": "id_cliente não encontrado na sessão"}), 400
 
-        # Verifica se existe registro para este id_cliente
-        cursor.execute("SELECT contador FROM contadorpedido WHERE id_cliente = %s", (id_cliente,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            # Incrementa o contador existente
-            novo_numero = resultado["contador"] + 1
-            cursor.execute("UPDATE contadorpedido SET contador = %s WHERE id_cliente = %s", (novo_numero, id_cliente))
-            numero = novo_numero
-        else:
-            # Cria o registro inicial para este id_cliente
-            cursor.execute("INSERT INTO contadorpedido (contador, id_cliente) VALUES (1, %s)", (id_cliente,))
-            numero = 1
-
-        conn.commit()
+        numero = _preview_proximo_nropedido(cursor, id_cliente)
         return jsonify({"numero": numero})
     
     except mysql.connector.Error as db_err:
@@ -7404,17 +7648,7 @@ def numero_pedido_atual():
         if not id_cliente:
             return jsonify({"erro": "id_cliente não encontrado na sessão"}), 400
 
-        # Verifica se existe registro para este id_cliente
-        cursor.execute("SELECT contador FROM contadorpedido WHERE id_cliente = %s", (id_cliente,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            # Retorna o próximo número (atual + 1) mas SEM incrementar no banco
-            numero = resultado["contador"] + 1
-        else:
-            # Se não existe, o próximo será 1
-            numero = 1
-
+        numero = _preview_proximo_nropedido(cursor, id_cliente)
         return jsonify({"numero": numero})
     
     except mysql.connector.Error as db_err:
@@ -7811,8 +8045,17 @@ def salvar_cliente():
         conn = conectar()
         cursor = conn.cursor(dictionary=True)
         
-        # Verifica configuração para saber se deve calcular distância/taxa
         id_cliente = session.get('id_cliente')
+        origem_cadastro = str(dados.get("origem_cadastro") or "").strip().lower()
+        cadastro_balcao = origem_cadastro == "balcao"
+
+        cursor.execute(
+            "SELECT chave, taxaentrega, distancia FROM clientes WHERE telefone = %s AND id_cliente = %s",
+            (telefone, id_cliente),
+        )
+        cliente_existente = cursor.fetchone()
+
+        # Verifica configuração para saber se deve calcular distância/taxa
         cursor.execute("SELECT calculodistancia FROM configuracao WHERE chave = 1 AND id_cliente = %s", (id_cliente,))
         config = cursor.fetchone()
         calculo_habilitado = True
@@ -7821,8 +8064,17 @@ def salvar_cliente():
             calculo_habilitado = (calculo_dist == 'sim')
             print(f"[SALVAR CLIENTE] Configuração: calculodistancia={calculo_dist}, habilitado={calculo_habilitado}")
         
-        # Se cálculo estiver habilitado, calcula; senão usa valores do formulário
-        if calculo_habilitado:
+        lat_cli = None
+        lon_cli = None
+        if cadastro_balcao:
+            if cliente_existente:
+                distancia_final = float(cliente_existente.get("distancia") or 0)
+                taxa_entrega = float(cliente_existente.get("taxaentrega") or 0)
+            else:
+                distancia_final = 0
+                taxa_entrega = 0
+            print(f"[SALVAR CLIENTE] Modo BALCÃO - Taxa={taxa_entrega}, Dist={distancia_final}")
+        elif calculo_habilitado:
             # Distância: usa valor manual se enviado (>0), senão calcula automático
             distancia_bruta = dados.get("distancia", 0)
             try:
@@ -7842,12 +8094,6 @@ def salvar_cliente():
             lat_cli = None
             lon_cli = None
             print(f"[SALVAR CLIENTE] Modo MANUAL - Taxa={taxa_entrega}, Dist={distancia_final}")
-        cursor = conn.cursor(dictionary=True)
-        
-        # Verificar se o cliente já existe
-        id_cliente = session.get('id_cliente')
-        cursor.execute("SELECT chave FROM clientes WHERE telefone = %s AND id_cliente = %s", (telefone, id_cliente))
-        cliente_existente = cursor.fetchone()
         
         # Verificar se as colunas lat_cliente e lon_cliente existem
         cursor.execute("SHOW COLUMNS FROM clientes LIKE 'lat_cliente'")
@@ -7855,6 +8101,8 @@ def salvar_cliente():
         # Verificar se coluna CEP existe
         cursor.execute("SHOW COLUMNS FROM clientes LIKE 'cep'")
         tem_cep = cursor.fetchone() is not None
+        cursor.execute("SHOW COLUMNS FROM clientes LIKE 'cpf_cnpj'")
+        tem_cpf_cnpj = cursor.fetchone() is not None
         
         if cliente_existente:
             # Atualizar cliente existente
@@ -7945,6 +8193,12 @@ def salvar_cliente():
                     id_cliente
                 )
             cursor.execute(sql, valores)
+            if tem_cpf_cnpj:
+                cpf_val = (dados.get("cpf_cnpj") or "").strip() or None
+                cursor.execute(
+                    "UPDATE clientes SET cpf_cnpj = %s WHERE telefone = %s AND id_cliente = %s",
+                    (cpf_val, telefone, id_cliente),
+                )
             conn.commit()
             return jsonify({"sucesso": True, "mensagem": "Cliente atualizado com sucesso", "chave": cliente_existente["chave"], "distancia_calculada": distancia_final, "taxa_calculada": taxa_entrega})
         else:
@@ -8032,6 +8286,12 @@ def salvar_cliente():
                     id_cliente
                 )
             cursor.execute(sql, valores)
+            if tem_cpf_cnpj:
+                cpf_val = (dados.get("cpf_cnpj") or "").strip() or None
+                cursor.execute(
+                    "UPDATE clientes SET cpf_cnpj = %s WHERE telefone = %s AND id_cliente = %s",
+                    (cpf_val, telefone, id_cliente),
+                )
             conn.commit()
             return jsonify({"sucesso": True, "mensagem": "Cliente cadastrado com sucesso", "chave": cursor.lastrowid, "distancia_calculada": distancia_final, "taxa_calculada": taxa_entrega})
     

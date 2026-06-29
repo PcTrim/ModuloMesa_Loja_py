@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Browser: LojaOnline Login",
+      "command": "${input:simpleBrowserLogin}"
+    },
+    {
+      "label": "Browser: Usuarios da loja",
+      "command": "${input:simpleBrowserUsuarios}"
+    },
+    {
+      "label": "Browser: Configuracoes",
+      "command": "${input:simpleBrowserConfig}"
+    },
+    {
+      "label": "Browser: Local login (127.0.0.1:2001)",
+      "command": "${input:simpleBrowserLocal}"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "simpleBrowserLogin",
+      "type": "command",
+      "command": "simpleBrowser.show",
+      "args": ["https://pedidofacil.online/LojaOnline/login/form"]
+    },
+    {
+      "id": "simpleBrowserUsuarios",
+      "type": "command",
+      "command": "simpleBrowser.show",
+      "args": ["https://pedidofacil.online/LojaOnline/cadastrar-usuario"]
+    },
+    {
+      "id": "simpleBrowserConfig",
+      "type": "command",
+      "command": "simpleBrowser.show",
+      "args": ["https://pedidofacil.online/LojaOnline/configuracoes"]
+    },
+    {
+      "id": "simpleBrowserLocal",
+      "type": "command",
+      "command": "simpleBrowser.show",
+      "args": ["http://127.0.0.1:2001/login/form"]
+    }
+  ]
+}

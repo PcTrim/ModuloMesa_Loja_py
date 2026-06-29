@@ -85,19 +85,34 @@ def login():
         row = None
         try:
             cursor.execute(
-                "SELECT usuario, senha, id_cliente, funcao FROM usuarios WHERE usuario = %s LIMIT 1",
+                "SELECT usuario, senha, id_cliente, funcao, ativo FROM usuarios WHERE usuario = %s LIMIT 1",
                 (payload.usuario,),
             )
             row = cursor.fetchone()
         except mysql.connector.Error as col_err:
             if getattr(col_err, "errno", None) != 1054:
                 raise
-            cursor.execute(
-                "SELECT usuario, senha, id_cliente FROM usuarios WHERE usuario = %s LIMIT 1",
-                (payload.usuario,),
-            )
-            row = cursor.fetchone()
+            try:
+                cursor.execute(
+                    "SELECT usuario, senha, id_cliente, funcao FROM usuarios WHERE usuario = %s LIMIT 1",
+                    (payload.usuario,),
+                )
+                row = cursor.fetchone()
+            except mysql.connector.Error:
+                cursor.execute(
+                    "SELECT usuario, senha, id_cliente FROM usuarios WHERE usuario = %s LIMIT 1",
+                    (payload.usuario,),
+                )
+                row = cursor.fetchone()
         user = UsuarioAuthRow.from_db_row(row)
+
+        if user is not None and isinstance(row, dict):
+            ativo_val = row.get("ativo")
+            if ativo_val is not None and int(ativo_val) == 0:
+                return (
+                    jsonify({"sucesso": False, "erro": AUTH_CREDENTIALS_INVALID_MSG}),
+                    401,
+                )
 
         senha_ok = user is not None and verify_password(user.senha, payload.senha)
         if not senha_ok:

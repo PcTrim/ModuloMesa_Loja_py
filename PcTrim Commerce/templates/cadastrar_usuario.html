@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuários da loja - {{ nome_fantasia or 'Loja' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
+    {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+{% set papel = (session.get('funcao') or 'gerente')|lower %}
+{% if papel != 'gerente' %}
+    <main class="cfg-content"><div class="cfg-wrap">
+      <div class="cfg-flash cfg-flash--err" role="alert">
+        <span class="cfg-flash-icon">X</span>
+        <span>Acesso restrito a gerentes. <a href="{{ url_prefix }}/configuracoes">Voltar</a></span>
+      </div>
+    </div></main>
+{% else %}
+
+    <div class="cfg-page">
+    <header class="topbar">
+        <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
+        <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+        <div class="brand">Usuários da loja</div>
+        {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+            <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+            <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+        </button>
+    </header>
+
+    <main class="cfg-content cfg-cadastro-page">
+        <div class="cfg-wrap cfg-cadastro-wrap">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+            <p class="cfg-intro" style="margin-bottom:1rem;">Cadastre logins de <strong>gerente</strong> ou <strong>atendente</strong> para esta loja. Usa a mesma tabela de login do sistema.</p>
+
+            <section class="cfg-section-card" id="usuariosListPanel">
+                <div class="cfg-cadastro-head">
+                    <h2 class="cfg-section-title">Usuários cadastrados</h2>
+                    <button type="button" class="btn-purple cfg-cadastro-btn-inline" onclick="novoRegistro()">Novo</button>
+                </div>
+                <div class="cfg-cadastro-table-wrap">
+                    <table class="tbl cfg-table" id="tabelaUsuarios">
+                        <thead>
+                            <tr>
+                                <th style="width: 90px;">Código</th>
+                                <th>Login</th>
+                                <th style="width: 130px;">Função</th>
+                                <th style="width: 100px;">Status</th>
+                                <th style="width: 140px; text-align: center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabela">
+                            <tr><td colspan="5" class="empty">Carregando usuários...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="usuarioModal" class="cfg-cadastro-modal" aria-hidden="true">
+        <div class="cfg-cadastro-modal-backdrop" data-close-usuario-modal tabindex="-1"></div>
+        <div class="cfg-cadastro-modal-card" role="dialog" aria-modal="true" aria-labelledby="usuarioModalTitle">
+            <div class="cfg-cadastro-modal-head">
+                <h2 id="usuarioModalTitle" class="cfg-section-title">Novo usuário</h2>
+                <button type="button" class="cfg-cadastro-modal-close" data-close-usuario-modal aria-label="Fechar">&times;</button>
+            </div>
+            <div id="usuarioFormPanel">
+                <form id="formUsuario" class="form" onsubmit="salvarUsuario(event)">
+                    <input type="text" id="loginUsuario" required placeholder="Login (ex: caixa1)" autocomplete="username" data-hint="Nome de acesso único — letras, números, ponto ou hífen (3 a 50 caracteres).">
+                    <div class="row-split" id="senhaRow">
+                        <input type="password" id="senha" placeholder="Senha" autocomplete="new-password" data-hint="Mínimo 4 caracteres.">
+                        <input type="password" id="senha2" placeholder="Confirmar senha" autocomplete="new-password" data-hint="Repita a senha para confirmar.">
+                    </div>
+                    <label for="funcao" class="login-label" style="margin-top:0.5rem;">Função</label>
+                    <select id="funcao" class="login-input" data-hint="Gerente acessa configurações; atendente usa PDV e mesa.">
+                        <option value="atendente">Atendente</option>
+                        <option value="gerente">Gerente</option>
+                    </select>
+                    <div id="ativoRow" style="display:none; margin-top:0.75rem;">
+                        <label class="login-label">
+                            <input type="checkbox" id="ativo" checked> Usuário ativo
+                        </label>
+                    </div>
+                    <input type="hidden" id="chaveEdicao" value="">
+                    <div class="cfg-cadastro-actions">
+                        <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
+                        <button type="button" class="btn-modal" id="btnCancelar" onclick="cancelarEdicao()">Cancelar</button>
+                        <button type="submit" class="btn-green" id="btnSalvar">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        const USUARIO_LOGADO = {{ (usuario_logado or '')|tojson }};
+
+        function showMsg(text, ok) {
+            const el = document.getElementById('mensagem');
+            if (!el) return;
+            el.className = 'mensagem ' + (ok ? 'sucesso' : 'erro');
+            el.textContent = text;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 4000);
+        }
+
+        function apiUrl(path) {
+            if (typeof lojaUrl === 'function') return lojaUrl(path);
+            return path;
+        }
+
+        function labelFuncao(f) {
+            return String(f || '').toLowerCase() === 'gerente' ? 'Gerente' : 'Atendente';
+        }
+
+        function openUsuarioModal() {
+            const modal = document.getElementById('usuarioModal');
+            if (!modal) return;
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.getElementById('loginUsuario')?.focus();
+        }
+
+        function closeUsuarioModal() {
+            const modal = document.getElementById('usuarioModal');
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function resetUsuarioForm() {
+            document.getElementById('formUsuario').reset();
+            document.getElementById('chaveEdicao').value = '';
+            document.getElementById('btnSalvar').textContent = 'Salvar';
+            document.getElementById('loginUsuario').readOnly = false;
+            document.getElementById('loginUsuario').required = true;
+            document.getElementById('senha').required = true;
+            document.getElementById('senha2').required = true;
+            document.getElementById('senha').placeholder = 'Senha';
+            document.getElementById('senha2').placeholder = 'Confirmar senha';
+            document.getElementById('ativoRow').style.display = 'none';
+            document.getElementById('ativo').checked = true;
+            const title = document.getElementById('usuarioModalTitle');
+            if (title) title.textContent = 'Novo usuário';
+        }
+
+        async function carregarUsuarios() {
+            try {
+                const response = await fetch(apiUrl('/api/usuarios-loja'));
+                const result = await response.json();
+                const tbody = document.getElementById('corpoTabela');
+                tbody.innerHTML = '';
+
+                if (result.sucesso && Array.isArray(result.usuarios) && result.usuarios.length > 0) {
+                    result.usuarios.forEach(u => {
+                        const tr = document.createElement('tr');
+                        const ativo = Number(u.ativo) === 1;
+                        tr.innerHTML = `
+                            <td class="kcell">#${u.chave}</td>
+                            <td>${u.usuario || ''}${u.usuario === USUARIO_LOGADO ? ' <span class="badge">você</span>' : ''}</td>
+                            <td>${labelFuncao(u.funcao)}</td>
+                            <td>${ativo ? 'Ativo' : 'Inativo'}</td>
+                            <td style="text-align: center;">
+                                <button type="button" class="btn-mini" onclick="editarUsuario(${u.chave})">Editar</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum usuário cadastrado.</td></tr>';
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar usuários:', erro);
+                document.getElementById('corpoTabela').innerHTML =
+                    '<tr><td colspan="5" class="empty">Erro ao carregar usuários</td></tr>';
+            }
+        }
+
+        async function editarUsuario(chave) {
+            try {
+                const response = await fetch(apiUrl('/api/usuarios-loja'));
+                const result = await response.json();
+                if (!result.sucesso) {
+                    showMsg(result.erro || 'Erro ao carregar', false);
+                    return;
+                }
+                const u = (result.usuarios || []).find(x => Number(x.chave) === Number(chave));
+                if (!u) {
+                    showMsg('Usuário não encontrado.', false);
+                    return;
+                }
+                document.getElementById('chaveEdicao').value = u.chave;
+                document.getElementById('loginUsuario').value = u.usuario || '';
+                document.getElementById('loginUsuario').readOnly = true;
+                document.getElementById('loginUsuario').required = false;
+                document.getElementById('funcao').value = String(u.funcao || 'atendente').toLowerCase();
+                document.getElementById('ativo').checked = Number(u.ativo) === 1;
+                document.getElementById('ativoRow').style.display = 'block';
+                document.getElementById('senha').value = '';
+                document.getElementById('senha2').value = '';
+                document.getElementById('senha').required = false;
+                document.getElementById('senha2').required = false;
+                document.getElementById('senha').placeholder = 'Nova senha (opcional)';
+                document.getElementById('senha2').placeholder = 'Confirmar nova senha';
+                document.getElementById('btnSalvar').textContent = 'Atualizar';
+                document.getElementById('usuarioModalTitle').textContent = 'Editar usuário';
+                openUsuarioModal();
+            } catch (erro) {
+                console.error(erro);
+                showMsg('Erro ao carregar usuário', false);
+            }
+        }
+
+        function novoRegistro() {
+            resetUsuarioForm();
+            openUsuarioModal();
+        }
+
+        function cancelarEdicao() {
+            resetUsuarioForm();
+            closeUsuarioModal();
+        }
+
+        async function salvarUsuario(event) {
+            event.preventDefault();
+            const chaveEdicao = document.getElementById('chaveEdicao').value;
+            const senha = document.getElementById('senha').value;
+            const senha2 = document.getElementById('senha2').value;
+
+            try {
+                if (chaveEdicao) {
+                    const body = {
+                        funcao: document.getElementById('funcao').value,
+                        ativo: document.getElementById('ativo').checked ? 1 : 0
+                    };
+                    if (senha || senha2) {
+                        body.senha = senha;
+                        body.senha_confirmacao = senha2;
+                    }
+                    const response = await fetch(apiUrl('/api/usuarios-loja/' + chaveEdicao), {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    const result = await response.json();
+                    if (result.sucesso) {
+                        showMsg(result.mensagem || 'Atualizado.', true);
+                        closeUsuarioModal();
+                        resetUsuarioForm();
+                        carregarUsuarios();
+                    } else {
+                        showMsg(result.erro || 'Erro ao atualizar', false);
+                    }
+                } else {
+                    const response = await fetch(apiUrl('/api/usuarios-loja'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            usuario: document.getElementById('loginUsuario').value.trim(),
+                            senha: senha,
+                            senha_confirmacao: senha2,
+                            funcao: document.getElementById('funcao').value
+                        })
+                    });
+                    const result = await response.json();
+                    if (result.sucesso) {
+                        showMsg(result.mensagem || 'Cadastrado.', true);
+                        closeUsuarioModal();
+                        resetUsuarioForm();
+                        carregarUsuarios();
+                    } else {
+                        showMsg(result.erro || 'Erro ao cadastrar', false);
+                    }
+                }
+            } catch (erro) {
+                console.error(erro);
+                showMsg('Erro ao conectar com o servidor', false);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-close-usuario-modal]').forEach(el => {
+                el.addEventListener('click', cancelarEdicao);
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('usuarioModal')?.classList.contains('open')) {
+                    cancelarEdicao();
+                }
+            });
+            carregarUsuarios();
+        });
+    </script>
+<script>try { lucide.createIcons(); } catch (e) {}</script>
+{% include 'partials/context_hint_bar.html' %}
+
+{% endif %}
+</body>
+</html>

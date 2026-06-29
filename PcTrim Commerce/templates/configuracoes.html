@@ -45,6 +45,15 @@
           <p>Nome fantasia, endereço e identificação.</p>
         </div>
       </a>
+      {% if papel == 'gerente' %}
+      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-usuario">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="users" width="22" height="22"></i></span>
+        <div>
+          <h2>Usuários da loja</h2>
+          <p>Logins de gerente e atendente desta loja.</p>
+        </div>
+      </a>
+      {% endif %}
       <a class="cfg-card" href="{{ url_prefix }}/formas-pagamento">
         <span class="cfg-ico" aria-hidden="true"><i data-lucide="credit-card" width="22" height="22"></i></span>
         <div>

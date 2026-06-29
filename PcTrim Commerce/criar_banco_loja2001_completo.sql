@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS clientes (
     cidade VARCHAR(100) DEFAULT NULL,
     estado VARCHAR(2) DEFAULT NULL,
     cep VARCHAR(10) DEFAULT NULL,
+    cpf_cnpj VARCHAR(20) DEFAULT NULL,
     taxaentrega DECIMAL(10,2) DEFAULT 0,
     distancia DECIMAL(10,2) DEFAULT 0,
     lat_cliente DECIMAL(10,7) DEFAULT NULL,

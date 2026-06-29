@@ -107,6 +107,11 @@
     .status-line{font-size:11px;color:var(--muted);}
     .status-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
     .status-dot{width:10px;height:10px;border-radius:999px;display:inline-block;background:#ef4444;border:.5px solid rgba(0,0,0,.25);}
+    .details{border:.5px solid var(--line);border-radius:10px;background:var(--collapse-bg);padding:10px;}
+    .details>summary{cursor:pointer;list-style:none;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);display:flex;align-items:center;gap:8px;}
+    .details>summary::-webkit-details-marker{display:none;}
+    .details[open]>summary{color:var(--text);margin-bottom:8px;}
+    .balcao-cliente-body{display:flex;flex-direction:column;gap:8px;}
     .history-btn{width:36px;height:36px;border:.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
     .history-btn:hover{color:var(--text);border-color:var(--purple);}
     .tot-collapse{border:.5px solid var(--line);border-radius:8px;background:var(--collapse-bg);padding:6px;}
@@ -273,8 +278,32 @@
         </div>
       </div>
       <div class="form" id="balcao-form" style="display:{% if IS_RETAIL %}grid{% else %}none{% endif %};">
+        {% if IS_RETAIL %}
+        <details class="details" id="balcao-cliente-card">
+          <summary>Cliente <span class="status-dot" id="balcao-cliente-ok" title="Cliente (opcional)"></span></summary>
+          <div class="balcao-cliente-body">
+            <div class="row"><input id="balcao-fone" placeholder="Telefone (sem DDD)" type="text" inputmode="numeric" autocomplete="off" data-hint="Telefone do cliente — clique Localizar se já comprou antes."><button type="button" class="btn-mini" id="btn-balcao-localizar">Localizar</button><button type="button" class="history-btn" id="btn-balcao-historico" title="Ver histórico do cliente" style="display:none;"><i data-lucide="history" width="14" height="14"></i></button></div>
+            <div class="status-row"><span class="status-line" id="balcao-cliente-pedidos-info">Pedidos anteriores: -</span></div>
+            <input id="balcao-nome" placeholder="Nome do cliente (opcional)" data-hint="Nome para identificar o cliente na venda.">
+            <input id="balcao-cpf-cnpj" placeholder="CPF/CNPJ (opcional)" inputmode="numeric" autocomplete="off" data-hint="Documento do cliente para nota fiscal, se necessário.">
+            <details class="details" id="balcao-endereco-card">
+              <summary>Endereço (opcional)</summary>
+              <div class="balcao-cliente-body">
+                <div class="cep-row"><input id="balcao-cep" placeholder="CEP" inputmode="numeric" autocomplete="off" data-hint="CEP com 8 dígitos — preenche endereço automaticamente."><span class="cep-status" id="balcao-cep-status"></span></div>
+                <input id="balcao-end" placeholder="Endereço" data-hint="Rua e logradouro do cliente.">
+                <div class="row-split"><input id="balcao-nrocasa" placeholder="Nº" data-hint="Número da casa ou prédio."><input id="balcao-complemento" placeholder="Complemento" data-hint="Apto, bloco, sala — o que ajudar a achar."></div>
+                <textarea id="balcao-ref" placeholder="Referência" data-hint="Ponto de referência do endereço."></textarea>
+                <div class="row-thirds"><input id="balcao-bairro" placeholder="Bairro" data-hint="Bairro do endereço."><input id="balcao-cidade" placeholder="Cidade" data-hint="Cidade."><input id="balcao-uf" placeholder="UF" maxlength="2" data-hint="Estado com 2 letras (ex.: PI)."></div>
+              </div>
+            </details>
+            <button type="button" class="btn-mini" id="btn-balcao-salvar-cliente">Cadastrar / atualizar cliente</button>
+            <span class="status-line" id="balcao-cliente-status"></span>
+          </div>
+        </details>
+        {% else %}
         <input id="balcao-nome" placeholder="Nome do cliente (opcional)" data-hint="Opcional — ajuda a chamar o cliente na hora de retirar.">
         <input id="balcao-fone" placeholder="Celular (opcional, para avisar quando pronto)" type="text" inputmode="numeric" autocomplete="off" data-hint="Com WhatsApp ativo, avisamos quando o pedido ficar pronto.">
+        {% endif %}
         <div class="field-group" style="margin-top:10px;">
           <p class="title">Pagamento</p>
           <div class="pay-list" id="balcao-pagamento-momento">
@@ -342,7 +371,7 @@
 
 <div class="modal" id="modal-pag"><div class="modal-card"><h3>Forma de pagamento</h3><p class="muted">Escolha uma opção para {% if IS_RETAIL %}esta venda{% else %}este pedido{% endif %}</p><div id="formas-pagamento-troco-panel" style="display:none;"><p class="muted" id="formas-pagamento-troco-hint"></p><input id="formas-pagamento-troco-input" class="form" type="text" inputmode="decimal" placeholder="Cliente paga com (R$)" autocomplete="off" /><p class="muted" id="formas-pagamento-troco-preview"></p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" class="btn-purple" id="formas-pagamento-troco-confirm">Confirmar</button><button type="button" class="btn-outline" id="formas-pagamento-troco-back">Outras formas</button></div></div><div id="formas-pagamento-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 <div class="modal" id="modal-conferencia"><div class="modal-card print casa-conf-card"><header class="casa-conf-head"><h3>{% if IS_RETAIL %}Conferir venda{% else %}Conferir pedido{% endif %}</h3><p class="muted">Revise os dados antes de salvar/imprimir</p></header><div class="casa-conf-body"><pre id="conferencia-conteudo" class="conferencia-pre"></pre></div><footer class="casa-conf-foot"><div class="casa-conf-printer-row"><span class="casa-conf-printer-lbl">Impressora</span><input id="imp-compartilhada" class="imp-ro" readonly placeholder="(cadastro MySQL)"></div><div class="casa-conf-actions"><button type="button" class="btn-modal btn-modal-primary" id="btn-salvar-imprimir">Salvar e imprimir</button><div class="casa-conf-actions-row"><button type="button" class="btn-modal" id="btn-salvar-txt">Salvar {% if IS_RETAIL %}venda{% else %}pedido{% endif %} (.txt)</button><button type="button" class="btn-modal" id="btn-enviar-whatsapp" style="display:none;">Enviar no WhatsApp</button><button type="button" class="btn-modal" data-close-modal>Fechar</button></div></div></footer></div></div>
-<div class="modal" id="modal-baixa-balcao"><div class="modal-card zoom"><h3>Baixa do balcão</h3><p class="muted">Feche o pagamento agora ou deixe para a retirada</p><div class="zoom-resumo" style="margin-top:10px;"><div><strong id="bb-titulo">{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %}</strong></div><div class="muted" id="bb-sub">BALCÃO</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"><span class="badge" id="bb-total">Total: R$ 0,00</span><span class="badge" id="bb-somado">Somado: R$ 0,00</span><span class="badge" id="bb-restante">Restante: R$ 0,00</span><span class="badge" id="bb-troco" style="display:none;">Troco: R$ 0,00</span></div></div><div id="bb-formas" class="pay-list" style="margin-top:12px;"></div><div class="modal-actions"><button class="btn-modal" id="btn-bb-receber">Marcar RECEBIDO</button><button class="btn-modal" id="btn-bb-depois">Depois</button></div></div></div>
+<div class="modal" id="modal-baixa-balcao"><div class="modal-card zoom"><h3>Baixa do balcão</h3><p class="muted">Feche o pagamento agora ou deixe para a retirada</p><div class="zoom-resumo" style="margin-top:10px;"><div><strong id="bb-titulo">{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %}</strong></div><div class="muted" id="bb-sub">BALCÃO</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"><span class="badge" id="bb-total">Total: R$ 0,00</span><span class="badge" id="bb-somado">Somado: R$ 0,00</span><span class="badge" id="bb-restante">Restante: R$ 0,00</span><span class="badge" id="bb-troco" style="display:none;">Troco: R$ 0,00</span></div></div><div id="bb-formas" class="pay-list" style="margin-top:12px;"></div><div class="modal-actions"><button class="btn-modal" id="btn-bb-receber">Marcar RECEBIDO <kbd>End</kbd></button><button class="btn-modal" id="btn-bb-depois">Depois</button></div></div></div>
 <div class="modal" id="modal-conferencia-zoom"><div class="modal-card zoom"><h3>Conferência ampliada</h3><p class="muted">Visualização completa {% if IS_RETAIL %}da venda{% else %}do pedido{% endif %} para revisão</p><div id="conferencia-zoom-resumo" class="zoom-resumo"></div><div id="conferencia-zoom-editor-list" class="zoom-editor-list"></div><div class="modal-actions"><button class="btn-modal" id="btn-zoom-aplicar">Aplicar alterações</button><button class="btn-modal" data-close-modal>Fechar</button></div></div></div>
 <div class="modal" id="modal-historico-cliente"><div class="modal-card zoom"><h3>Histórico do cliente</h3><p class="muted">Últimos 3 pedidos recebidos</p><div id="historico-cliente-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 <div class="modal" id="modal-aguarde-pendentes" data-retail-hide><div class="modal-card zoom"><h3>Pedidos em AGUARDE</h3><p class="muted">Pedidos aguardando conclusão ou impressão. Abra para retomar o atendimento.</p><div id="aguarde-pendentes-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
@@ -353,7 +382,10 @@
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
 <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=10"></script>
+{% include 'partials/print_context.html' %}
 <script src="{{ url_for('static', filename='print-format.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='print-header.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='receber-hotkeys.js') }}?v=1"></script>
 {% include 'partials/retail_mode.html' %}
 <script>
 (function(){
@@ -361,9 +393,31 @@
   const LABEL_PEDIDO = window.LABEL_PEDIDO;
   const el=(id)=>document.getElementById(id);
   const money=(n)=>"R$ "+Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2});
+  function origemImpressaoCasa(){
+    if(state.modo==="balcao") return "BALCAO";
+    return "DELIVERY";
+  }
+  function getPrintMetaSyncCasa(){
+    const H=window.lojaPrintHeader;
+    const orig=origemImpressaoCasa();
+    const nro=Number(state.pedidoId)||0;
+    if(H && H.getCachedPrintMeta(nro, orig)) return H.getCachedPrintMeta(nro, orig);
+    return {
+      data_criacao: new Date().toISOString(),
+      atendente: String((window.LOJA_PRINT_CTX||{}).usuario||"").trim()||"-"
+    };
+  }
+  async function ensurePrintMetaCasa(){
+    const H=window.lojaPrintHeader;
+    if(!H) return getPrintMetaSyncCasa();
+    await H.ensureLojaDados();
+    const meta=await H.refreshPrintMeta(Number(state.pedidoId)||0, origemImpressaoCasa());
+    H.setPrintMeta(Number(state.pedidoId)||0, origemImpressaoCasa(), meta);
+    return meta;
+  }
   let impressoraCasaLabel="(carregando impressora…)";
   let impressoraCasaFeed=6;
-  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
+  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, clienteObrigatorioBalcao:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
   function msgCasaPedidoBloqueado(){ return IS_RETAIL ? "Comanda cancelada ou venda em ROTA/RECEBIDA não pode ser alterada na tela /casa." : "Comanda cancelada ou pedido em ROTA/RECEBIDO não pode ser alterado na tela /casa."; }
   function aplicarBloqueioCasaUi(host){
     const bloq = !!state.pedidoBloqueadoCasa && (Number(state.pedidoId)||0) > 0;
@@ -568,12 +622,96 @@
     state.pedidoReservado=false;
     updatePedidoBadge();
   }
+  let _previewRefreshTimer=null;
+  async function refreshPedidoPreviewIfIdle(){
+    if((Number(state.pedidoId)||0)>0) return;
+    if(state.emRecuperacao) return;
+    try{
+      const n=await fetchNumeroPedido(false);
+      if((Number(state.pedidoId)||0)>0) return;
+      state.pedidoPreview=n;
+      updatePedidoBadge();
+    }catch(_e){}
+  }
+  function scheduleRefreshPedidoPreviewIfIdle(){
+    if(_previewRefreshTimer) clearTimeout(_previewRefreshTimer);
+    _previewRefreshTimer=setTimeout(()=>{ _previewRefreshTimer=null; refreshPedidoPreviewIfIdle(); }, 350);
+  }
+  function bindPedidoPreviewRefresh(){
+    document.addEventListener("visibilitychange",()=>{
+      if(document.visibilityState==="visible") scheduleRefreshPedidoPreviewIfIdle();
+    });
+    window.addEventListener("focus", scheduleRefreshPedidoPreviewIfIdle);
+    setInterval(()=>{
+      if(document.visibilityState!=="visible") return;
+      refreshPedidoPreviewIfIdle();
+    }, 30000);
+  }
   async function avancarParaProximoPedido(){
     state.pedidoId=0;
     state.pedidoReservado=false;
     await syncPedidoAtual();
   }
   function onlyDigits(v){ return String(v||"").replace(/\D/g,""); }
+  function telefoneBalcaoValido(tel){
+    const t=String(tel||"").trim();
+    if(!t || t.toUpperCase().startsWith("BALCAO")) return false;
+    return onlyDigits(t).length>=10;
+  }
+  function clienteBalcaoPronto(){
+    if(!IS_RETAIL || !state.clienteObrigatorioBalcao) return true;
+    const tel=telefoneComDdd((el("balcao-fone")?.value||"").trim());
+    const nome=(el("balcao-nome")?.value||"").trim();
+    return telefoneBalcaoValido(tel) && !!nome && !!state.clienteLocalizado;
+  }
+  function setBalcaoClienteStatus(msg){
+    const s=el("balcao-cliente-status");
+    if(s) s.textContent=msg||"";
+  }
+  async function carregarConfigBalcao(){
+    if(!IS_RETAIL) return;
+    try{
+      const r=await fetch("/api/dados-loja-info",{credentials:"same-origin"});
+      const d=await r.json().catch(()=>({}));
+      if(r.ok && d.sucesso!==false && d.dados){
+        const dados=d.dados;
+        state.clienteObrigatorioBalcao=!!(dados.cliente_obrigatorio_balcao==1 || dados.cliente_obrigatorio_balcao===true);
+        if(dados.ddd) state.dddPadrao=onlyDigits(dados.ddd);
+        const card=el("balcao-cliente-card");
+        if(card) card.open=state.clienteObrigatorioBalcao;
+        syncBalcaoClienteCardUi();
+      }
+    }catch(_){}
+  }
+  function syncBalcaoClienteCardUi(){
+    if(!IS_RETAIL) return;
+    const nomeEl=el("balcao-nome");
+    if(nomeEl){
+      nomeEl.placeholder=state.clienteObrigatorioBalcao?"Nome do cliente *":"Nome do cliente (opcional)";
+    }
+    updateBalcaoClienteBadge();
+    updatePrintState();
+  }
+  function updateBalcaoClienteBadge(){
+    const ok=el("balcao-cliente-ok");
+    if(!ok || !IS_RETAIL) return;
+    if(!state.clienteObrigatorioBalcao){
+      ok.style.background=state.clienteLocalizado?"#22c55e":"#888";
+      ok.title=state.clienteLocalizado?"Cliente localizado":"Cliente (opcional)";
+      return;
+    }
+    const pronto=clienteBalcaoPronto();
+    ok.style.background=pronto?"#22c55e":"#ef4444";
+    ok.title=pronto?"Cliente pronto":"Cliente pendente";
+  }
+  function renderHistoricoBalcaoResumo(){
+    const info=el("balcao-cliente-pedidos-info");
+    const btn=el("btn-balcao-historico");
+    const total=Number(state.historicoClienteTotal);
+    const n=Number.isFinite(total)&&total>=0?total:(Number(state.historicoCliente.length)||0);
+    if(info) info.textContent=`Pedidos anteriores: ${n}`;
+    if(btn) btn.style.display=state.clienteLocalizado?"inline-flex":"none";
+  }
   function telefoneComDdd(telefoneSemDdd){
     const base=onlyDigits(telefoneSemDdd);
     if(!base) return "";
@@ -628,9 +766,12 @@
     const tel=(el("cli-fone")?.value||"").trim();
     const pagamento=String(state.formaPagamento||"").trim();
     const temPedido = (Number(state.pedidoId)||0) > 0 && pedidoAtualTemItens();
-    const podeImprimir = state.modo!=="delivery"
+    let podeImprimir = state.modo!=="delivery"
       ? temPedido
       : (temPedido && !!tel && state.clienteLocalizado && !!pagamento);
+    if(IS_RETAIL && state.modo==="balcao" && state.clienteObrigatorioBalcao){
+      podeImprimir = temPedido && clienteBalcaoPronto();
+    }
     if(btn) btn.disabled = !podeImprimir;
     if(btnPagamento){
       const podeEscolherPagamento = pedidoAtualTemItens() && !((state.modo==="balcao") && String(state.balcaoPagamentoMomento||"agora")==="agora");
@@ -651,13 +792,16 @@
     const n=Number.isFinite(total)&&total>=0?total:(Number(state.historicoCliente.length)||0);
     if(info) info.textContent=`Pedidos anteriores: ${n}`;
     if(btn){ btn.style.display = state.clienteLocalizado?"inline-flex":"none"; }
+    renderHistoricoBalcaoResumo();
   }
   function updateClienteLocalizadoBadge(){
     const ok=el("cliente-localizado-ok");
-    if(!ok) return;
-    const ativo = state.modo==="delivery" && state.clienteLocalizado;
-    ok.style.background = ativo ? "#22c55e" : "#ef4444";
-    ok.title = ativo ? "Cliente localizado" : "Cliente não localizado";
+    if(ok){
+      const ativo = state.modo==="delivery" && state.clienteLocalizado;
+      ok.style.background = ativo ? "#22c55e" : "#ef4444";
+      ok.title = ativo ? "Cliente localizado" : "Cliente não localizado";
+    }
+    updateBalcaoClienteBadge();
   }
   async function carregarDddPadrao(){
     try{
@@ -1021,11 +1165,14 @@
     if(IS_RETAIL) state.modo="balcao";
     const modoOp = state.modo==="balcao" ? "BALCAO" : (state.modo==="mesa" ? "MESA" : "DELIVERY");
     let tel = telefoneComDdd(el("cli-fone").value||"");
+    const nomeBalcao=(el("balcao-nome")?.value||"").trim();
+    const nomeDelivery=(el("cli-nome")?.value||"").trim();
     if (modoOp === "BALCAO") {
       const balcaoTel = telefoneComDdd((el("balcao-fone")?.value || "").trim());
       tel = balcaoTel || "BALCAO";
     }
-    return { telefone:tel, cep:(el("cli-cep").value||"").trim(), nome:(el("cli-nome").value||"").trim(), endereco:(el("cli-end").value||"").trim(), nrocasa:(el("cli-nrocasa").value||"").trim(), complemento:(el("cli-complemento").value||"").trim(), cliente:nomeClienteAtual(), modo:modoOp, em_recuperacao:!!state.emRecuperacao };
+    const nome = modoOp === "BALCAO" ? nomeBalcao : nomeDelivery;
+    return { telefone:tel, cep:(el("cli-cep").value||"").trim(), nome, endereco:(el("cli-end").value||"").trim(), nrocasa:(el("cli-nrocasa").value||"").trim(), complemento:(el("cli-complemento").value||"").trim(), cliente:nomeClienteAtual(), modo:modoOp, em_recuperacao:!!state.emRecuperacao };
   }
 
   async function loadItens(modoCarga="normal"){
@@ -1129,7 +1276,6 @@
       updateClienteLocalizadoBadge();
     }else if(modoCarga==="recuperacao" && data.cliente && origemRec==="BALCAO"){
       const c=data.cliente||{};
-      if(el("balcao-nome") && c.nome) el("balcao-nome").value=c.nome||"";
       if(el("balcao-fone") && c.telefone){
         const t=String(c.telefone||"").trim();
         if(t && !t.toUpperCase().startsWith("BALCAO")){
@@ -1138,12 +1284,15 @@
           el("balcao-fone").value=(ddd && d.startsWith(ddd) && d.length>ddd.length)?d.slice(ddd.length):d;
         }
       }
-      state.clienteLocalizado=false;
+      preencherBalcaoClienteFromApi(c);
+      const telRec=telefoneComDdd((el("balcao-fone")?.value||"").trim());
+      state.clienteLocalizado=telefoneBalcaoValido(telRec || String(c.telefone||"").trim());
       state.editandoCliente=false;
       applyClienteFieldsLock();
       updatePrintState();
       updateSaveClienteState();
       updateClienteLocalizadoBadge();
+      renderHistoricoClienteResumo();
     }
     regs.forEach((it)=>{ subtotal+=lineTot(it); const id=pkItem(it); if(id!=null){ state.preparoMetaById[String(id)]={ imp_preparo:String(it.imp_preparo||"N"), impressoras:String(it.impressoras_produto||""), codigoproduto:String(it.codigoproduto||"") }; } });
     const grupos=new Map();
@@ -1197,6 +1346,7 @@
     updatePrintState();
     updateDistribuirPreparoUiCasa();
     await persistFormaPagamentoSePendente();
+    if((Number(state.pedidoId)||0)>0){ try{ await ensurePrintMetaCasa(); }catch(_e){} }
     return true;
   }
 
@@ -1267,6 +1417,9 @@
       btn.textContent = "...";
     }
     try{
+      if((Number(state.pedidoId)||0)<=0){
+        try{ await refreshPedidoPreviewIfIdle(); }catch(_e){}
+      }
       const payloadSend = (Number(state.pedidoId)||0) > 0 ? ({...payload,nropedido:Number(state.pedidoId)}) : payload;
       const res=await fetch("/api/casa/item",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payloadSend)});
       const ct=(res.headers.get("content-type")||"").toLowerCase(); const data=ct.includes("application/json") ? await res.json() : null;
@@ -1427,6 +1580,12 @@
   async function addItem(p, btn){
     if(!state.classificacao){ alert("Selecione uma categoria."); return; }
     if(state.modo==="delivery" && !state.clienteLocalizado){ alert("Localize o cliente antes de incluir itens."); return; }
+    if(IS_RETAIL && state.modo==="balcao" && state.clienteObrigatorioBalcao && !clienteBalcaoPronto()){
+      alert("Localize ou cadastre o cliente antes de incluir itens.");
+      const card=el("balcao-cliente-card"); if(card) card.open=true;
+      const f=el("balcao-fone"); if(f) f.focus();
+      return;
+    }
     const draft=state.fracionadoDraftInline;
     if(draft){
       const codAtual=String(p.chave||p.codigoproduto||"");
@@ -1512,7 +1671,83 @@
     }
   }
 
+  function formatarCpfCnpjInput(v){
+    let valor=String(v||"").replace(/\D/g,"");
+    if(valor.length<=11){
+      valor=valor.replace(/(\d{3})(\d)/,"$1.$2");
+      valor=valor.replace(/(\d{3})(\d)/,"$1.$2");
+      valor=valor.replace(/(\d{3})(\d{1,2})$/,"$1-$2");
+    }else{
+      valor=valor.replace(/^(\d{2})(\d)/,"$1.$2");
+      valor=valor.replace(/^(\d{2})\.(\d{3})(\d)/,"$1.$2.$3");
+      valor=valor.replace(/\.(\d{3})(\d)/,".$1/$2");
+      valor=valor.replace(/(\d{4})(\d)/,"$1-$2");
+    }
+    return valor;
+  }
+  function preencherBalcaoClienteFromApi(d){
+    if(!d) return;
+    if(el("balcao-nome")) el("balcao-nome").value=d.nome||"";
+    if(el("balcao-cpf-cnpj")) el("balcao-cpf-cnpj").value=formatarCpfCnpjInput(d.cpf_cnpj||"");
+    if(el("balcao-cep")) el("balcao-cep").value=d.cep||"";
+    if(el("balcao-end")) el("balcao-end").value=d.endereco||"";
+    if(el("balcao-nrocasa")) el("balcao-nrocasa").value=d.nrocasa||"";
+    if(el("balcao-complemento")) el("balcao-complemento").value=d.complemento||"";
+    if(el("balcao-ref")) el("balcao-ref").value=d.referencia||"";
+    if(el("balcao-bairro")) el("balcao-bairro").value=d.bairro||"";
+    if(el("balcao-cidade")) el("balcao-cidade").value=d.cidade||"";
+    if(el("balcao-uf")) el("balcao-uf").value=(d.estado||"").toString().toUpperCase();
+  }
+  function limparBalcaoClienteExtra(){
+    ["balcao-cpf-cnpj","balcao-cep","balcao-end","balcao-nrocasa","balcao-complemento","balcao-ref","balcao-bairro","balcao-cidade","balcao-uf"].forEach((id)=>{
+      const node=el(id);
+      if(node) node.value="";
+    });
+    const st=el("balcao-cep-status");
+    if(st) st.textContent="";
+  }
+  function payloadBalcaoClienteSalvar(){
+    return {
+      telefone: telefoneComDdd((el("balcao-fone")?.value||"").trim()),
+      nome: (el("balcao-nome")?.value||"").trim(),
+      cpf_cnpj: (el("balcao-cpf-cnpj")?.value||"").trim(),
+      cep: (el("balcao-cep")?.value||"").trim(),
+      endereco: (el("balcao-end")?.value||"").trim(),
+      nrocasa: (el("balcao-nrocasa")?.value||"").trim(),
+      complemento: (el("balcao-complemento")?.value||"").trim(),
+      referencia: (el("balcao-ref")?.value||"").trim(),
+      bairro: (el("balcao-bairro")?.value||"").trim(),
+      cidade: (el("balcao-cidade")?.value||"").trim(),
+      estado: (el("balcao-uf")?.value||"").trim().toUpperCase(),
+      origem_cadastro: "balcao",
+      distancia: 0,
+    };
+  }
   function formatarCep(v){ const d=(v||"").replace(/\D/g,"").slice(0,8); return d.length>5?d.slice(0,5)+"-"+d.slice(5):d; }
+  async function buscarEnderecoPorCepBalcao(){
+    const raw=(el("balcao-cep")?.value||"").replace(/\D/g,"");
+    const statusEl=el("balcao-cep-status");
+    if(raw.length!==8){ if(statusEl) statusEl.textContent="CEP inválido"; return; }
+    if(statusEl) statusEl.textContent="…";
+    try{
+      const r=await fetch("https://viacep.com.br/ws/"+encodeURIComponent(raw)+"/json/",{credentials:"omit"});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok||d.erro||!d.cep){
+        if(statusEl) statusEl.textContent="CEP não encontrado";
+        return;
+      }
+      if(el("balcao-cep")) el("balcao-cep").value=formatarCep(String(d.cep||raw).replace(/\D/g,""));
+      if(el("balcao-end")) el("balcao-end").value=d.logradouro||"";
+      if(el("balcao-bairro")) el("balcao-bairro").value=d.bairro||"";
+      if(el("balcao-cidade")) el("balcao-cidade").value=d.localidade||"";
+      if(el("balcao-uf")) el("balcao-uf").value=(d.uf||"").toString().toUpperCase();
+      if(statusEl) statusEl.textContent="✓";
+      const nr=el("balcao-nrocasa"); if(nr) nr.focus();
+    }catch(e){
+      console.error(e);
+      if(statusEl) statusEl.textContent="Erro ao buscar CEP";
+    }
+  }
   async function buscarEnderecoPorCep(){
     const raw=(el("cli-cep").value||"").replace(/\D/g,"");
     const statusEl=el("cep-status");
@@ -1759,6 +1994,118 @@
       }
     }
   }
+  async function localizarClienteBalcao(force=false){
+    if(!IS_RETAIL || state.localizandoCliente) return false;
+    const telRaw=(el("balcao-fone")?.value||"").trim();
+    if(!telRaw){
+      setBalcaoClienteStatus("Informe o telefone para localizar.");
+      return false;
+    }
+    const tel=telefoneComDdd(telRaw);
+    if(!force && tel===state.ultimoTelefoneLocalizado) return !!state.clienteLocalizado;
+    const btn=el("btn-balcao-localizar");
+    const prevLabel=btn?btn.textContent:"";
+    state.localizandoCliente=true;
+    if(btn){ btn.disabled=true; btn.textContent="…"; }
+    try{
+      const r=await fetch("/buscar-cliente?telefone="+encodeURIComponent(tel),{credentials:"same-origin",redirect:"manual",headers:{Accept:"application/json"}});
+      if(r.type==="opaqueredirect"||[301,302,307,308].includes(r.status)){
+        alert("Sessão expirada. Faça login novamente.");
+        lojaGo("/login/form");
+        return false;
+      }
+      const ct=(r.headers.get("content-type")||"").toLowerCase();
+      let d;
+      if(ct.indexOf("application/json")!==-1){
+        d=await r.json();
+      }else{
+        alert("Não foi possível interpretar a resposta do servidor.");
+        return false;
+      }
+      if(!r.ok||d.erro){
+        if(el("balcao-nome")) el("balcao-nome").value="";
+        limparBalcaoClienteExtra();
+        state.clienteLocalizado=false;
+        state.historicoCliente=[];
+        state.historicoClienteTotal=0;
+        renderHistoricoClienteResumo();
+        updatePrintState();
+        setBalcaoClienteStatus((d&&d.erro)||"Cliente não encontrado. Cadastre abaixo.");
+        const nm=el("balcao-nome"); if(nm) nm.focus();
+        return false;
+      }
+      preencherBalcaoClienteFromApi(d);
+      state.clienteLocalizado=true;
+      state.ultimoTelefoneLocalizado=tel;
+      state.ultimoTelefoneCompleto=tel;
+      await carregarHistoricoCliente(tel);
+      setBalcaoClienteStatus("Cliente localizado.");
+      updatePrintState();
+      updateBalcaoClienteBadge();
+      return true;
+    }catch(e){
+      console.error(e);
+      setBalcaoClienteStatus("Erro ao localizar cliente.");
+      return false;
+    }finally{
+      state.localizandoCliente=false;
+      if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Localizar"; }
+      updateBalcaoClienteBadge();
+    }
+  }
+  async function salvarClienteBalcao(){
+    if(!IS_RETAIL) return;
+    const payload=payloadBalcaoClienteSalvar();
+    if(!payload.telefone){
+      alert("Informe o telefone.");
+      return;
+    }
+    if(!payload.nome){
+      alert("Informe o nome do cliente.");
+      return;
+    }
+    const btn=el("btn-balcao-salvar-cliente");
+    const prevLabel=btn?btn.textContent:"";
+    if(btn){ btn.disabled=true; btn.textContent="Salvando..."; }
+    try{
+      const r=await fetch("/salvar-cliente",{
+        method:"POST",
+        credentials:"same-origin",
+        redirect:"manual",
+        headers:{"Content-Type":"application/json",Accept:"application/json"},
+        body:JSON.stringify(payload),
+      });
+      if(r.type==="opaqueredirect"||[301,302,307,308].includes(r.status)){
+        alert("Sessão expirada. Faça login novamente.");
+        lojaGo("/login/form");
+        return;
+      }
+      const ct=(r.headers.get("content-type")||"").toLowerCase();
+      if(ct.indexOf("application/json")===-1){
+        alert("Resposta inválida do servidor ao salvar cliente.");
+        return;
+      }
+      const d=await r.json();
+      if(!r.ok||d.erro){
+        alert(d.erro||"Erro ao salvar cliente.");
+        return;
+      }
+      state.clienteLocalizado=true;
+      state.ultimoTelefoneLocalizado=payload.telefone;
+      state.ultimoTelefoneCompleto=payload.telefone;
+      await carregarHistoricoCliente(payload.telefone);
+      setBalcaoClienteStatus(d.mensagem||"Cliente salvo com sucesso.");
+      updatePrintState();
+      updateBalcaoClienteBadge();
+      const busca=el("busca-produto");
+      if(busca) busca.focus();
+    }catch(e){
+      console.error(e);
+      alert("Não foi possível salvar os dados do cliente.");
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Cadastrar / atualizar cliente"; }
+    }
+  }
   function nomeClienteAtual(){ if(state.modo==="balcao"){ const nm=(el("balcao-nome").value||"").trim(); return nm||"cliente"; } return (el("cli-nome").value||"").trim()||"cliente"; }
 
   function textoImpressao(){
@@ -1776,8 +2123,17 @@
     const kv=(l,v)=> (F&&F.kv)?F.kv(l,v,W):(`${String(l||"")}: ${String(v||"")}`);
 
     out.push(ESC+"a"+String.fromCharCode(1));
-    out.push((ESC+"!"+String.fromCharCode(0x30))+`PEDIDO #${state.pedidoId}`+(ESC+"!"+String.fromCharCode(0x00)));
-    out.push(ESC+"a"+String.fromCharCode(0));
+    const H=window.lojaPrintHeader;
+    if(H && H.buildPrintHeaderFull){
+      H.buildPrintHeaderFull({
+        tituloPedido: `PEDIDO #${state.pedidoId||"-"}`,
+        meta: getPrintMetaSyncCasa()
+      }).forEach((ln)=>{ out.push(ln); });
+    }else{
+      out.push((ESC+"!"+String.fromCharCode(0x30))+`PEDIDO #${state.pedidoId}`+(ESC+"!"+String.fromCharCode(0x00)));
+      out.push(ESC+"a"+String.fromCharCode(0));
+      out.push(hr("-"));
+    }
     const st=String(state.statusComanda||"NORMAL").toUpperCase();
     if(st==="MODIFICADA") out.push(center("*** COMANDA MODIFICADA ***"));
     if(st==="CANCELADA") out.push(center("*** COMANDA CANCELADA ***"));
@@ -1896,9 +2252,14 @@
   }
   function limparCamposCliente(){
     ["cli-fone","cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-ref","cli-bairro","cli-cidade","cli-uf","cli-cep","cli-distancia","cli-taxa","balcao-nome","balcao-fone"].forEach((id)=>{ const node=el(id); if(node) node.value=""; });
+    limparBalcaoClienteExtra();
   }
   function focoOperacional(){
     if(state.modo==="delivery"){ const f=el("cli-fone"); if(f) f.focus(); return; }
+    if(IS_RETAIL && state.modo==="balcao" && state.clienteObrigatorioBalcao && !clienteBalcaoPronto()){
+      const card=el("balcao-cliente-card"); if(card) card.open=true;
+      const f=el("balcao-fone"); if(f){ f.focus(); return; }
+    }
     const b=el("busca-produto"); if(b) b.focus();
   }
   function applyInitialUiState(){
@@ -1927,6 +2288,8 @@
     updateSaveClienteState();
     updateBalcaoPagamentoMomentoUi();
     updatePrintState();
+    const cardBalcao=el("balcao-cliente-card");
+    if(cardBalcao && IS_RETAIL) cardBalcao.open=state.clienteObrigatorioBalcao;
   }
   async function resetPedidoRapido(incrementarPedido=true){
     const lista = el("itens-list");
@@ -1974,6 +2337,7 @@
       const acoes=el("acoes-rapidas"); if(acoes) acoes.open=false;
       await refreshPendentesAguarde();
       if(ok){
+        await ensurePrintMetaCasa();
         alert(`Comanda ${pedido} carregada.`);
       } else {
         state.emRecuperacao=false;
@@ -2174,7 +2538,7 @@
     impressoraCasaFeed=feed;
     const ip=el("imp-compartilhada"); if(ip) ip.value=impressoraCasaLabel;
   }
-  function preencherConferencias(){ const conteudo=textoImpressao(); state.conferenciaConteudo=conteudo; const pre=el("conferencia-conteudo"); if(pre) pre.textContent=conteudo; const preZoom=el("conferencia-zoom-conteudo"); if(preZoom) preZoom.textContent=conteudo; refreshImpressoraCasaLabel(); }
+  async function preencherConferencias(){ await ensurePrintMetaCasa(); const conteudo=textoImpressao(); state.conferenciaConteudo=conteudo; const pre=el("conferencia-conteudo"); if(pre) pre.textContent=conteudo; const preZoom=el("conferencia-zoom-conteudo"); if(preZoom) preZoom.textContent=conteudo; refreshImpressoraCasaLabel(); }
 
   async function checarTerminalImpressao(){
     try{
@@ -2411,7 +2775,12 @@
     out.push(ESC+"a"+String.fromCharCode(1));
     out.push((ESC+"!"+String.fromCharCode(0x30))+String(titulo||"")+(ESC+"!"+String.fromCharCode(0x00)));
     out.push(ESC+"a"+String.fromCharCode(0));
-    out.push(hr("-"));
+    const H=window.lojaPrintHeader;
+    if(H && H.buildPrintHeaderPreparo){
+      H.buildPrintHeaderPreparo({ meta: getPrintMetaSyncCasa() }).forEach((ln)=>{ out.push(ln); });
+    }else{
+      out.push(hr("-"));
+    }
     (itens||[]).forEach((it)=>{
       const qtd=Math.max(1,Math.floor(Number(it.qtd)||1));
       const nome=String(it.nome||"-").trim();
@@ -2462,6 +2831,7 @@
     }
     if(btn){ btn.disabled=true; btn.textContent="Distribuindo..."; }
     try{
+      await ensurePrintMetaCasa();
       let rows=[];
       try{
         rows = await _carregarImpressorasCadastro();
@@ -2658,8 +3028,16 @@
       if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Aplicar alterações"; }
     }
   }
-  function abrirConferencia(){ const detalhes=el("detalhes-pedido"); if(detalhes) detalhes.open=false; preencherConferencias(); atualizarBotaoWhatsapp(); openModal("modal-conferencia"); }
-  function abrirConferenciaZoom(){ const detalhes=el("detalhes-pedido"); if(detalhes) detalhes.open=false; preencherConferencias(); renderResumoZoom(); renderEditorZoom(); openModal("modal-conferencia-zoom"); }
+  async function abrirConferencia(){
+    if(IS_RETAIL && state.modo==="balcao" && state.clienteObrigatorioBalcao && !clienteBalcaoPronto()){
+      alert("Localize ou cadastre o cliente antes de finalizar a venda.");
+      const card=el("balcao-cliente-card"); if(card) card.open=true;
+      const f=el("balcao-fone"); if(f) f.focus();
+      return;
+    }
+    const detalhes=el("detalhes-pedido"); if(detalhes) detalhes.open=false; await preencherConferencias(); atualizarBotaoWhatsapp(); openModal("modal-conferencia");
+  }
+  async function abrirConferenciaZoom(){ const detalhes=el("detalhes-pedido"); if(detalhes) detalhes.open=false; await preencherConferencias(); renderResumoZoom(); renderEditorZoom(); openModal("modal-conferencia-zoom"); }
   async function salvarPedidoTxtInterno(fechar=true, formaOverride=null){ const conteudo=(state.conferenciaConteudo||textoImpressao()||"").trim(); if(!conteudo){ alert("Conteúdo vazio para salvar."); return null; } const formaEnv = (formaOverride!==null && formaOverride!==undefined) ? String(formaOverride||"") : String(state.formaPagamento||""); const r=await fetch("/api/casa/salvar-txt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nropedido:Number(state.pedidoId),conteudo,forma_pagamento:formaEnv||""})}); const ct=(r.headers.get("content-type")||"").toLowerCase(); const d=ct.includes("application/json")?await r.json().catch(()=>({})):{}; if(!r.ok||d.sucesso===false){ if(r.status===404){ alert("Endpoint não encontrado (404). Reinicie o servidor para carregar a rota /api/casa/salvar-txt."); return null; } const txt=!ct.includes("application/json")?await r.text().catch(()=>""):""; alert(d.erro||`Falha ao salvar arquivo .txt (HTTP ${r.status}). ${txt?txt.slice(0,180):""}`); return null; } alert("Pedido salvo em: "+(d.caminho||"-")+(d.aviso?"\n\n"+d.aviso:"")); if(fechar) closeModals(); return {conteudo,arquivo:d.arquivo,caminho:d.caminho}; }
   async function salvarPedidoTxt(){ await salvarPedidoTxtInterno(true); }
   function totalAtualCasa(){
@@ -2741,6 +3119,8 @@
         ip.type="text";
         ip.inputMode="decimal";
         ip.placeholder="0,00";
+        ip.setAttribute("data-receber-valor","1");
+        ip.setAttribute("data-forma",nome);
         ip.value = vals[nome] ? String(vals[nome]).replace(".",",") : "";
         ip.style.minHeight="var(--ui-touch-sm)";
         ip.style.padding="10px 12px";
@@ -2780,9 +3160,23 @@
     render();
 
     return await new Promise((resolve)=>{
-      state.baixaBalcao = { nropedido:Number(nropedido)||0, total, vals, formas, resolve };
+      state.baixaBalcao = { nropedido:Number(nropedido)||0, total, vals, formas, resolve, recalc };
       openModal("modal-baixa-balcao");
     });
+  }
+  function syncBaixaBalcaoValsFromDom(){
+    const bb=state.baixaBalcao;
+    if(!bb||!bb.vals) return;
+    const host=el("bb-formas");
+    if(!host) return;
+    host.querySelectorAll("[data-receber-valor]").forEach((ip)=>{
+      const nome=String(ip.getAttribute("data-forma")||"").trim();
+      if(!nome) return;
+      const v=Math.max(0, parseMoneyInput(ip.value||""));
+      if(v>0) bb.vals[nome]=Math.round(v*100)/100;
+      else delete bb.vals[nome];
+    });
+    if(typeof bb.recalc==="function") bb.recalc();
   }
   async function receberBaixaBalcao(){
     const bb=state.baixaBalcao;
@@ -2824,7 +3218,14 @@
       if(!state.clienteLocalizado){ alert("Localize o cliente antes de imprimir."); return; }
       if(!(el("cli-fone").value||"").trim()){ alert("Informe o telefone antes de imprimir."); return; }
     }
+    if(IS_RETAIL && state.modo==="balcao" && state.clienteObrigatorioBalcao && !clienteBalcaoPronto()){
+      alert("Localize ou cadastre o cliente antes de finalizar a venda.");
+      const card=el("balcao-cliente-card"); if(card) card.open=true;
+      return;
+    }
     if(state.modo==="delivery" && !String(state.formaPagamento||"").trim()){ alert("Selecione a forma de pagamento antes de imprimir."); return; }
+    await ensurePrintMetaCasa();
+    await preencherConferencias();
     const formaToUse = state.modo==="delivery" ? String(state.formaPagamento||"").trim() : (String(state.formaPagamento||"").trim() || "PENDENTE");
     const ok=await salvarPedidoTxtInterno(false, formaToUse);
     if(!ok) return;
@@ -2898,6 +3299,60 @@
   el("cli-fone").addEventListener("keydown",async(e)=>{ if(e.key==="Enter"){ e.preventDefault(); const localizado=await localizarCliente(); if(!localizado){ const c=el("cli-cep"); if(c) c.focus(); } } });
   el("cli-fone").addEventListener("blur",(e)=>{ if(e.relatedTarget && e.relatedTarget.id==="btn-localizar") return; if(state.modo==="delivery" && (el("cli-fone").value||"").trim()) localizarCliente(); });
   el("btn-salvar-cliente").onclick=salvarClienteEntrega;
+  const btnBalcLoc=el("btn-balcao-localizar");
+  if(btnBalcLoc) btnBalcLoc.onclick=()=>localizarClienteBalcao(true);
+  const btnBalcSalvar=el("btn-balcao-salvar-cliente");
+  if(btnBalcSalvar) btnBalcSalvar.onclick=salvarClienteBalcao;
+  const btnBalcHist=el("btn-balcao-historico");
+  if(btnBalcHist) btnBalcHist.onclick=abrirHistoricoCliente;
+  const balcaoFone=el("balcao-fone");
+  if(balcaoFone && IS_RETAIL){
+    balcaoFone.addEventListener("input",()=>{
+      state.ultimoTelefoneLocalizado="";
+      state.clienteLocalizado=false;
+      renderHistoricoClienteResumo();
+      updateBalcaoClienteBadge();
+      updatePrintState();
+      setBalcaoClienteStatus("");
+    });
+    balcaoFone.addEventListener("keydown",async(e)=>{
+      if(e.key==="Enter"){ e.preventDefault(); await localizarClienteBalcao(); }
+    });
+    balcaoFone.addEventListener("blur",(e)=>{
+      if(e.relatedTarget && e.relatedTarget.id==="btn-balcao-localizar") return;
+      if((balcaoFone.value||"").trim()) localizarClienteBalcao();
+    });
+  }
+  const balcaoNome=el("balcao-nome");
+  if(balcaoNome && IS_RETAIL){
+    balcaoNome.addEventListener("input",()=>{ updatePrintState(); updateBalcaoClienteBadge(); });
+  }
+  const balcaoCpf=el("balcao-cpf-cnpj");
+  if(balcaoCpf && IS_RETAIL){
+    balcaoCpf.addEventListener("input",(e)=>{
+      const fmt=formatarCpfCnpjInput(e.target.value||"");
+      if(fmt!==e.target.value) e.target.value=fmt;
+    });
+  }
+  const balcaoCep=el("balcao-cep");
+  if(balcaoCep && IS_RETAIL){
+    balcaoCep.addEventListener("input",async()=>{
+      const v=balcaoCep.value||"";
+      const fmt=formatarCep(v);
+      if(fmt!==v) balcaoCep.value=fmt;
+      const s=el("balcao-cep-status");
+      if(s) s.textContent="";
+      const raw=fmt.replace(/\D/g,"");
+      if(raw.length===8) await buscarEnderecoPorCepBalcao();
+    });
+    balcaoCep.addEventListener("keydown",async(e)=>{
+      if(e.key==="Enter"){ e.preventDefault(); await buscarEnderecoPorCepBalcao(); }
+    });
+    balcaoCep.addEventListener("blur",()=>{
+      const raw=(balcaoCep.value||"").replace(/\D/g,"");
+      if(raw.length===8) buscarEnderecoPorCepBalcao();
+    });
+  }
   el("btn-salvar-obs-geral").onclick=salvarObsGeral;
   async function buscarProdutoPorCodigo(codigo,inputEl){
     try{
@@ -3026,7 +3481,18 @@
       }
     });
   }
-  document.addEventListener("DOMContentLoaded",async()=>{ window.applyRetailUi(); bindHotkeys(); refreshImpressoraCasaLabel(); if(!IS_RETAIL) await carregarDddPadrao(); const params=new URLSearchParams(window.location.search); const modoParam=params.get("modo"); if(IS_RETAIL){ state.modo="balcao"; }else{ state.modo=(modoParam==="balcao"||modoParam==="delivery")?modoParam:"delivery"; } const pedidoParam=Number(String(params.get("pedido")||"").replace(/[^\d]/g,""))||0; const telParam=String(params.get("tel")||"").replace(/\D/g,""); const recParam=params.get("rec")==="1"; if(pedidoParam>0 && recParam){ state.pedidoId=pedidoParam; state.pedidoReservado=true; state.pedidoPreview=state.pedidoId; state.emRecuperacao=true; updatePedidoBadge(); if(state.modo==="delivery" && telParam){ const local=telParam.length>9?telParam.slice(-9):telParam; if(el("cli-fone")) el("cli-fone").value=local; } } await syncPedidoAtual(); syncModeUi(); captureClienteSnapshot(); applyInitialUiState(); if(!IS_RETAIL) setClienteStatus("Pedidos anteriores: -"); await refreshTaxaServico(); await loadClassTabs(); const _ldMode=pedidoParam>0 && recParam ? "recuperacao" : "normal"; const _ldOk=await loadItens(_ldMode); if(pedidoParam>0 && recParam && _ldOk===false){ state.emRecuperacao=false; state.pedidoId=0; state.pedidoReservado=false; await syncPedidoAtual(); await loadItens("normal"); updatePedidoBadge(); } if(!IS_RETAIL){ await refreshPendentesAguarde(); const btnPend=el("btn-pend-aguarde"); if(btnPend) btnPend.onclick=async()=>{ await refreshPendentesAguarde(); renderAguardePendentesModal(); openModal("modal-aguarde-pendentes"); }; } if(IS_RETAIL){ history.replaceState({},"",lojaUrl("/casa?modo=balcao")); await resetPedidoRapido(true); syncModeUi(); } lucide.createIcons(); });
+  if(window.lojaReceberHotkeys){
+    window.lojaReceberHotkeys.register({
+      id:"casa-baixa-balcao",
+      enabled:()=>true,
+      isActive:()=>!!el("modal-baixa-balcao")?.classList.contains("open"),
+      isValueInput:(t)=>!!t?.closest?.("#bb-formas") && t.matches("input[data-receber-valor]"),
+      canConfirm:()=>{ const b=el("btn-bb-receber"); return !!(b && !b.disabled); },
+      syncBeforeConfirm:syncBaixaBalcaoValsFromDom,
+      onConfirm:()=>{ receberBaixaBalcao(); },
+    });
+  }
+  document.addEventListener("DOMContentLoaded",async()=>{ bindPedidoPreviewRefresh(); if(window.lojaPrintHeader) window.lojaPrintHeader.ensureLojaDados(); window.applyRetailUi(); bindHotkeys(); refreshImpressoraCasaLabel(); if(!IS_RETAIL) await carregarDddPadrao(); if(IS_RETAIL) await carregarConfigBalcao(); const params=new URLSearchParams(window.location.search); const modoParam=params.get("modo"); if(IS_RETAIL){ state.modo="balcao"; }else{ state.modo=(modoParam==="balcao"||modoParam==="delivery")?modoParam:"delivery"; } const pedidoParam=Number(String(params.get("pedido")||"").replace(/[^\d]/g,""))||0; const telParam=String(params.get("tel")||"").replace(/\D/g,""); const recParam=params.get("rec")==="1"; if(pedidoParam>0 && recParam){ state.pedidoId=pedidoParam; state.pedidoReservado=true; state.pedidoPreview=state.pedidoId; state.emRecuperacao=true; updatePedidoBadge(); if(state.modo==="delivery" && telParam){ const local=telParam.length>9?telParam.slice(-9):telParam; if(el("cli-fone")) el("cli-fone").value=local; } } await syncPedidoAtual(); syncModeUi(); captureClienteSnapshot(); applyInitialUiState(); if(!IS_RETAIL) setClienteStatus("Pedidos anteriores: -"); await refreshTaxaServico(); await loadClassTabs(); const _ldMode=pedidoParam>0 && recParam ? "recuperacao" : "normal"; const _ldOk=await loadItens(_ldMode); if(pedidoParam>0 && recParam && _ldOk===false){ state.emRecuperacao=false; state.pedidoId=0; state.pedidoReservado=false; await syncPedidoAtual(); await loadItens("normal"); updatePedidoBadge(); } if(!IS_RETAIL){ await refreshPendentesAguarde(); const btnPend=el("btn-pend-aguarde"); if(btnPend) btnPend.onclick=async()=>{ await refreshPendentesAguarde(); renderAguardePendentesModal(); openModal("modal-aguarde-pendentes"); }; } if(IS_RETAIL){ history.replaceState({},"",lojaUrl("/casa?modo=balcao")); await resetPedidoRapido(true); syncModeUi(); } lucide.createIcons(); });
 })();
 </script>
 {% if not IS_RETAIL %}

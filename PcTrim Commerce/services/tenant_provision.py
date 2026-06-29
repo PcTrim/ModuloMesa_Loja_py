@@ -5,6 +5,7 @@ import mysql.connector
 
 from database import conectar
 from services.passwords import hash_password
+from services.usuarios_loja import insert_usuario_row
 
 DEFAULT_FORMAS_PAGAMENTO = (
     ("Dinheiro", "S"),
@@ -114,31 +115,7 @@ def _usuario_login_exists(cur, usuario: str) -> bool:
 
 
 def _insert_usuario(cur, usuario: str, senha_hash: str, id_cliente: int) -> None:
-    try:
-        cur.execute(
-            """
-            INSERT INTO usuarios (usuario, senha, id_cliente, funcao, ativo)
-            VALUES (%s, %s, %s, 'gerente', 1)
-            """,
-            (usuario, senha_hash, id_cliente),
-        )
-    except mysql.connector.Error as e:
-        if getattr(e, "errno", None) == 1054:
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO usuarios (usuario, senha, id_cliente, funcao)
-                    VALUES (%s, %s, %s, 'gerente')
-                    """,
-                    (usuario, senha_hash, id_cliente),
-                )
-            except mysql.connector.Error:
-                cur.execute(
-                    "INSERT INTO usuarios (usuario, senha, id_cliente) VALUES (%s, %s, %s)",
-                    (usuario, senha_hash, id_cliente),
-                )
-        else:
-            raise
+    insert_usuario_row(cur, usuario, senha_hash, id_cliente, funcao="gerente", ativo=1)
 
 
 def _insert_formapagamento(cur, id_cliente: int) -> None:

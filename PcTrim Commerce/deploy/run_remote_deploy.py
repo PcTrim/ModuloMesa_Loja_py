@@ -63,9 +63,11 @@ def ssh_exec(client: paramiko.SSHClient, cmd: str, check: bool = True) -> tuple[
     err = stderr.read().decode("utf-8", errors="replace")
     code = stdout.channel.recv_exit_status()
     if out.strip():
-        print(out.rstrip())
+        sys.stdout.buffer.write(out.encode("utf-8", errors="replace"))
+        sys.stdout.buffer.write(b"\n")
     if err.strip():
-        print(err.rstrip(), file=sys.stderr)
+        sys.stderr.buffer.write(err.encode("utf-8", errors="replace"))
+        sys.stderr.buffer.write(b"\n")
     if check and code != 0:
         raise RuntimeError(f"Comando falhou (exit {code})")
     return code, out, err
