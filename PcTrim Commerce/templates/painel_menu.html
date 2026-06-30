@@ -184,9 +184,10 @@
       user-select: none;
     }
     .grid {
-      display: grid;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       width: 100%;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
       align-items: stretch;
       align-content: start;
@@ -196,6 +197,8 @@
       display: flex;
       align-items: flex-start;
       gap: 14px;
+      flex: 1 1 280px;
+      max-width: calc((100% - 24px) / 3);
       text-decoration: none;
       color: inherit;
       padding: 14px 14px;
@@ -424,8 +427,8 @@
       .content-wrap {
         width: min(900px, 100%);
       }
-      .grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      a.tile {
+        max-width: calc((100% - 12px) / 2);
       }
     }
     @media (max-width: 768px) {
@@ -442,8 +445,9 @@
         width: 100%;
         justify-content: center;
       }
-      .grid {
-        grid-template-columns: 1fr;
+      a.tile {
+        flex-basis: 100%;
+        max-width: 100%;
       }
       h1 {
         font-size: 22px;
@@ -617,20 +621,6 @@
             <p class="desc">{% if IS_RETAIL %}PDV de balcão — venda rápida com cliente opcional.{% else %}Abertura de pedidos (Delivery/Balcão) e acesso ao módulo de Mesas pelo seletor.{% endif %}</p>
           </div>
         </a>
-        <a class="tile" href="{{ url_prefix }}/configuracoes">
-          <span class="ico"><i data-lucide="settings" width="24" height="24"></i></span>
-          <div class="tile-copy">
-            <h2>Configurações</h2>
-            <p class="desc">Produtos, taxas e tabelas auxiliares.</p>
-          </div>
-        </a>
-        <a class="tile" href="{{ url_prefix }}/admin/lojas" style="border-color: rgba(124,58,237,.45);">
-          <span class="ico"><i data-lucide="building-2" width="24" height="24"></i></span>
-          <div class="tile-copy">
-            <h2>Cadastrar lojas</h2>
-            <p class="desc">Administração — incluir nova loja no sistema (equipe técnica / suporte).</p>
-          </div>
-        </a>
         <a class="tile warn" href="#" id="baixa-open" onclick="return false;">
           <span class="ico"><i data-lucide="wallet" width="24" height="24"></i></span>
           <div class="tile-copy">
@@ -650,6 +640,13 @@
           <div class="tile-copy">
             <h2>Cancelar comanda</h2>
             <p class="desc">{% if IS_RETAIL %}Cancela a comanda de balcão enquanto ABERTO, AGUARDE ou ROTA. Não permite mais edição.{% else %}Cancela a comanda inteira (DELIVERY/Balcão) enquanto ABERTO, AGUARDE ou ROTA. Não permite mais edição.{% endif %}</p>
+          </div>
+        </a>
+        <a class="tile" href="{{ url_prefix }}/configuracoes">
+          <span class="ico"><i data-lucide="settings" width="24" height="24"></i></span>
+          <div class="tile-copy">
+            <h2>Configurações</h2>
+            <p class="desc">Produtos, taxas e tabelas auxiliares.</p>
           </div>
         </a>
       </nav>

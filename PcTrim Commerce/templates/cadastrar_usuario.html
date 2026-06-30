@@ -90,6 +90,8 @@
                         <option value="atendente">Atendente</option>
                         <option value="gerente">Gerente</option>
                     </select>
+                    <label for="whatsapp" class="login-label" style="margin-top:0.75rem;">WhatsApp (login por código)</label>
+                    <input type="tel" id="whatsapp" class="login-input" placeholder="(11) 99999-9999" autocomplete="tel" data-hint="Número para receber código de acesso no login.">
                     <div id="ativoRow" style="display:none; margin-top:0.75rem;">
                         <label class="login-label">
                             <input type="checkbox" id="ativo" checked> Usuário ativo
@@ -209,6 +211,7 @@
                 document.getElementById('loginUsuario').readOnly = true;
                 document.getElementById('loginUsuario').required = false;
                 document.getElementById('funcao').value = String(u.funcao || 'atendente').toLowerCase();
+                document.getElementById('whatsapp').value = u.whatsapp || '';
                 document.getElementById('ativo').checked = Number(u.ativo) === 1;
                 document.getElementById('ativoRow').style.display = 'block';
                 document.getElementById('senha').value = '';
@@ -246,7 +249,8 @@
                 if (chaveEdicao) {
                     const body = {
                         funcao: document.getElementById('funcao').value,
-                        ativo: document.getElementById('ativo').checked ? 1 : 0
+                        ativo: document.getElementById('ativo').checked ? 1 : 0,
+                        whatsapp: document.getElementById('whatsapp').value.trim()
                     };
                     if (senha || senha2) {
                         body.senha = senha;
@@ -274,7 +278,8 @@
                             usuario: document.getElementById('loginUsuario').value.trim(),
                             senha: senha,
                             senha_confirmacao: senha2,
-                            funcao: document.getElementById('funcao').value
+                            funcao: document.getElementById('funcao').value,
+                            whatsapp: document.getElementById('whatsapp').value.trim()
                         })
                     });
                     const result = await response.json();

@@ -34,6 +34,39 @@ CREATE TABLE IF NOT EXISTS classificacao (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================
+-- RETAIL: categoria / subcategoria / produto_retail
+-- (restaurante não usa; produtos.category_id/subcategory_id ficam NULL)
+-- =============================
+CREATE TABLE IF NOT EXISTS categoria (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    nome VARCHAR(120) NOT NULL,
+    ordem_exibicao INT NOT NULL DEFAULT 0,
+    ativo TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_categoria_cliente_nome (id_cliente, nome),
+    KEY idx_categoria_id_cliente (id_cliente),
+    KEY idx_categoria_cliente_ativo_ordem (id_cliente, ativo, ordem_exibicao)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS subcategoria (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    categoria_id INT NOT NULL,
+    nome VARCHAR(120) NOT NULL,
+    ordem_exibicao INT NOT NULL DEFAULT 0,
+    ativo TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_subcategoria_cliente_cat_nome (id_cliente, categoria_id, nome),
+    KEY idx_subcategoria_id_cliente (id_cliente),
+    KEY idx_subcategoria_categoria (categoria_id),
+    KEY idx_subcategoria_cliente_ativo_ordem (id_cliente, ativo, ordem_exibicao),
+    CONSTRAINT fk_subcategoria_categoria FOREIGN KEY (categoria_id) REFERENCES categoria(id) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================
 -- TABELA: produtos
 -- =============================
 CREATE TABLE IF NOT EXISTS produtos (
@@ -49,9 +82,37 @@ CREATE TABLE IF NOT EXISTS produtos (
     vendaliberada VARCHAR(10) DEFAULT 'Sim',
     descricao TEXT,
     id_cliente INT NOT NULL,
+    category_id INT NULL DEFAULT NULL,
+    subcategory_id INT NULL DEFAULT NULL,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY idx_produtos_classe (classe),
-    KEY idx_produtos_id_cliente (id_cliente)
+    KEY idx_produtos_id_cliente (id_cliente),
+    KEY idx_produtos_category_id (category_id),
+    KEY idx_produtos_subcategory_id (subcategory_id),
+    CONSTRAINT fk_produtos_category FOREIGN KEY (category_id) REFERENCES categoria(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_produtos_subcategory FOREIGN KEY (subcategory_id) REFERENCES subcategoria(id) ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS produto_retail (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    product_id INT NOT NULL,
+    nome_vitrine VARCHAR(200) NULL,
+    descricao_vitrine TEXT NULL,
+    preco_varejo DECIMAL(10,2) NULL,
+    preco_atacado DECIMAL(10,2) NULL,
+    comissao DECIMAL(5,2) NULL DEFAULT NULL,
+    estoque DECIMAL(12,3) NOT NULL DEFAULT 0,
+    permite_venda_sem_estoque TINYINT(1) NOT NULL DEFAULT 0,
+    destaque TINYINT(1) NOT NULL DEFAULT 0,
+    ativo TINYINT(1) NOT NULL DEFAULT 1,
+    ordem_exibicao INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_produto_retail_product (product_id),
+    KEY idx_produto_retail_id_cliente (id_cliente),
+    KEY idx_produto_retail_vitrine (id_cliente, ativo, destaque, ordem_exibicao),
+    CONSTRAINT fk_produto_retail_product FOREIGN KEY (product_id) REFERENCES produtos(chave) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================

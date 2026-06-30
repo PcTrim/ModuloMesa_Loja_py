@@ -45,6 +45,10 @@ def _validate_senha(senha: str, *, required: bool = True) -> str:
     return s
 
 
+def _normalize_whatsapp(whatsapp: str | None) -> str:
+    return "".join(ch for ch in str(whatsapp or "") if ch.isdigit())
+
+
 def insert_usuario_row(
     cur,
     usuario: str,
@@ -52,32 +56,43 @@ def insert_usuario_row(
     id_cliente: int,
     funcao: str = "gerente",
     ativo: int = 1,
+    whatsapp: str | None = None,
 ) -> None:
-    """INSERT em usuarios com fallback se colunas funcao/ativo não existirem."""
+    """INSERT em usuarios com fallback se colunas funcao/ativo/whatsapp não existirem."""
     funcao = normalize_funcao(funcao)
+    wa = _normalize_whatsapp(whatsapp).strip() or None
     try:
         cur.execute(
             """
-            INSERT INTO usuarios (usuario, senha, id_cliente, funcao, ativo)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO usuarios (usuario, senha, id_cliente, funcao, ativo, whatsapp)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            (usuario, senha_hash, id_cliente, funcao, int(ativo)),
+            (usuario, senha_hash, id_cliente, funcao, int(ativo), wa),
         )
     except mysql.connector.Error as e:
         if getattr(e, "errno", None) == 1054:
             try:
                 cur.execute(
                     """
-                    INSERT INTO usuarios (usuario, senha, id_cliente, funcao)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO usuarios (usuario, senha, id_cliente, funcao, ativo)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (usuario, senha_hash, id_cliente, funcao),
+                    (usuario, senha_hash, id_cliente, funcao, int(ativo)),
                 )
             except mysql.connector.Error:
-                cur.execute(
-                    "INSERT INTO usuarios (usuario, senha, id_cliente) VALUES (%s, %s, %s)",
-                    (usuario, senha_hash, id_cliente),
-                )
+                try:
+                    cur.execute(
+                        """
+                        INSERT INTO usuarios (usuario, senha, id_cliente, funcao)
+                        VALUES (%s, %s, %s, %s)
+                        """,
+                        (usuario, senha_hash, id_cliente, funcao),
+                    )
+                except mysql.connector.Error:
+                    cur.execute(
+                        "INSERT INTO usuarios (usuario, senha, id_cliente) VALUES (%s, %s, %s)",
+                        (usuario, senha_hash, id_cliente),
+                    )
         elif getattr(e, "errno", None) == 1062:
             raise UsuariosLojaError(f"Login '{usuario}' já está em uso.", status=409) from e
         else:
@@ -88,7 +103,7 @@ def _fetch_usuario(cur, id_cliente: int, chave: int) -> dict | None:
     try:
         cur.execute(
             """
-            SELECT chave, usuario, funcao, ativo, data_criacao
+            SELECT chave, usuario, funcao, ativo, whatsapp, data_criacao
             FROM usuarios
             WHERE chave = %s AND id_cliente = %s
             LIMIT 1
@@ -113,6 +128,7 @@ def _fetch_usuario(cur, id_cliente: int, chave: int) -> dict | None:
     if isinstance(row, dict):
         row.setdefault("funcao", "gerente")
         row.setdefault("ativo", 1)
+        row.setdefault("whatsapp", None)
         return row
     return {
         "chave": row[0],
@@ -174,7 +190,7 @@ def list_usuarios(id_cliente: int) -> list[dict]:
         try:
             cur.execute(
                 """
-                SELECT chave, usuario, funcao, ativo, data_criacao
+                SELECT chave, usuario, funcao, ativo, whatsapp, data_criacao
                 FROM usuarios
                 WHERE id_cliente = %s
                 ORDER BY usuario
@@ -202,6 +218,7 @@ def list_usuarios(id_cliente: int) -> list[dict]:
                     "usuario": r.get("usuario"),
                     "funcao": normalize_funcao(r.get("funcao")),
                     "ativo": int(r.get("ativo") if r.get("ativo") is not None else 1),
+                    "whatsapp": r.get("whatsapp") or "",
                     "data_criacao": (
                         r.get("data_criacao").isoformat()
                         if hasattr(r.get("data_criacao"), "isoformat")
@@ -217,7 +234,7 @@ def list_usuarios(id_cliente: int) -> list[dict]:
             conn.close()
 
 
-def create_usuario(id_cliente: int, usuario: str, senha: str, funcao: str) -> dict:
+def create_usuario(id_cliente: int, usuario: str, senha: str, funcao: str, whatsapp: str | None = None) -> dict:
     login = _validate_login(usuario)
     senha_plain = _validate_senha(senha, required=True)
     funcao_norm = normalize_funcao(funcao)
@@ -232,7 +249,7 @@ def create_usuario(id_cliente: int, usuario: str, senha: str, funcao: str) -> di
             raise UsuariosLojaError(f"Login '{login}' já está em uso.", status=409)
 
         senha_hash = hash_password(senha_plain)
-        insert_usuario_row(cur, login, senha_hash, id_cliente, funcao_norm, 1)
+        insert_usuario_row(cur, login, senha_hash, id_cliente, funcao_norm, 1, whatsapp)
         conn.commit()
         chave = cur.lastrowid
         return {
@@ -240,6 +257,7 @@ def create_usuario(id_cliente: int, usuario: str, senha: str, funcao: str) -> di
             "usuario": login,
             "funcao": funcao_norm,
             "ativo": 1,
+            "whatsapp": _normalize_whatsapp(whatsapp).strip() or "",
         }
     except UsuariosLojaError:
         if conn:
@@ -265,6 +283,7 @@ def update_usuario(
     funcao: str | None = None,
     ativo: int | None = None,
     senha: str | None = None,
+    whatsapp: str | None = None,
     usuario_logado: str | None = None,
 ) -> dict:
     conn = None
@@ -314,6 +333,9 @@ def update_usuario(
         if senha_hash:
             sets.append("senha = %s")
             params.append(senha_hash)
+        if whatsapp is not None:
+            sets.append("whatsapp = %s")
+            params.append(_normalize_whatsapp(whatsapp).strip() or None)
 
         if not sets:
             raise UsuariosLojaError("Nenhuma alteração informada.")
@@ -354,6 +376,7 @@ def update_usuario(
             "usuario": updated.get("usuario"),
             "funcao": normalize_funcao(updated.get("funcao")),
             "ativo": int(updated.get("ativo") if updated.get("ativo") is not None else 1),
+            "whatsapp": updated.get("whatsapp") or "",
         }
     except UsuariosLojaError:
         if conn:

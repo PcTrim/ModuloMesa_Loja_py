@@ -54,6 +54,20 @@ def restaurant_only(f):
     return wrapped
 
 
+def retail_only(f):
+    """Restringe rotas ao catálogo retail (lojas varejo)."""
+
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        if not is_retail():
+            if request.path.startswith("/api/") or request.is_json:
+                return jsonify({"sucesso": False, "erro": "Recurso disponível apenas no modo varejo."}), 403
+            return redirect(url_for("configuracoes"))
+        return f(*args, **kwargs)
+
+    return wrapped
+
+
 def gerente_required(f):
     """Restringe rotas a usuários com funcao gerente na sessão."""
 

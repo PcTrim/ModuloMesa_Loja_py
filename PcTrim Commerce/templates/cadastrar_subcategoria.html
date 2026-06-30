@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subcategorias | {{ nome_fantasia or 'Loja' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
+    {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+    <script src="{{ url_for('static', filename='retail-catalog.js') }}?v=1"></script>
+</head>
+<body class="cfg-body">
+    <div class="cfg-page">
+    <header class="topbar">
+        <a class="home" href="{{ url_prefix }}/configuracoes" title="Configurações"><i data-lucide="home" width="18" height="18"></i></a>
+        <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+        <div class="brand">Subcategorias</div>
+        {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+            <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+            <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+        </button>
+    </header>
+
+    <main class="cfg-content cfg-cadastro-page">
+        <div class="cfg-wrap cfg-cadastro-wrap">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+            <p class="help" style="margin-bottom:12px;">Subcategorias vinculadas às categorias do catálogo retail.</p>
+
+            <section class="cfg-section-card">
+                <div class="cfg-cadastro-head">
+                    <h2 class="cfg-section-title">Subcategorias cadastradas</h2>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                        <select id="filtroCategoria" class="form" style="max-width:220px;">
+                            <option value="">Todas as categorias</option>
+                        </select>
+                        <button type="button" class="btn-purple cfg-cadastro-btn-inline" onclick="novaSubcategoria()">+ Nova subcategoria</button>
+                    </div>
+                </div>
+                <div class="cfg-cadastro-table-wrap">
+                    <table class="tbl cfg-table">
+                        <thead>
+                            <tr>
+                                <th style="width:70px;">ID</th>
+                                <th>Categoria</th>
+                                <th>Subcategoria</th>
+                                <th style="width:90px;">Ordem</th>
+                                <th style="width:90px;">Ativo</th>
+                                <th style="width:220px;text-align:center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabela">
+                            <tr><td colspan="6" class="empty">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="modalSub" class="cfg-cadastro-modal" aria-hidden="true">
+        <div class="cfg-cadastro-modal-backdrop" data-close-modal tabindex="-1"></div>
+        <div class="cfg-cadastro-modal-card" role="dialog" aria-modal="true">
+            <div class="cfg-cadastro-modal-head">
+                <h2 class="cfg-section-title" id="modalTitulo">Nova subcategoria</h2>
+                <button type="button" class="cfg-cadastro-modal-close" data-close-modal aria-label="Fechar">&times;</button>
+            </div>
+            <form id="formSub" class="form" onsubmit="salvarSubcategoria(event)">
+                <input type="hidden" id="editId" value="">
+                <select id="categoria_id" required>
+                    <option value="">Selecione a categoria...</option>
+                </select>
+                <input type="text" id="nome" required maxlength="120" placeholder="Nome da subcategoria">
+                <input type="number" id="ordem_exibicao" value="0" step="1" placeholder="Ordem de exibição">
+                <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                    <input type="checkbox" id="ativo" checked> Ativa
+                </label>
+                <div class="cfg-cadastro-actions">
+                    <button type="button" class="btn-outline" data-close-modal>Cancelar</button>
+                    <button type="submit" class="btn-green" id="btnSalvar">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        let categoriasCache = [];
+
+        function mostrarMensagem(texto, tipo) {
+            const el = document.getElementById('mensagem');
+            if (!el) return;
+            el.className = 'mensagem ' + tipo;
+            el.textContent = texto;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 3500);
+        }
+
+        function openModal() {
+            document.getElementById('modalSub').classList.add('open');
+            document.getElementById('modalSub').setAttribute('aria-hidden', 'false');
+        }
+
+        function closeModal() {
+            document.getElementById('modalSub').classList.remove('open');
+            document.getElementById('modalSub').setAttribute('aria-hidden', 'true');
+        }
+
+        function badgeAtivo(v) {
+            return Number(v) ? '<span class="pill ok">Sim</span>' : '<span class="pill bad">Não</span>';
+        }
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function preencherSelectCategorias(selectEl, selectedId) {
+            if (!selectEl) return;
+            const prev = selectedId || selectEl.value;
+            selectEl.innerHTML = '<option value="">Selecione a categoria...</option>';
+            categoriasCache.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.nome;
+                selectEl.appendChild(opt);
+            });
+            if (prev) selectEl.value = String(prev);
+        }
+
+        async function carregarCategorias() {
+            const data = await retailApiJson('/api/retail/categorias');
+            categoriasCache = data.categorias || [];
+            const filtro = document.getElementById('filtroCategoria');
+            const prevFiltro = filtro.value;
+            filtro.innerHTML = '<option value="">Todas as categorias</option>';
+            categoriasCache.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.nome;
+                filtro.appendChild(opt);
+            });
+            if (prevFiltro) filtro.value = prevFiltro;
+            preencherSelectCategorias(document.getElementById('categoria_id'));
+        }
+
+        async function carregarSubcategorias() {
+            const tbody = document.getElementById('corpoTabela');
+            const cat = document.getElementById('filtroCategoria').value;
+            const qs = cat ? ('?categoria_id=' + encodeURIComponent(cat)) : '';
+            try {
+                const data = await retailApiJson('/api/retail/subcategorias' + qs);
+                const rows = data.subcategorias || [];
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma subcategoria cadastrada.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.map(r => `
+                    <tr>
+                        <td class="kcell">#${r.id}</td>
+                        <td>${escapeHtml(r.categoria_nome)}</td>
+                        <td>${escapeHtml(r.nome)}</td>
+                        <td>${r.ordem_exibicao ?? 0}</td>
+                        <td>${badgeAtivo(r.ativo)}</td>
+                        <td style="text-align:center;">
+                            <span class="tbl-actions">
+                                <button type="button" class="btn-mini" onclick="editarSubcategoria(${r.id})">Editar</button>
+                                <button type="button" class="btn-mini" onclick="toggleAtivo(${r.id}, ${Number(r.ativo) ? 0 : 1})">${Number(r.ativo) ? 'Desativar' : 'Ativar'}</button>
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar subcategorias.</td></tr>';
+                mostrarMensagem(e.message || 'Erro ao carregar subcategorias', 'erro');
+            }
+        }
+
+        function novaSubcategoria() {
+            document.getElementById('editId').value = '';
+            document.getElementById('formSub').reset();
+            document.getElementById('ativo').checked = true;
+            preencherSelectCategorias(document.getElementById('categoria_id'));
+            document.getElementById('modalTitulo').textContent = 'Nova subcategoria';
+            document.getElementById('btnSalvar').textContent = 'Salvar';
+            openModal();
+        }
+
+        async function editarSubcategoria(id) {
+            try {
+                const data = await retailApiJson('/api/retail/subcategorias/' + id);
+                const s = data.subcategoria;
+                document.getElementById('editId').value = s.id;
+                preencherSelectCategorias(document.getElementById('categoria_id'), s.categoria_id);
+                document.getElementById('nome').value = s.nome || '';
+                document.getElementById('ordem_exibicao').value = s.ordem_exibicao ?? 0;
+                document.getElementById('ativo').checked = !!Number(s.ativo);
+                document.getElementById('modalTitulo').textContent = 'Editar subcategoria';
+                document.getElementById('btnSalvar').textContent = 'Atualizar';
+                openModal();
+            } catch (e) {
+                mostrarMensagem(e.message || 'Erro ao carregar', 'erro');
+            }
+        }
+
+        async function toggleAtivo(id, ativo) {
+            try {
+                const data = await retailApiJson('/api/retail/subcategorias/' + id + '/ativo', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ativo: !!ativo })
+                });
+                mostrarMensagem(data.mensagem || 'Atualizado.', 'sucesso');
+                carregarSubcategorias();
+            } catch (e) {
+                mostrarMensagem(e.message || 'Erro ao atualizar', 'erro');
+            }
+        }
+
+        async function salvarSubcategoria(ev) {
+            ev.preventDefault();
+            const id = document.getElementById('editId').value;
+            const payload = {
+                categoria_id: parseInt(document.getElementById('categoria_id').value, 10),
+                nome: document.getElementById('nome').value.trim(),
+                ordem_exibicao: parseInt(document.getElementById('ordem_exibicao').value, 10) || 0,
+                ativo: document.getElementById('ativo').checked ? 1 : 0
+            };
+            const url = id ? '/api/retail/subcategorias/' + id : '/api/retail/subcategorias';
+            const method = id ? 'PUT' : 'POST';
+            try {
+                const data = await retailApiJson(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                mostrarMensagem(data.mensagem || 'Salvo.', 'sucesso');
+                closeModal();
+                carregarSubcategorias();
+            } catch (e) {
+                mostrarMensagem(e.message || 'Erro ao salvar', 'erro');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', closeModal));
+            document.getElementById('filtroCategoria').addEventListener('change', carregarSubcategorias);
+            try {
+                await carregarCategorias();
+                await carregarSubcategorias();
+            } catch (e) {
+                mostrarMensagem(e.message || 'Erro ao iniciar', 'erro');
+            }
+        });
+    </script>
+    <script>try { lucide.createIcons(); } catch (e) {}</script>
+    {% include 'partials/context_hint_bar.html' %}
+</body>
+</html>

@@ -14,23 +14,40 @@ class LoginPayload:
     usuario: str
     senha: str
     csrf_token: str | None
+    metodo: str = "senha"
+    codigo: str = ""
 
 
 def parse_login_json(data: dict[str, Any] | None) -> LoginPayload:
     if not data:
         return LoginPayload(usuario="", senha="", csrf_token=None)
+    metodo = str(data.get("metodo") or "senha").strip().lower()
+    if metodo not in ("senha", "whatsapp"):
+        metodo = "senha"
     return LoginPayload(
         usuario=str(data.get("usuario") or "").strip(),
         senha=str(data.get("senha") or "").strip(),
         csrf_token=(data.get("csrf_token") or data.get("csrf") or None),
+        metodo=metodo,
+        codigo=str(data.get("codigo") or "").strip(),
     )
 
 
-def collect_empty_login_fields(usuario: str, senha: str) -> list[str]:
+def collect_empty_login_fields(
+    usuario: str,
+    senha: str,
+    *,
+    metodo: str = "senha",
+    codigo: str = "",
+) -> list[str]:
     """Retorna nomes de campos vazios (para resposta JSON + UX no cliente)."""
     missing: list[str] = []
     if not usuario:
         missing.append("usuario")
+    if metodo == "whatsapp":
+        if not codigo:
+            missing.append("codigo")
+        return missing
     if not senha:
         missing.append("senha")
     return missing

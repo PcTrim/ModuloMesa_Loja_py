@@ -361,6 +361,19 @@ html[data-theme="light"] .cfg-theme-btn .icon-light { display: none; }
   grid-template-columns: 1fr;
   gap: 1rem;
 }
+.cfg-grid-heading {
+  grid-column: 1 / -1;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cfg-muted);
+}
+.cfg-grid-heading:first-of-type {
+  margin-top: 0;
+}
 @media (min-width: 640px) {
   .cfg-grid {
     grid-template-columns: repeat(2, 1fr);

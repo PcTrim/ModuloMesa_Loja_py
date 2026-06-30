@@ -4,7 +4,9 @@ from flask import Blueprint, jsonify, render_template, request, session
 
 from decorators import login_required
 from database import conectar
+from services.business_mode import is_retail
 from services.dados_loja import obter_dados_loja
+from services.retail_catalog import RetailCatalogError, apply_retail_produto_save, enrich_produto_retail
 
 catalog_bp = Blueprint("catalog", __name__)
 
@@ -145,6 +147,9 @@ def salvar_produto():
             )
             chave_gerada = cursor.lastrowid
 
+        if is_retail():
+            apply_retail_produto_save(cursor, id_cliente, chave_gerada, dados)
+
         conn.commit()
 
         print(f"[PRODUTO CADASTRADO] {produto} (código: {chave_gerada}, classe: {classe})")
@@ -152,6 +157,10 @@ def salvar_produto():
             {"sucesso": True, "mensagem": f"Produto '{produto}' cadastrado com sucesso! (Código: {chave_gerada})"}
         )
 
+    except RetailCatalogError as err:
+        if conn:
+            conn.rollback()
+        return jsonify({"sucesso": False, "erro": str(err)}), 400
     except mysql.connector.Error as db_err:
         print("[DB ERROR]", db_err)
         if getattr(db_err, "errno", None) == 1062:
@@ -176,16 +185,34 @@ def listar_produtos():
         cursor = conn.cursor(dictionary=True)
 
         id_cliente = session.get("id_cliente")
-        cursor.execute(
-            """
-            SELECT chave, produto, preco, classe, porkilo, impressora, cfop, ncm, 
-                   display, vendaliberada, descricao, barcode
-            FROM produtos
-            WHERE id_cliente = %s
-            ORDER BY produto
-        """,
-            (id_cliente,),
-        )
+        if is_retail():
+            cursor.execute(
+                """
+                SELECT p.chave, p.produto, p.preco, p.classe, p.porkilo, p.impressora, p.cfop, p.ncm,
+                       p.display, p.vendaliberada, p.descricao, p.barcode,
+                       p.category_id, p.subcategory_id,
+                       c.nome AS categoria_nome, s.nome AS subcategoria_nome,
+                       pr.estoque, pr.destaque, pr.ativo AS retail_ativo
+                FROM produtos p
+                LEFT JOIN categoria c ON c.id = p.category_id AND c.id_cliente = p.id_cliente
+                LEFT JOIN subcategoria s ON s.id = p.subcategory_id AND s.id_cliente = p.id_cliente
+                LEFT JOIN produto_retail pr ON pr.product_id = p.chave AND pr.id_cliente = p.id_cliente
+                WHERE p.id_cliente = %s
+                ORDER BY p.produto
+                """,
+                (id_cliente,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT chave, produto, preco, classe, porkilo, impressora, cfop, ncm, 
+                       display, vendaliberada, descricao, barcode
+                FROM produtos
+                WHERE id_cliente = %s
+                ORDER BY produto
+            """,
+                (id_cliente,),
+            )
 
         produtos = cursor.fetchall()
 
@@ -226,6 +253,8 @@ def obter_produto(chave):
         produto = cursor.fetchone()
 
         if produto:
+            if is_retail():
+                enrich_produto_retail(cursor, id_cliente, produto)
             return jsonify({"sucesso": True, "produto": produto})
         else:
             return jsonify({"sucesso": False, "erro": "Produto não encontrado"}), 404
@@ -317,7 +346,7 @@ def editar_produto(chave):
             return jsonify({"sucesso": False, "erro": "Classe e nome do produto são obrigatórios"}), 400
 
         conn = conectar()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
         id_cliente = session.get("id_cliente")
         cursor.execute(
@@ -345,14 +374,21 @@ def editar_produto(chave):
             ),
         )
 
-        conn.commit()
-
-        if cursor.rowcount > 0:
-            print(f"[PRODUTO ATUALIZADO] {produto} (código: {chave})")
-            return jsonify({"sucesso": True, "mensagem": f"Produto '{produto}' atualizado com sucesso!"})
-        else:
+        if cursor.rowcount <= 0:
             return jsonify({"sucesso": False, "erro": "Produto não encontrado"}), 404
 
+        if is_retail():
+            apply_retail_produto_save(cursor, id_cliente, chave, dados)
+
+        conn.commit()
+
+        print(f"[PRODUTO ATUALIZADO] {produto} (código: {chave})")
+        return jsonify({"sucesso": True, "mensagem": f"Produto '{produto}' atualizado com sucesso!"})
+
+    except RetailCatalogError as err:
+        if conn:
+            conn.rollback()
+        return jsonify({"sucesso": False, "erro": str(err)}), 400
     except mysql.connector.Error as db_err:
         print("[DB ERROR]", db_err)
         return jsonify({"sucesso": False, "erro": "Erro ao editar produto"}), 500

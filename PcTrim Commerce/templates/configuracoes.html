@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
-  <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+  <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=23">
   <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
   {% include 'partials/topbar_meta_assets.html' %}
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -38,6 +38,8 @@
     {% endif %}
 
     <section class="cfg-grid" aria-label="Módulos de configuração">
+
+      <h3 class="cfg-grid-heading">Cadastro inicial</h3>
       <a class="cfg-card" href="{{ url_prefix }}/dados-loja">
         <span class="cfg-ico" aria-hidden="true"><i data-lucide="store" width="22" height="22"></i></span>
         <div>
@@ -54,13 +56,39 @@
         </div>
       </a>
       {% endif %}
-      <a class="cfg-card" href="{{ url_prefix }}/formas-pagamento">
-        <span class="cfg-ico" aria-hidden="true"><i data-lucide="credit-card" width="22" height="22"></i></span>
+
+      <h3 class="cfg-grid-heading">Catálogo</h3>
+      {% if is_retail %}
+      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-categoria-retail">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="tags" width="22" height="22"></i></span>
         <div>
-          <h2>Forma de pagamento</h2>
-          <p>PIX, cartão, dinheiro e demais formas aceitas.</p>
+          <h2>Categorias</h2>
+          <p>Grupos do catálogo retail / vitrine.</p>
         </div>
       </a>
+      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-subcategoria">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="list-tree" width="22" height="22"></i></span>
+        <div>
+          <h2>Subcategorias</h2>
+          <p>Subgrupos vinculados às categorias retail.</p>
+        </div>
+      </a>
+      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-classificacao">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="layout-grid" width="22" height="22"></i></span>
+        <div>
+          <h2>Grupo PDV</h2>
+          <p>Classificações usadas na tela de vendas (/casa).</p>
+        </div>
+      </a>
+      {% else %}
+      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-classificacao">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="tags" width="22" height="22"></i></span>
+        <div>
+          <h2>Classificação</h2>
+          <p>Grupos e regras de cobrança por categoria.</p>
+        </div>
+      </a>
+      {% endif %}
       <a class="cfg-card" href="{{ url_prefix }}/cadastrar-produto">
         <span class="cfg-ico" aria-hidden="true"><i data-lucide="package" width="22" height="22"></i></span>
         <div>
@@ -68,16 +96,13 @@
           <p>Cadastro de itens, preços e dados de venda.</p>
         </div>
       </a>
-      <a class="cfg-card" href="{{ url_prefix }}/cadastrar-classificacao">
-        <span class="cfg-ico" aria-hidden="true"><i data-lucide="tags" width="22" height="22"></i></span>
+
+      <h3 class="cfg-grid-heading">Operação</h3>
+      <a class="cfg-card" href="{{ url_prefix }}/formas-pagamento">
+        <span class="cfg-ico" aria-hidden="true"><i data-lucide="credit-card" width="22" height="22"></i></span>
         <div>
-          <h2>{{ 'Categoria' if is_retail else 'Classificação' }}</h2>
-          <p>{{
-            'Grupos de produtos para organização no PDV.'
-            if is_retail
-            else
-            'Grupos e regras de cobrança por categoria.'
-          }}</p>
+          <h2>Forma de pagamento</h2>
+          <p>PIX, cartão, dinheiro e demais formas aceitas.</p>
         </div>
       </a>
       {% if papel == 'gerente' and not is_retail %}

@@ -1246,6 +1246,9 @@ def bootstrap_schema():
         _ensure_terminal_impressora_table()
         _ensure_whatsapp_config_table()
         _ensure_whatsapp_log_table()
+        _ensure_usuario_login_otp_table()
+        from services.retail_catalog_schema import ensure_retail_catalog_schema
+        ensure_retail_catalog_schema()
     except Exception as e:
         print("[SCHEMA BOOTSTRAP ERRO]", e, flush=True)
         traceback.print_exc()
@@ -1431,6 +1434,41 @@ def _ensure_whatsapp_log_table():
         except Exception:
             pass
         print("[WHATSAPP LOG TABELA ERRO]", e, flush=True)
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def _ensure_usuario_login_otp_table():
+    """Códigos OTP de login via WhatsApp (5 min, uso único)."""
+    conn = None
+    cur = None
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS usuario_login_otp (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                usuario VARCHAR(100) NOT NULL,
+                codigo_hash VARCHAR(255) NOT NULL,
+                expira_em DATETIME NOT NULL,
+                usado TINYINT NOT NULL DEFAULT 0,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_otp_usuario_ativo (usuario, usado, expira_em)
+            )
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        try:
+            if conn:
+                conn.rollback()
+        except Exception:
+            pass
+        print("[USUARIO_LOGIN_OTP TABELA ERRO]", e, flush=True)
     finally:
         if cur:
             cur.close()
@@ -5278,6 +5316,7 @@ def api_usuarios_loja_create():
             data.get("usuario"),
             senha,
             data.get("funcao") or "atendente",
+            data.get("whatsapp"),
         )
         return jsonify(
             {
@@ -5318,6 +5357,7 @@ def api_usuarios_loja_update(chave):
             funcao=data.get("funcao"),
             ativo=ativo,
             senha=senha if senha else None,
+            whatsapp=data.get("whatsapp") if "whatsapp" in data else None,
             usuario_logado=session.get("usuario_logado"),
         )
         return jsonify(

@@ -50,13 +50,17 @@
                                 <th>Produto</th>
                                 <th style="width: 110px;">Preço</th>
                                 <th style="width: 130px;">{{ label_classif if is_retail else 'Classe' }}</th>
+                                {% if is_retail %}
+                                <th style="width: 130px;">Cat. retail</th>
+                                <th style="width: 90px;">Estoque</th>
+                                {% endif %}
                                 <th style="width: 110px;">Por kilo</th>
                                 <th style="width: 120px;">Venda</th>
                                 <th style="width: 220px; text-align: center;">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="corpoTabela">
-                            <tr><td colspan="7" class="empty">Carregando produtos...</td></tr>
+                            <tr><td colspan="{{ 9 if is_retail else 7 }}" class="empty">Carregando produtos...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -123,6 +127,36 @@
                     {% endif %}
 
                     <textarea id="descricao" rows="3" maxlength="250" placeholder="Descrição (opcional)" data-hint="Detalhes opcionais — aparecem na conferência."></textarea>
+
+                    {% if is_retail %}
+                    <details class="details cfg-section-card" style="margin-top:8px;padding:12px;" open>
+                        <summary style="font-weight:700;cursor:pointer;">Catálogo retail / vitrine</summary>
+                        <p class="help" style="margin:8px 0;">Organização para vitrine (independente do grupo PDV acima).</p>
+                        <div class="row-split">
+                            <select id="category_id" data-hint="Categoria do catálogo retail.">
+                                <option value="">Categoria retail...</option>
+                            </select>
+                            <select id="subcategory_id" data-hint="Subcategoria (opcional).">
+                                <option value="">Subcategoria...</option>
+                            </select>
+                        </div>
+                        <input type="text" id="nome_vitrine" maxlength="200" placeholder="Nome na vitrine (opcional)">
+                        <textarea id="descricao_vitrine" rows="2" placeholder="Descrição na vitrine (opcional)"></textarea>
+                        <div class="row-split">
+                            <input type="number" id="preco_varejo" step="0.01" min="0" placeholder="Preço varejo (opcional)">
+                            <input type="number" id="preco_atacado" step="0.01" min="0" placeholder="Preço atacado (opcional)">
+                        </div>
+                        <div class="row-split">
+                            <input type="number" id="estoque" step="0.001" min="0" value="0" placeholder="Estoque">
+                            <input type="number" id="ordem_exibicao" step="1" value="0" placeholder="Ordem vitrine">
+                        </div>
+                        <div class="row-split">
+                            <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="permite_venda_sem_estoque"> Venda sem estoque</label>
+                            <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="destaque"> Destaque</label>
+                            <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="retail_ativo" checked> Ativo na vitrine</label>
+                        </div>
+                    </details>
+                    {% endif %}
 
                     <input type="hidden" id="chaveEdicao" value="">
 
@@ -195,6 +229,122 @@
             }
         }
 
+        function resetRetailFields() {
+            if (!IS_RETAIL) return;
+            const cat = document.getElementById('category_id');
+            const sub = document.getElementById('subcategory_id');
+            if (cat) cat.value = '';
+            if (sub) sub.innerHTML = '<option value="">Subcategoria...</option>';
+            ['nome_vitrine','descricao_vitrine','preco_varejo','preco_atacado'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            const est = document.getElementById('estoque');
+            if (est) est.value = '0';
+            const ord = document.getElementById('ordem_exibicao');
+            if (ord) ord.value = '0';
+            const pve = document.getElementById('permite_venda_sem_estoque');
+            if (pve) pve.checked = false;
+            const dest = document.getElementById('destaque');
+            if (dest) dest.checked = false;
+            const rat = document.getElementById('retail_ativo');
+            if (rat) rat.checked = true;
+        }
+
+        async function carregarCategoriasRetail() {
+            if (!IS_RETAIL) return;
+            try {
+                const resp = await fetch('/api/retail/categorias?ativo=1');
+                const data = await resp.json();
+                const select = document.getElementById('category_id');
+                if (!select || !data.sucesso) return;
+                const prev = select.value;
+                select.innerHTML = '<option value="">Categoria retail...</option>';
+                (data.categorias || []).forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.nome;
+                    select.appendChild(opt);
+                });
+                if (prev) select.value = prev;
+            } catch (e) {
+                console.error('Erro ao carregar categorias retail:', e);
+            }
+        }
+
+        async function carregarSubcategoriasRetail(categoriaId, selectedSub) {
+            if (!IS_RETAIL) return;
+            const select = document.getElementById('subcategory_id');
+            if (!select) return;
+            if (!categoriaId) {
+                select.innerHTML = '<option value="">Subcategoria...</option>';
+                return;
+            }
+            try {
+                const resp = await fetch('/api/retail/subcategorias?categoria_id=' + encodeURIComponent(categoriaId) + '&ativo=1');
+                const data = await resp.json();
+                select.innerHTML = '<option value="">Subcategoria...</option>';
+                if (data.sucesso) {
+                    (data.subcategorias || []).forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.textContent = s.nome;
+                        select.appendChild(opt);
+                    });
+                }
+                if (selectedSub) select.value = String(selectedSub);
+            } catch (e) {
+                console.error('Erro ao carregar subcategorias retail:', e);
+            }
+        }
+
+        function preencherRetailDoProduto(p) {
+            if (!IS_RETAIL || !p) return;
+            const cat = document.getElementById('category_id');
+            if (cat) cat.value = p.category_id ? String(p.category_id) : '';
+            carregarSubcategoriasRetail(p.category_id, p.subcategory_id);
+            const retail = p.retail || {};
+            const nv = document.getElementById('nome_vitrine');
+            if (nv) nv.value = retail.nome_vitrine || '';
+            const dv = document.getElementById('descricao_vitrine');
+            if (dv) dv.value = retail.descricao_vitrine || '';
+            const pvar = document.getElementById('preco_varejo');
+            if (pvar) pvar.value = retail.preco_varejo != null ? retail.preco_varejo : '';
+            const pat = document.getElementById('preco_atacado');
+            if (pat) pat.value = retail.preco_atacado != null ? retail.preco_atacado : '';
+            const est = document.getElementById('estoque');
+            if (est) est.value = retail.estoque != null ? retail.estoque : '0';
+            const ord = document.getElementById('ordem_exibicao');
+            if (ord) ord.value = retail.ordem_exibicao != null ? retail.ordem_exibicao : '0';
+            const pve = document.getElementById('permite_venda_sem_estoque');
+            if (pve) pve.checked = !!Number(retail.permite_venda_sem_estoque);
+            const dest = document.getElementById('destaque');
+            if (dest) dest.checked = !!Number(retail.destaque);
+            const rat = document.getElementById('retail_ativo');
+            if (rat) rat.checked = retail.ativo == null ? true : !!Number(retail.ativo);
+        }
+
+        function montarPayloadRetail() {
+            if (!IS_RETAIL) return {};
+            const catVal = document.getElementById('category_id')?.value || '';
+            const subVal = document.getElementById('subcategory_id')?.value || '';
+            return {
+                category_id: catVal ? parseInt(catVal, 10) : null,
+                subcategory_id: subVal ? parseInt(subVal, 10) : null,
+                retail: {
+                    nome_vitrine: document.getElementById('nome_vitrine')?.value.trim() || null,
+                    descricao_vitrine: document.getElementById('descricao_vitrine')?.value.trim() || null,
+                    preco_varejo: document.getElementById('preco_varejo')?.value || null,
+                    preco_atacado: document.getElementById('preco_atacado')?.value || null,
+                    estoque: document.getElementById('estoque')?.value || 0,
+                    ordem_exibicao: parseInt(document.getElementById('ordem_exibicao')?.value, 10) || 0,
+                    permite_venda_sem_estoque: document.getElementById('permite_venda_sem_estoque')?.checked ? 1 : 0,
+                    destaque: document.getElementById('destaque')?.checked ? 1 : 0,
+                    ativo: document.getElementById('retail_ativo')?.checked ? 1 : 0
+                }
+            };
+        }
+
         function resetProdutoForm() {
             document.getElementById('formProduto').reset();
             document.getElementById('chaveEdicao').value = '';
@@ -206,6 +356,7 @@
             const codigoEl = document.getElementById('codigo');
             if (codigoEl) codigoEl.value = '';
             setCodigoSomenteLeitura(false);
+            resetRetailFields();
         }
 
         function sincronizarClasseDoSelect() {
@@ -330,6 +481,16 @@
             } else {
                 carregarProdutos();
             }
+            if (IS_RETAIL) {
+                carregarCategoriasRetail().then(() => {
+                    const catSel = document.getElementById('category_id');
+                    if (catSel) {
+                        catSel.addEventListener('change', () => {
+                            carregarSubcategoriasRetail(catSel.value, null);
+                        });
+                    }
+                });
+            }
         });
 
         async function carregarImpressorasParaProduto() {
@@ -386,6 +547,7 @@
                 tbody.innerHTML = '';
                 
                 if (result.sucesso && result.produtos.length > 0) {
+                    const colSpan = IS_RETAIL ? 9 : 7;
                     result.produtos.forEach(produto => {
                         const tr = document.createElement('tr');
                         const porkiloBadge = produto.porkilo === 'Sim' ? 
@@ -394,12 +556,17 @@
                         const vendaBadge = produto.vendaliberada === 'Sim' ? 
                             '<span class="pill ok">Sim</span>' : 
                             '<span class="pill bad">Não</span>';
+                        const retailCols = IS_RETAIL ? `
+                            <td><span class="pill">${produto.categoria_nome || '—'}</span></td>
+                            <td>${produto.estoque != null ? Number(produto.estoque).toFixed(3) : '—'}</td>
+                        ` : '';
                         
                         tr.innerHTML = `
                             <td class="kcell">#${produto.chave}</td>
                             <td>${produto.produto}</td>
                             <td>R$ ${parseFloat(produto.preco).toFixed(2)}</td>
                             <td><span class="pill">${produto.classe}</span></td>
+                            ${retailCols}
                             <td>${porkiloBadge}</td>
                             <td>${vendaBadge}</td>
                             <td style="text-align: center;">
@@ -412,12 +579,14 @@
                         tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum produto cadastrado.</td></tr>';
+                    const colSpan = IS_RETAIL ? 9 : 7;
+                    tbody.innerHTML = `<tr><td colspan="${colSpan}" class="empty">Nenhum produto cadastrado.</td></tr>`;
                 }
             } catch (erro) {
                 console.error('Erro ao carregar produtos:', erro);
                 const tbody = document.getElementById('corpoTabela');
-                tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar produtos</td></tr>';
+                const colSpan = IS_RETAIL ? 9 : 7;
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="empty">Erro ao carregar produtos</td></tr>`;
             }
         }
         
@@ -455,6 +624,11 @@
                             }
                         }
                         sincronizarClasseDoSelect();
+                    }
+
+                    if (IS_RETAIL) {
+                        await carregarCategoriasRetail();
+                        preencherRetailDoProduto(p);
                     }
                     
                     document.getElementById('btnSalvar').textContent = 'Atualizar';
@@ -535,6 +709,10 @@
                 ncm: document.getElementById('ncm').value.trim().toUpperCase() || '',
                 descricao: document.getElementById('descricao').value.trim().toUpperCase() || ''
             };
+
+            if (IS_RETAIL) {
+                Object.assign(dados, montarPayloadRetail());
+            }
 
             if (!chaveEdicao) {
                 const codigoNum = parseInt(document.getElementById('codigo').value, 10);

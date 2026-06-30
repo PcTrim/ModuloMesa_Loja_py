@@ -274,6 +274,34 @@ def status_instancia(id_cliente):
         return {"ok": False, "erro": str(e), "status": "disconnected"}
 
 
+def status_instancia_plataforma():
+    """Estado da instância central (UZAPI_TOKEN do .env)."""
+    url = _url_base(None)
+    token = (Config.UZAPI_TOKEN or "").strip()
+    if not url or not token:
+        return {"ok": False, "status": "disconnected", "configurado": False, "erro": "Plataforma não configurada."}
+    try:
+        resp = requests.get(
+            f"{url}/instance/status",
+            headers={"token": token},
+            timeout=TIMEOUT_ENVIO,
+        )
+        data = _json_seguro(resp)
+        if not resp.ok:
+            return {
+                "ok": False,
+                "erro": _erro_resposta(resp, data),
+                "status": "disconnected",
+                "configurado": True,
+            }
+        st = (_buscar_status_resposta(data) or "disconnected").lower()
+        return {"ok": True, "status": st, "configurado": True, "connected": st == "connected"}
+    except requests.RequestException as e:
+        return {"ok": False, "erro": f"Falha de conexão com a uazapi: {e}", "status": "disconnected", "configurado": True}
+    except Exception as e:
+        return {"ok": False, "erro": str(e), "status": "disconnected", "configurado": True}
+
+
 def desconectar_instancia(id_cliente):
     """Encerra a sessão do WhatsApp (mantém a instância)."""
     cfg = obter_config(id_cliente)
@@ -349,6 +377,42 @@ def enviar_texto_async(id_cliente, telefone, mensagem, evento="manual", ddd_padr
     return t
 
 
+def enviar_texto_plataforma(telefone, mensagem, evento="plataforma", id_cliente_log=None):
+    """Envia texto pela instância central (Config.UZAPI_URL + UZAPI_TOKEN)."""
+    telefone_norm = normalizar_telefone(telefone, None)
+    log_cliente = id_cliente_log if id_cliente_log is not None else 0
+    if not telefone_norm:
+        _log(log_cliente, telefone, evento, "erro", "telefone inválido")
+        return {"ok": False, "erro": "Telefone inválido."}
+
+    url = _url_base(None)
+    token = (Config.UZAPI_TOKEN or "").strip()
+    if not url or not token:
+        _log(log_cliente, telefone_norm, evento, "erro", "plataforma não configurada")
+        return {"ok": False, "erro": "WhatsApp plataforma não configurado."}
+
+    try:
+        resp = requests.post(
+            f"{url}/send/text",
+            json={"number": telefone_norm, "text": mensagem},
+            headers={"token": token, "Content-Type": "application/json"},
+            timeout=TIMEOUT_ENVIO,
+        )
+        data = _json_seguro(resp)
+        if not resp.ok:
+            erro = _erro_resposta(resp, data)
+            _log(log_cliente, telefone_norm, evento, "erro", erro)
+            return {"ok": False, "erro": erro}
+        _log(log_cliente, telefone_norm, evento, "ok", None)
+        return {"ok": True}
+    except requests.RequestException as e:
+        _log(log_cliente, telefone_norm, evento, "erro", f"conexao: {e}")
+        return {"ok": False, "erro": f"Falha de conexão com a uazapi: {e}"}
+    except Exception as e:
+        _log(log_cliente, telefone_norm, evento, "erro", str(e))
+        return {"ok": False, "erro": str(e)}
+
+
 # ----------------------------------------------------------------------------
 # Helpers internos
 # ----------------------------------------------------------------------------
@@ -361,9 +425,14 @@ def _json_seguro(resp):
 
 def _erro_resposta(resp, data):
     if isinstance(data, dict):
-        for chave in ("error", "message", "erro", "_raw"):
-            if data.get(chave):
-                return f"HTTP {resp.status_code}: {data[chave]}"
+        msg = data.get("message") or data.get("erro")
+        if isinstance(msg, str) and msg.strip():
+            return f"HTTP {resp.status_code}: {msg.strip()}"
+        err = data.get("error")
+        if isinstance(err, str) and err.strip():
+            return f"HTTP {resp.status_code}: {err.strip()}"
+        if data.get("_raw"):
+            return f"HTTP {resp.status_code}: {data['_raw']}"
     return f"HTTP {resp.status_code}"
 
 

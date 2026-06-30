@@ -206,6 +206,71 @@
       font-size: 11px;
       color: var(--foot);
     }
+    .login-mode {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      padding: 4px;
+      border-radius: 12px;
+      background: var(--bg);
+      border: 0.5px solid var(--line);
+    }
+    .login-mode-btn {
+      flex: 1;
+      min-height: 44px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .login-mode-btn.active {
+      background: var(--purple);
+      color: #fff;
+    }
+    .login-mode-btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+    }
+    .login-hint {
+      margin: -8px 0 14px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--muted);
+      text-align: center;
+    }
+    .login-hint strong { color: var(--text); }
+    .login-send-code {
+      width: 100%;
+      min-height: 48px;
+      margin-bottom: 12px;
+      border: 0.5px solid var(--line);
+      border-radius: 12px;
+      background: transparent;
+      color: var(--purple);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .login-send-code:hover:not(:disabled) { background: rgba(124, 58, 237, 0.08); }
+    .login-send-code:disabled { opacity: 0.55; cursor: not-allowed; }
+    .login-panel-hidden { display: none !important; }
+    .login-otp-note {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      border: 0.5px solid rgba(124, 58, 237, 0.35);
+      background: rgba(124, 58, 237, 0.1);
+      color: var(--text);
+    }
     @media (max-width: 420px) {
       .login-card { padding: 26px 18px 20px; border-radius: 16px; }
       .theme-login-btn { top: 10px; right: 10px; }
@@ -224,6 +289,11 @@
 
     <div id="mensagem" class="login-msg" role="alert" aria-live="polite"></div>
 
+    <div class="login-mode" role="tablist" aria-label="Modo de login">
+      <button type="button" class="login-mode-btn active" id="modeSenha" role="tab" aria-selected="true">Senha</button>
+      <button type="button" class="login-mode-btn" id="modeWhatsapp" role="tab" aria-selected="false">WhatsApp</button>
+    </div>
+
     <form id="loginForm" novalidate>
       <input type="hidden" id="csrf_token" value="{{ csrf_token or '' }}">
 
@@ -232,13 +302,25 @@
         <input type="text" class="login-input" id="usuario" name="usuario" autocomplete="username" required data-hint="Digite seu usuário de acesso à loja.">
       </div>
 
-      <div class="login-field-wrap">
-        <label for="senha" class="login-label">Senha</label>
-        <div class="senha-row">
-          <input type="password" class="login-input" id="senha" name="senha" autocomplete="current-password" required data-hint="Sua senha pessoal. Não compartilhe com outras pessoas.">
-          <button type="button" class="senha-toggle" id="togglePassword" aria-label="Mostrar senha" title="Mostrar senha">
-            <i data-lucide="eye"></i>
-          </button>
+      <div id="panelSenha">
+        <div class="login-field-wrap">
+          <label for="senha" class="login-label">Senha</label>
+          <div class="senha-row">
+            <input type="password" class="login-input" id="senha" name="senha" autocomplete="current-password" data-hint="Sua senha pessoal. Não compartilhe com outras pessoas.">
+            <button type="button" class="senha-toggle" id="togglePassword" aria-label="Mostrar senha" title="Mostrar senha">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="panelWhatsapp" class="login-panel-hidden">
+        <p class="login-hint">O código será enviado ao WhatsApp cadastrado para este usuário.</p>
+        <button type="button" class="login-send-code" id="sendCodeBtn">Enviar código</button>
+        <div id="otpDestino" class="login-otp-note login-panel-hidden" aria-live="polite"></div>
+        <div class="login-field-wrap">
+          <label for="codigo" class="login-label">Código</label>
+          <input type="text" class="login-input" id="codigo" name="codigo" inputmode="numeric" maxlength="7" autocomplete="one-time-code" placeholder="000 000" data-hint="Digite o código de 6 dígitos recebido no WhatsApp.">
         </div>
       </div>
 
@@ -253,10 +335,18 @@
     const loginForm = document.getElementById('loginForm');
     const usuarioInput = document.getElementById('usuario');
     const senhaInput = document.getElementById('senha');
+    const codigoInput = document.getElementById('codigo');
     const csrfInput = document.getElementById('csrf_token');
     const mensagemEl = document.getElementById('mensagem');
     const submitBtn = document.getElementById('submitBtn');
     const togglePasswordBtn = document.getElementById('togglePassword');
+    const modeSenhaBtn = document.getElementById('modeSenha');
+    const modeWhatsappBtn = document.getElementById('modeWhatsapp');
+    const panelSenha = document.getElementById('panelSenha');
+    const panelWhatsapp = document.getElementById('panelWhatsapp');
+    const sendCodeBtn = document.getElementById('sendCodeBtn');
+    const otpDestino = document.getElementById('otpDestino');
+    let loginMode = 'senha';
 
     function showMessage(type, text) {
       mensagemEl.textContent = text;
@@ -268,26 +358,63 @@
       mensagemEl.textContent = '';
     }
 
+    function setLoginMode(mode) {
+      loginMode = mode === 'whatsapp' ? 'whatsapp' : 'senha';
+      const isWa = loginMode === 'whatsapp';
+      modeSenhaBtn.classList.toggle('active', !isWa);
+      modeWhatsappBtn.classList.toggle('active', isWa);
+      modeSenhaBtn.setAttribute('aria-selected', String(!isWa));
+      modeWhatsappBtn.setAttribute('aria-selected', String(isWa));
+      panelSenha.classList.toggle('login-panel-hidden', isWa);
+      panelWhatsapp.classList.toggle('login-panel-hidden', !isWa);
+      senhaInput.required = !isWa;
+      codigoInput.required = isWa;
+      clearMessage();
+      if (!isWa) {
+        otpDestino.classList.add('login-panel-hidden');
+        otpDestino.textContent = '';
+      }
+    }
+
     function validateFields() {
       let valid = true;
-      [usuarioInput, senhaInput].forEach((el) => el.classList.remove('invalid'));
+      [usuarioInput, senhaInput, codigoInput].forEach((el) => el.classList.remove('invalid'));
 
       if (!usuarioInput.value.trim()) {
         usuarioInput.classList.add('invalid');
         valid = false;
       }
-      if (!senhaInput.value.trim()) {
-        senhaInput.classList.add('invalid');
-        valid = false;
-      }
-      if (!valid) {
-        showMessage('erro', 'Preencha usuário e senha para continuar.');
+      if (loginMode === 'senha') {
+        if (!senhaInput.value.trim()) {
+          senhaInput.classList.add('invalid');
+          valid = false;
+        }
+        if (!valid) showMessage('erro', 'Preencha usuário e senha para continuar.');
+      } else {
+        const digits = codigoInput.value.replace(/\D/g, '');
+        if (digits.length !== 6) {
+          codigoInput.classList.add('invalid');
+          valid = false;
+        }
+        if (!valid) showMessage('erro', 'Preencha usuário e código de 6 dígitos.');
       }
       return valid;
     }
 
-    usuarioInput.addEventListener('input', () => usuarioInput.classList.remove('invalid'));
+    usuarioInput.addEventListener('input', () => {
+      usuarioInput.classList.remove('invalid');
+      otpDestino.classList.add('login-panel-hidden');
+      otpDestino.textContent = '';
+    });
     senhaInput.addEventListener('input', () => senhaInput.classList.remove('invalid'));
+    codigoInput.addEventListener('input', () => {
+      codigoInput.classList.remove('invalid');
+      const raw = codigoInput.value.replace(/\D/g, '').slice(0, 6);
+      codigoInput.value = raw.length > 3 ? raw.slice(0, 3) + ' ' + raw.slice(3) : raw;
+    });
+
+    modeSenhaBtn.addEventListener('click', () => setLoginMode('senha'));
+    modeWhatsappBtn.addEventListener('click', () => setLoginMode('whatsapp'));
 
     togglePasswordBtn.addEventListener('click', () => {
       const isPassword = senhaInput.type === 'password';
@@ -300,6 +427,45 @@
       lucide.createIcons();
     });
 
+    sendCodeBtn.addEventListener('click', async () => {
+      clearMessage();
+      usuarioInput.classList.remove('invalid');
+      if (!usuarioInput.value.trim()) {
+        usuarioInput.classList.add('invalid');
+        showMessage('erro', 'Informe o usuário antes de enviar o código.');
+        return;
+      }
+      sendCodeBtn.disabled = true;
+      sendCodeBtn.textContent = 'Enviando...';
+      otpDestino.classList.add('login-panel-hidden');
+      try {
+        const response = await fetch('/login/solicitar-codigo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            usuario: usuarioInput.value.trim(),
+            csrf_token: csrfInput.value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          showMessage('erro', data.erro || 'Não foi possível solicitar o código.');
+          return;
+        }
+        if (data.whatsapp_mascara) {
+          otpDestino.textContent = 'Código enviado para ' + data.whatsapp_mascara;
+          otpDestino.classList.remove('login-panel-hidden');
+        }
+        showMessage('sucesso', data.mensagem || 'Se o usuário existir, enviaremos um código em instantes.');
+        codigoInput.focus();
+      } catch (error) {
+        showMessage('erro', 'Erro de comunicação com o servidor.');
+      } finally {
+        sendCodeBtn.disabled = false;
+        sendCodeBtn.textContent = 'Enviar código';
+      }
+    });
+
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       clearMessage();
@@ -309,14 +475,21 @@
       submitBtn.textContent = 'Entrando...';
 
       try {
+        const body = {
+          usuario: usuarioInput.value.trim(),
+          csrf_token: csrfInput.value,
+          metodo: loginMode
+        };
+        if (loginMode === 'whatsapp') {
+          body.codigo = codigoInput.value.replace(/\D/g, '');
+        } else {
+          body.senha = senhaInput.value.trim();
+        }
+
         const response = await fetch('/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            usuario: usuarioInput.value.trim(),
-            senha: senhaInput.value.trim(),
-            csrf_token: csrfInput.value
-          })
+          body: JSON.stringify(body)
         });
         const data = await response.json();
 
@@ -331,6 +504,7 @@
         if (Array.isArray(data.campos_invalidos)) {
           if (data.campos_invalidos.includes('usuario')) usuarioInput.classList.add('invalid');
           if (data.campos_invalidos.includes('senha')) senhaInput.classList.add('invalid');
+          if (data.campos_invalidos.includes('codigo')) codigoInput.classList.add('invalid');
         }
         showMessage('erro', data.erro || 'Não foi possível autenticar.');
       } catch (error) {
