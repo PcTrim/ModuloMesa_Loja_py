@@ -15,9 +15,16 @@ from auth_validation import (
     parse_login_json,
     validate_login_csrf,
 )
-from database import conectar
+from database import conectar, conectar_admin
 from models import AUTH_CREDENTIALS_INVALID_MSG, UsuarioAuthRow, normalize_funcao
 from services.login_otp import OTP_MSG_GENERIC, solicitar_codigo_whatsapp, validar_codigo_whatsapp
+from services.login_tenant_db import (
+    LoginAmbienteError,
+    bind_tenant_db_to_session,
+    locate_login_user,
+    row_to_auth_user,
+    user_is_inactive,
+)
 from services.passwords import hash_password, password_is_bcrypt, verify_password
 
 auth_bp = Blueprint("auth", __name__)
@@ -29,43 +36,8 @@ def _issue_login_csrf() -> str:
     return token
 
 
-def _fetch_user_row(cursor, usuario: str):
-    row = None
-    try:
-        cursor.execute(
-            """
-            SELECT usuario, senha, id_cliente, funcao, ativo
-            FROM usuarios WHERE usuario = %s LIMIT 1
-            """,
-            (usuario,),
-        )
-        row = cursor.fetchone()
-    except mysql.connector.Error as col_err:
-        if getattr(col_err, "errno", None) != 1054:
-            raise
-        try:
-            cursor.execute(
-                "SELECT usuario, senha, id_cliente, funcao FROM usuarios WHERE usuario = %s LIMIT 1",
-                (usuario,),
-            )
-            row = cursor.fetchone()
-        except mysql.connector.Error:
-            cursor.execute(
-                "SELECT usuario, senha, id_cliente FROM usuarios WHERE usuario = %s LIMIT 1",
-                (usuario,),
-            )
-            row = cursor.fetchone()
-    return row
-
-
-def _user_is_inactive(row) -> bool:
-    if row is None or not isinstance(row, dict):
-        return False
-    ativo_val = row.get("ativo")
-    return ativo_val is not None and int(ativo_val) == 0
-
-
-def _complete_login_response(user: UsuarioAuthRow):
+def _complete_login_response(user: UsuarioAuthRow, tenant_target: str):
+    bind_tenant_db_to_session(session, tenant_target)
     session["usuario_logado"] = user.usuario
     session["id_cliente"] = user.id_cliente
     session["funcao"] = normalize_funcao(user.funcao)
@@ -235,14 +207,16 @@ def login():
 
     conn = None
     cursor = None
+    tenant_target = None
     try:
-        conn = conectar()
-        cursor = conn.cursor(dictionary=True)
+        try:
+            tenant_target, row = locate_login_user(payload.usuario)
+        except LoginAmbienteError as e:
+            return jsonify({"sucesso": False, "erro": e.message}), e.status
 
-        row = _fetch_user_row(cursor, payload.usuario)
-        user = UsuarioAuthRow.from_db_row(row)
+        user = row_to_auth_user(row)
 
-        if _user_is_inactive(row):
+        if user_is_inactive(row):
             return (
                 jsonify({"sucesso": False, "erro": AUTH_CREDENTIALS_INVALID_MSG}),
                 401,
@@ -255,7 +229,7 @@ def login():
                     401,
                 )
             assert user is not None
-            return _complete_login_response(user)
+            return _complete_login_response(user, tenant_target)
 
         senha_ok = user is not None and verify_password(user.senha, payload.senha)
         if not senha_ok:
@@ -268,16 +242,34 @@ def login():
 
         if user.senha and not password_is_bcrypt(user.senha):
             novo_hash = hash_password(payload.senha)
+            conn = conectar_admin(target=tenant_target)
+            cursor = conn.cursor()
             cursor.execute(
                 "UPDATE usuarios SET senha = %s WHERE usuario = %s",
                 (novo_hash, user.usuario),
             )
             conn.commit()
+            cursor.close()
+            conn.close()
+            cursor = None
+            conn = None
 
-        return _complete_login_response(user)
+        return _complete_login_response(user, tenant_target)
 
     except mysql.connector.Error as db_err:
         print("[DB ERROR LOGIN]", db_err)
+        traceback.print_exc()
+        return (
+            jsonify(
+                {
+                    "sucesso": False,
+                    "erro": "Não foi possível validar o login no momento. Tente novamente.",
+                }
+            ),
+            500,
+        )
+    except Exception as exc:
+        print("[LOGIN ERROR]", exc)
         traceback.print_exc()
         return (
             jsonify(

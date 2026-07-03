@@ -1,7 +1,7 @@
 """Shared Flask route decorators."""
 from functools import wraps
 
-from flask import jsonify, redirect, request, session, url_for
+from flask import flash, jsonify, redirect, request, session, url_for
 
 from config import Config
 from models import normalize_funcao
@@ -34,6 +34,10 @@ def platform_admin_required(f):
         if not Config.is_platform_admin(session.get("usuario_logado")):
             if request.path.startswith("/api/"):
                 return jsonify({"sucesso": False, "erro": "Acesso restrito à administração da plataforma."}), 403
+            flash(
+                "Acesso restrito. Seu usuário não está autorizado a cadastrar lojas (PLATFORM_ADMIN_USERS).",
+                "error",
+            )
             return redirect(url_for("index"))
         return f(*args, **kwargs)
 

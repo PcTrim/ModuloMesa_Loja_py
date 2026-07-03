@@ -136,6 +136,7 @@
                 <summary class="cfg-dados-accordion-summary">WhatsApp (uazapi)</summary>
                 <div class="cfg-dados-accordion-body">
                 <div class="help">Conecte o WhatsApp desta loja e ative as notificações automáticas.</div>
+                <div id="waServidorAlert" class="help" style="display:none;color:#f87171;font-weight:700;margin-bottom:8px;"></div>
 
                 <div class="cfg-dados-status-row">
                     <span class="title">Status:</span>
@@ -665,6 +666,26 @@
             return s;
         }
 
+        async function waVerificarServidor() {
+            const el = document.getElementById('waServidorAlert');
+            if (!el) return;
+            try {
+                const data = await fetchJsonSafe('/api/whatsapp/servidor-status');
+                if (data?.uzapi_url_ok && data?.uzapi_admin_ok) {
+                    el.style.display = 'none';
+                    el.textContent = '';
+                    return;
+                }
+                const parts = [];
+                if (!data?.uzapi_url_ok) parts.push('UZAPI_URL ausente no .env do servidor');
+                if (!data?.uzapi_admin_ok) parts.push('UZAPI_ADMIN_TOKEN ausente no .env do servidor');
+                el.textContent = parts.join('. ') + '. Reinicie: sudo systemctl restart lojaonline';
+                el.style.display = 'block';
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
         async function waVerificarStatus() {
             try {
                 const data = await fetchJsonSafe('/api/whatsapp/instancia/status');
@@ -856,6 +877,7 @@
             await carregarTerminalImpressao();
             resetImpressoraForm();
             await waCarregarConfig();
+            await waVerificarServidor();
             await waVerificarStatus();
         });
 

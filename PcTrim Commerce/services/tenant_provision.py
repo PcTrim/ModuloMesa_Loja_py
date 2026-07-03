@@ -3,7 +3,15 @@ from __future__ import annotations
 
 import mysql.connector
 
-from database import conectar
+from config import Config
+
+from database import conectar_admin, conectar_admin_optional
+from services.loja_ambiente import (
+    AMBIENTE_HOMOLOGATION,
+    AMBIENTE_PRODUCTION,
+    ambiente_label,
+    normalize_ambiente,
+)
 from services.passwords import hash_password
 from services.usuarios_loja import insert_usuario_row
 
@@ -26,6 +34,42 @@ DEFAULT_TXENTREGA_FAIXAS = (
     (25.0, 30.0),
     (30.0, 35.0),
 )
+
+_LIST_QUERY = """
+    SELECT
+        d.id_cliente,
+        d.nome,
+        d.cidade,
+        d.telefone,
+        d.ddd,
+        d.tipo_negocio,
+        d.ambiente,
+        (
+            SELECT u.usuario
+            FROM usuarios u
+            WHERE u.id_cliente = d.id_cliente
+            ORDER BY
+                CASE WHEN LOWER(COALESCE(u.funcao, '')) = 'gerente' THEN 0 ELSE 1 END,
+                u.chave ASC
+            LIMIT 1
+        ) AS usuario_gerente,
+        (
+            SELECT u.ativo
+            FROM usuarios u
+            WHERE u.id_cliente = d.id_cliente
+            ORDER BY u.chave ASC
+            LIMIT 1
+        ) AS ativo
+    FROM dadosloja d
+    ORDER BY d.id_cliente ASC
+"""
+
+_LIST_QUERY_FALLBACK = """
+    SELECT d.id_cliente, d.nome, d.cidade, d.telefone, d.ddd,
+        (SELECT u.usuario FROM usuarios u WHERE u.id_cliente = d.id_cliente LIMIT 1) AS usuario_gerente
+    FROM dadosloja d
+    ORDER BY d.id_cliente ASC
+"""
 
 
 class TenantProvisionError(Exception):
@@ -62,19 +106,35 @@ def _next_id_cliente(cur) -> int:
     return int(m or 0) + 1
 
 
+def hml_admin_disponivel() -> bool:
+    return Config.admin_db_configured(AMBIENTE_HOMOLOGATION)
+
+
+def _admin_targets_for_sync() -> list[str]:
+    targets = [AMBIENTE_PRODUCTION]
+    if hml_admin_disponivel():
+        targets.append(AMBIENTE_HOMOLOGATION)
+    return targets
+
+
 def suggested_next_id_cliente() -> int:
-    """Próximo id_cliente sugerido (MAX + 1)."""
-    conn = None
-    cur = None
-    try:
-        conn = conectar()
-        cur = conn.cursor(dictionary=True)
-        return _next_id_cliente(cur)
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
+    """Próximo id_cliente sugerido (MAX + 1 em prod e HML configurado)."""
+    max_id = 0
+    for target in _admin_targets_for_sync():
+        conn = None
+        cur = None
+        try:
+            conn = conectar_admin_optional(target=target)
+            if conn is None:
+                continue
+            cur = conn.cursor(dictionary=True)
+            max_id = max(max_id, _next_id_cliente(cur) - 1)
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+    return max_id + 1
 
 
 def _id_cliente_exists(cur, id_cliente: int) -> bool:
@@ -169,6 +229,57 @@ def _insert_txentrega(cur, id_cliente: int) -> None:
     cur.execute(f"INSERT INTO txentrega ({col_list}) VALUES ({placeholders})", tuple(vals))
 
 
+def _row_to_tenant(r: dict) -> dict:
+    ativo_raw = r.get("ativo")
+    ambiente = normalize_ambiente(r.get("ambiente"))
+    profile = Config.admin_db_profile(ambiente)
+    return {
+        "id_cliente": int(r.get("id_cliente") or 0),
+        "nome": r.get("nome") or "",
+        "cidade": r.get("cidade") or "",
+        "telefone": r.get("telefone") or "",
+        "ddd": r.get("ddd") or "",
+        "tipo_negocio": r.get("tipo_negocio") or "restaurante",
+        "ambiente": ambiente,
+        "ambiente_label": ambiente_label(ambiente),
+        "banco_ativo": profile["database"],
+        "usuario_gerente": r.get("usuario_gerente") or "",
+        "ativo": None if ativo_raw is None else bool(int(ativo_raw)),
+    }
+
+
+def _list_from_target(target: str) -> list[dict]:
+    conn = conectar_admin_optional(target=target)
+    if conn is None:
+        return []
+    cur = None
+    try:
+        cur = conn.cursor(dictionary=True)
+        try:
+            cur.execute(_LIST_QUERY)
+        except mysql.connector.Error as e:
+            if getattr(e, "errno", None) != 1054:
+                raise
+            cur.execute(_LIST_QUERY_FALLBACK)
+        rows = cur.fetchall() or []
+        return [_row_to_tenant(r) for r in rows]
+    finally:
+        if cur:
+            cur.close()
+        conn.close()
+
+
+def list_tenants() -> list[dict]:
+    """Lista lojas de produção e homologação (prioriza registro de produção por id)."""
+    merged: dict[int, dict] = {}
+    for target in _admin_targets_for_sync():
+        for row in _list_from_target(target):
+            key = row["id_cliente"]
+            if key not in merged or target == AMBIENTE_PRODUCTION:
+                merged[key] = row
+    return [merged[k] for k in sorted(merged)]
+
+
 def provision_tenant(
     *,
     nome: str,
@@ -179,11 +290,9 @@ def provision_tenant(
     telefone: str = "",
     cidade: str = "",
     tipo_negocio: str = "restaurante",
+    ambiente: str = AMBIENTE_PRODUCTION,
 ) -> dict:
-    """
-    Cria tenant completo com registros mínimos para operação.
-    Retorna dict com id_cliente, usuario e mensagem.
-    """
+    """Cria tenant no banco correspondente ao ambiente escolhido."""
     nome = (nome or "").strip()
     usuario = (usuario or "").strip()
     senha = senha or ""
@@ -191,8 +300,21 @@ def provision_tenant(
     telefone = (telefone or "").strip()
     cidade = (cidade or "").strip()
     tipo_negocio = str(tipo_negocio or "restaurante").strip().lower()
+    ambiente = normalize_ambiente(ambiente)
     if tipo_negocio not in ("restaurante", "varejo"):
         raise TenantProvisionError("tipo_negocio deve ser 'restaurante' ou 'varejo'.")
+
+    if not Config.admin_db_configured(ambiente):
+        if ambiente == AMBIENTE_HOMOLOGATION:
+            raise TenantProvisionError(
+                "Para criar loja de homologação, use o painel na URL de homologação "
+                "ou peça ao suporte para configurar o banco de testes neste servidor.",
+                status=503,
+            )
+        raise TenantProvisionError(
+            "Banco de produção não configurado neste servidor.",
+            status=503,
+        )
 
     if not nome:
         raise TenantProvisionError("Nome fantasia é obrigatório.")
@@ -201,10 +323,11 @@ def provision_tenant(
     if len(senha) < 4:
         raise TenantProvisionError("Senha deve ter pelo menos 4 caracteres.")
 
+    profile = Config.admin_db_profile(ambiente)
     conn = None
     cur = None
     try:
-        conn = conectar()
+        conn = conectar_admin(target=ambiente)
         conn.start_transaction()
         cur = conn.cursor(dictionary=True)
 
@@ -213,16 +336,47 @@ def provision_tenant(
 
         id_cliente = _resolve_id_cliente(cur, id_cliente)
         senha_hash = hash_password(senha)
+        cols = _table_columns(cur, "dadosloja")
+        loja_cols = [
+            "id_cliente",
+            "nome",
+            "endereco",
+            "bairro",
+            "cidade",
+            "cep",
+            "telefone",
+            "cnpj",
+            "latitude",
+            "longitude",
+            "ddd",
+            "tipo_negocio",
+            "ambiente",
+        ]
+        loja_vals = {
+            "id_cliente": id_cliente,
+            "nome": nome,
+            "endereco": "",
+            "bairro": "",
+            "cidade": cidade,
+            "cep": "",
+            "telefone": telefone,
+            "cnpj": "",
+            "latitude": "",
+            "longitude": "",
+            "ddd": ddd or "11",
+            "tipo_negocio": tipo_negocio,
+            "ambiente": ambiente,
+        }
+        insert_cols = [c for c in loja_cols if c in cols]
+        placeholders = ", ".join(["%s"] * len(insert_cols))
+        col_list = ", ".join(insert_cols)
+        vals = tuple(loja_vals[c] for c in insert_cols)
+        cur.execute(
+            f"INSERT INTO dadosloja ({col_list}) VALUES ({placeholders})",
+            vals,
+        )
 
         _insert_usuario(cur, usuario, senha_hash, id_cliente)
-
-        cur.execute(
-            """
-            INSERT INTO dadosloja (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, tipo_negocio)
-            VALUES (%s, %s, '', '', %s, '', %s, '', '', '', %s, %s)
-            """,
-            (id_cliente, nome, cidade, telefone, ddd or "11", tipo_negocio),
-        )
 
         cur.execute(
             "INSERT INTO contadorpedido (contador, id_cliente) VALUES (0, %s)",
@@ -230,7 +384,6 @@ def provision_tenant(
         )
 
         _insert_configuracao(cur, id_cliente)
-
         _insert_formapagamento(cur, id_cliente)
         _insert_txentrega(cur, id_cliente)
 
@@ -239,7 +392,11 @@ def provision_tenant(
             "sucesso": True,
             "id_cliente": id_cliente,
             "usuario": usuario,
-            "mensagem": f"Loja '{nome}' criada com sucesso (id_cliente={id_cliente}).",
+            "ambiente": ambiente,
+            "mensagem": (
+                f"Loja '{nome}' criada em {ambiente_label(ambiente)} "
+                f"({profile['database']}, id_cliente={id_cliente})."
+            ),
         }
     except TenantProvisionError:
         if conn:
@@ -260,8 +417,13 @@ def provision_tenant(
             conn.close()
 
 
-def update_tenant_tipo_negocio(id_cliente: int, tipo_negocio: str) -> dict:
-    """Atualiza tipo_negocio de uma loja existente (restaurante | varejo)."""
+def update_tenant_loja(
+    id_cliente: int,
+    *,
+    tipo_negocio: str | None,
+    ambiente: str | None,
+) -> dict:
+    """Atualiza tipo e ambiente da loja (sincroniza ambiente nos 2 bancos se existir)."""
     try:
         id_cliente = int(id_cliente)
     except (TypeError, ValueError):
@@ -269,122 +431,102 @@ def update_tenant_tipo_negocio(id_cliente: int, tipo_negocio: str) -> dict:
     if id_cliente <= 0:
         raise TenantProvisionError("ID cliente inválido.", status=400)
 
-    tipo = str(tipo_negocio or "restaurante").strip().lower()
-    if tipo not in ("restaurante", "varejo"):
-        raise TenantProvisionError("tipo_negocio deve ser 'restaurante' ou 'varejo'.")
+    tipo = None
+    if tipo_negocio is not None and str(tipo_negocio).strip():
+        tipo = str(tipo_negocio).strip().lower()
+        if tipo not in ("restaurante", "varejo"):
+            raise TenantProvisionError("tipo_negocio deve ser 'restaurante' ou 'varejo'.")
 
-    conn = None
-    cur = None
-    try:
-        conn = conectar()
-        cur = conn.cursor()
-        cur.execute(
-            "UPDATE dadosloja SET tipo_negocio = %s WHERE id_cliente = %s",
-            (tipo, id_cliente),
+    amb = None
+    if ambiente is not None and str(ambiente).strip():
+        amb = normalize_ambiente(ambiente)
+
+    targets = _admin_targets_for_sync()
+
+    found = False
+    changed = False
+    for target in targets:
+        conn = None
+        cur = None
+        try:
+            conn = conectar_admin_optional(target=target)
+            if conn is None:
+                continue
+            cur = conn.cursor(dictionary=True)
+            cur.execute(
+                "SELECT id_cliente, tipo_negocio, ambiente FROM dadosloja WHERE id_cliente = %s LIMIT 1",
+                (id_cliente,),
+            )
+            row = cur.fetchone()
+            if not row:
+                continue
+            found = True
+            cols = _table_columns(cur, "dadosloja")
+            sets = []
+            vals = []
+            if tipo is not None and "tipo_negocio" in cols:
+                sets.append("tipo_negocio = %s")
+                vals.append(tipo)
+            if amb is not None and "ambiente" in cols:
+                sets.append("ambiente = %s")
+                vals.append(amb)
+            if not sets:
+                continue
+            vals.append(id_cliente)
+            cur2 = conn.cursor()
+            cur2.execute(
+                f"UPDATE dadosloja SET {', '.join(sets)} WHERE id_cliente = %s",
+                tuple(vals),
+            )
+            if cur2.rowcount:
+                changed = True
+            cur2.close()
+            conn.commit()
+        except TenantProvisionError:
+            if conn:
+                conn.rollback()
+            raise
+        except mysql.connector.Error as e:
+            if conn:
+                conn.rollback()
+            raise TenantProvisionError(f"Erro no banco de dados: {e}", status=500) from e
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+
+    if not found:
+        raise TenantProvisionError(
+            f"Loja #{id_cliente} não encontrada em produção nem homologação.",
+            status=404,
         )
-        if cur.rowcount == 0:
-            raise TenantProvisionError("Loja não encontrada.", status=404)
-        conn.commit()
+
+    final_amb = amb or AMBIENTE_PRODUCTION
+    final_tipo = tipo or "restaurante"
+    if not changed:
         return {
             "sucesso": True,
             "id_cliente": id_cliente,
-            "tipo_negocio": tipo,
-            "mensagem": f"Tipo de negócio atualizado para '{tipo}'.",
+            "tipo_negocio": final_tipo,
+            "ambiente": final_amb,
+            "mensagem": "Nada a alterar — valores já estavam corretos.",
         }
-    except TenantProvisionError:
-        if conn:
-            conn.rollback()
-        raise
-    except mysql.connector.Error as e:
-        if conn:
-            conn.rollback()
-        raise TenantProvisionError(f"Erro no banco de dados: {e}", status=500) from e
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
+
+    return {
+        "sucesso": True,
+        "id_cliente": id_cliente,
+        "tipo_negocio": final_tipo,
+        "ambiente": final_amb,
+        "banco_ativo": Config.admin_db_profile(final_amb)["database"],
+        "mensagem": (
+            f"Loja #{id_cliente} atualizada: ambiente {ambiente_label(final_amb)} "
+            f"({Config.admin_db_profile(final_amb)['database']}), tipo {final_tipo}. "
+            "Faça logout e login de novo para operar no banco correto."
+        ),
+    }
 
 
-def list_tenants() -> list[dict]:
-    """Lista lojas provisionadas com login gerente principal."""
-    conn = None
-    cur = None
-    try:
-        conn = conectar()
-        cur = conn.cursor(dictionary=True)
-        cur.execute(
-            """
-            SELECT
-                d.id_cliente,
-                d.nome,
-                d.cidade,
-                d.telefone,
-                d.ddd,
-                d.tipo_negocio,
-                (
-                    SELECT u.usuario
-                    FROM usuarios u
-                    WHERE u.id_cliente = d.id_cliente
-                    ORDER BY
-                        CASE WHEN LOWER(COALESCE(u.funcao, '')) = 'gerente' THEN 0 ELSE 1 END,
-                        u.chave ASC
-                    LIMIT 1
-                ) AS usuario_gerente,
-                (
-                    SELECT u.ativo
-                    FROM usuarios u
-                    WHERE u.id_cliente = d.id_cliente
-                    ORDER BY u.chave ASC
-                    LIMIT 1
-                ) AS ativo
-            FROM dadosloja d
-            ORDER BY d.id_cliente ASC
-            """
-        )
-        rows = cur.fetchall() or []
-        out = []
-        for r in rows:
-            ativo_raw = r.get("ativo")
-            out.append(
-                {
-                    "id_cliente": int(r.get("id_cliente") or 0),
-                    "nome": r.get("nome") or "",
-                    "cidade": r.get("cidade") or "",
-                    "telefone": r.get("telefone") or "",
-                    "ddd": r.get("ddd") or "",
-                    "tipo_negocio": r.get("tipo_negocio") or "restaurante",
-                    "usuario_gerente": r.get("usuario_gerente") or "",
-                    "ativo": None if ativo_raw is None else bool(int(ativo_raw)),
-                }
-            )
-        return out
-    except mysql.connector.Error as e:
-        if getattr(e, "errno", None) == 1054:
-            cur.execute(
-                """
-                SELECT d.id_cliente, d.nome, d.cidade, d.telefone, d.ddd,
-                    (SELECT u.usuario FROM usuarios u WHERE u.id_cliente = d.id_cliente LIMIT 1) AS usuario_gerente
-                FROM dadosloja d
-                ORDER BY d.id_cliente ASC
-                """
-            )
-            rows = cur.fetchall() or []
-            return [
-                {
-                    "id_cliente": int(r.get("id_cliente") or 0),
-                    "nome": r.get("nome") or "",
-                    "cidade": r.get("cidade") or "",
-                    "telefone": r.get("telefone") or "",
-                    "ddd": r.get("ddd") or "",
-                    "usuario_gerente": r.get("usuario_gerente") or "",
-                    "ativo": True,
-                }
-                for r in rows
-            ]
-        raise
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
+def update_tenant_tipo_negocio(id_cliente: int, tipo_negocio: str) -> dict:
+    """Compatibilidade — atualiza só tipo."""
+    return update_tenant_loja(id_cliente, tipo_negocio=tipo_negocio, ambiente=None)

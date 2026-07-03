@@ -9,8 +9,9 @@ import traceback
 from datetime import datetime, timedelta
 
 from config import Config
-from database import conectar
+from database import conectar_admin
 from services import uazapi
+from services.login_tenant_db import LoginAmbienteError, locate_login_user
 
 OTP_TTL_MINUTES = 5
 OTP_MSG_GENERIC = (
@@ -123,7 +124,12 @@ def solicitar_codigo_whatsapp(usuario: str, session_store: dict | None = None) -
     conn = None
     cur = None
     try:
-        conn = conectar()
+        try:
+            tenant_target, _row = locate_login_user(login)
+        except LoginAmbienteError:
+            return {"enviado": False, "whatsapp_mascara": None}
+
+        conn = conectar_admin(tenant_target)
         cur = conn.cursor(dictionary=True)
         row = _fetch_usuario_whatsapp(cur, login)
         if not row:
@@ -190,7 +196,12 @@ def validar_codigo_whatsapp(usuario: str, codigo: str) -> bool:
     conn = None
     cur = None
     try:
-        conn = conectar()
+        try:
+            tenant_target, _row = locate_login_user(login)
+        except LoginAmbienteError:
+            return False
+
+        conn = conectar_admin(tenant_target)
         cur = conn.cursor(dictionary=True)
         cur.execute(
             """

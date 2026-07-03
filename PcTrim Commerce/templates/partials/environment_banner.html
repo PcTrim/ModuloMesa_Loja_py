@@ -1,0 +1,5 @@
+{% if environment_banner %}
+<span class="top-meta-badge env-badge-hml" role="status" aria-live="polite" title="Ambiente de testes — alterações aqui não afetam a loja real.">{{ environment_banner }}</span>
+{% elif environment_label == 'PRODUÇÃO' %}
+<span class="top-meta-badge env-badge-prod" title="Ambiente de produção">{{ environment_label }}</span>
+{% endif %}

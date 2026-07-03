@@ -190,14 +190,19 @@ def _buscar_qr_resposta(data):
 # ----------------------------------------------------------------------------
 # Gestão de instância
 # ----------------------------------------------------------------------------
+_UZAPI_ENV_HINT = (
+    "Configure UZAPI_URL e UZAPI_ADMIN_TOKEN no .env do servidor e reinicie: sudo systemctl restart lojaonline"
+)
+
+
 def criar_instancia(id_cliente, nome):
     """Cria uma instância no servidor (admintoken) e salva o token para a loja."""
     url = _url_base()
     admintoken = (Config.UZAPI_ADMIN_TOKEN or "").strip()
     if not url:
-        return {"ok": False, "erro": "UZAPI_URL não configurada."}
+        return {"ok": False, "erro": f"UZAPI_URL não configurada. {_UZAPI_ENV_HINT}"}
     if not admintoken:
-        return {"ok": False, "erro": "UZAPI_ADMIN_TOKEN não configurado no .env."}
+        return {"ok": False, "erro": f"UZAPI_ADMIN_TOKEN não configurado no .env. {_UZAPI_ENV_HINT}"}
     try:
         resp = requests.post(
             f"{url}/instance/init",
@@ -227,7 +232,7 @@ def conectar_instancia(id_cliente, phone=None):
     url = _url_base(cfg)
     token = _token_loja(id_cliente, cfg)
     if not url:
-        return {"ok": False, "erro": "UZAPI_URL não configurada."}
+        return {"ok": False, "erro": f"UZAPI_URL não configurada. {_UZAPI_ENV_HINT}"}
     if not token:
         return {"ok": False, "erro": "Esta loja ainda não tem instância. Crie a instância primeiro."}
     try:
@@ -272,6 +277,26 @@ def status_instancia(id_cliente):
         return {"ok": False, "erro": f"Falha de conexão com a uazapi: {e}", "status": "disconnected"}
     except Exception as e:
         return {"ok": False, "erro": str(e), "status": "disconnected"}
+
+
+def servidor_env_status():
+    """Diagnóstico das variáveis uazapi no .env (sem expor tokens)."""
+    url = (Config.UZAPI_URL or "").strip().rstrip("/")
+    admin = (Config.UZAPI_ADMIN_TOKEN or "").strip()
+    host = ""
+    if url:
+        try:
+            from urllib.parse import urlparse
+
+            host = urlparse(url).netloc or url.replace("https://", "").replace("http://", "").split("/")[0]
+        except Exception:
+            host = url
+    return {
+        "uzapi_url_ok": bool(url),
+        "uzapi_admin_ok": bool(admin),
+        "uzapi_token_plataforma_ok": bool((Config.UZAPI_TOKEN or "").strip()),
+        "uzapi_url_host": host,
+    }
 
 
 def status_instancia_plataforma():

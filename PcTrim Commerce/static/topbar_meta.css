@@ -40,6 +40,18 @@
   z-index: 2;
 }
 
+.env-badge-hml {
+  border-color: color-mix(in srgb, #d97706 40%, var(--line, #e5e7eb));
+  color: color-mix(in srgb, #d97706 75%, var(--text, #111827));
+  font-size: 10px;
+}
+
+.env-badge-prod {
+  border-color: color-mix(in srgb, #16a34a 40%, var(--line, #e5e7eb));
+  color: color-mix(in srgb, #16a34a 70%, var(--text, #111827));
+  font-size: 10px;
+}
+
 .login-card {
   position: relative;
 }

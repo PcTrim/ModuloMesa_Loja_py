@@ -122,7 +122,42 @@ register_domain_blueprints(app)
 
 @app.context_processor
 def inject_app_globals():
+    from database import resolve_tenant_db_target
+    from services.loja_ambiente import (
+        ambiente_label,
+        banner_for_loja,
+        loja_eh_homologacao,
+        normalize_ambiente,
+    )
+
     retail = is_retail()
+    id_cliente = session.get("id_cliente")
+    tenant_target = resolve_tenant_db_target(session)
+    dados_loja = None
+    if id_cliente is not None:
+        try:
+            dados_loja = obter_dados_loja(id_cliente)
+        except Exception:
+            dados_loja = None
+
+    if id_cliente is not None:
+        env_banner, env_banner_kind = banner_for_loja(dados_loja)
+        if loja_eh_homologacao(dados_loja):
+            env_label = "HOMOLOGAÇÃO"
+        else:
+            env_label = "PRODUÇÃO"
+    else:
+        env_label = None
+        env_banner, env_banner_kind = None, None
+
+    tenant_db_name = None
+    if dados_loja:
+        tenant_db_name = Config.admin_db_profile(
+            normalize_ambiente(dados_loja.get("ambiente"))
+        )["database"]
+    elif tenant_target:
+        tenant_db_name = Config.admin_db_profile(tenant_target)["database"]
+
     return {
         "app_version": get_app_version(),
         "url_prefix": Config.URL_PREFIX,
@@ -130,6 +165,12 @@ def inject_app_globals():
         "is_retail": retail,
         "IS_RETAIL": retail,
         "is_platform_admin": Config.is_platform_admin(session.get("usuario_logado")),
+        "environment_label": env_label,
+        "environment_banner": env_banner,
+        "environment_banner_kind": env_banner_kind,
+        "mysql_database": tenant_db_name or Config.admin_db_profile("production")["database"],
+        "tenant_db_target": tenant_target,
+        "loja_ambiente": ambiente_label(dados_loja.get("ambiente")) if dados_loja else None,
     }
 
 
@@ -142,6 +183,16 @@ def _evitar_cache_html(response):
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
         response.headers["X-App-Version"] = get_app_version()
+        from database import resolve_tenant_db_target
+
+        tenant = resolve_tenant_db_target(session)
+        if tenant:
+            profile = Config.admin_db_profile(tenant)
+            response.headers["X-Environment"] = f"tenant={tenant};db={profile['database']}"
+        else:
+            response.headers["X-Environment"] = (
+                f"db={Config.admin_db_profile('production')['database']}"
+            )
     return response
 
 
@@ -1176,6 +1227,48 @@ def _ensure_tipo_negocio_column():
             conn.close()
 
 
+def _ensure_ambiente_column():
+    """Coluna ambiente (production|homologation) em dadosloja — prod e HML configurado."""
+    from config import Config
+    from database import conectar_admin_optional
+
+    targets = ["production"]
+    if Config.admin_db_configured("homologation"):
+        targets.append("homologation")
+
+    for target in targets:
+        conn = None
+        cur = None
+        try:
+            conn = conectar_admin_optional(target=target)
+            if conn is None:
+                continue
+            cur = conn.cursor()
+            cur.execute("SHOW COLUMNS FROM dadosloja LIKE 'ambiente'")
+            if cur.fetchone() is None:
+                cur.execute(
+                    "ALTER TABLE dadosloja ADD COLUMN ambiente VARCHAR(20) NOT NULL DEFAULT 'production'"
+                )
+            default = "homologation" if target == "homologation" else "production"
+            cur.execute(
+                "UPDATE dadosloja SET ambiente = %s WHERE ambiente IS NULL OR ambiente = ''",
+                (default,),
+            )
+            conn.commit()
+        except Exception as e:
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+            print(f"[DADOSLOJA AMBIENTE COLUNA ERRO {target}]", e, flush=True)
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+
+
 def _ensure_cliente_obrigatorio_balcao_column():
     conn = None
     cur = None
@@ -1231,6 +1324,7 @@ def _ensure_clientes_cpf_cnpj_column():
 def bootstrap_schema():
     try:
         _ensure_tipo_negocio_column()
+        _ensure_ambiente_column()
         _ensure_cliente_obrigatorio_balcao_column()
         _ensure_clientes_cpf_cnpj_column()
         _ensure_obs_columns()
@@ -3076,6 +3170,15 @@ def api_whatsapp_config_post():
             cur.close()
         if conn:
             conn.close()
+
+
+@app.route("/api/whatsapp/servidor-status", methods=["GET"])
+@login_required
+@gerente_required
+def api_whatsapp_servidor_status():
+    """Diagnóstico uazapi no .env do servidor (sem expor segredos)."""
+    info = uazapi_service.servidor_env_status()
+    return jsonify({"sucesso": True, **info})
 
 
 @app.route("/api/whatsapp/instancia/criar", methods=["POST"])
@@ -5122,6 +5225,7 @@ def logout():
     session.pop('usuario_logado', None)
     session.pop('id_cliente', None)
     session.pop('funcao', None)
+    session.pop('tenant_db_target', None)
     return redirect(url_for('auth.login_page'))
 
 @app.route("/casa")

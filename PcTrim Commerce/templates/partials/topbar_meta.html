@@ -1,4 +1,5 @@
 {% set papel = (session.get('funcao') or 'gerente')|lower %}
+{% include 'partials/environment_banner.html' %}
 {% include 'partials/app_version_badge.html' %}
 {% if session.get('usuario_logado') %}
 <span class="top-meta-badge cfg-papel-badge" title="Função do usuário">{{ papel }}</span>

@@ -1,0 +1,20 @@
+# Instância de homologação — porta 8002
+[Unit]
+Description=LojaOnline Flask HML (Gunicorn)
+After=network.target mysql.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/html/LojaOnline_hml
+EnvironmentFile=/var/www/html/LojaOnline_hml/.env
+ExecStart=/var/www/html/LojaOnline_hml/.venv/bin/gunicorn \
+  --workers 2 \
+  --bind 127.0.0.1:8002 \
+  --timeout 120 \
+  wsgi:application
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

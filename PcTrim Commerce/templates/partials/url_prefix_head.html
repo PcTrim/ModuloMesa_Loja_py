@@ -2,17 +2,16 @@
 <script>
 (function () {
   var base = {{ url_prefix|tojson }};
-  if (!base && typeof location !== "undefined") {
-    var m = (location.pathname || "").match(/^(\/LojaOnline)/i);
-    if (m) base = m[1];
+  function detectBaseFromPath() {
+    if (typeof location === "undefined") return "";
+    var path = location.pathname || "";
+    var m = path.match(/^(\/LojaOnlineHml|\/LojaOnline)/i);
+    return m ? m[1] : "";
   }
+  if (!base) base = detectBaseFromPath();
   window.LOJA_BASE = base || "";
   window.lojaUrl = function (p) {
-    var b = window.LOJA_BASE || "";
-    if (!b && typeof location !== "undefined") {
-      var m2 = (location.pathname || "").match(/^(\/LojaOnline)/i);
-      if (m2) b = m2[1];
-    }
+    var b = window.LOJA_BASE || detectBaseFromPath();
     if (!p) return b || "/";
     if (/^https?:\/\//i.test(p)) return p;
     if (p.charAt(0) !== "/") p = "/" + p;

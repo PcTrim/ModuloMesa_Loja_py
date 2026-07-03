@@ -26,6 +26,19 @@ Get-ChildItem -Path $Root -Force | ForEach-Object {
     $name = $_.Name
     if ($ExcludeDirs -contains $name) { return }
     if ($_.PSIsContainer) {
+        if ($name -eq "deploy") {
+            $deployDest = Join-Path $Temp "deploy"
+            New-Item -ItemType Directory -Force -Path $deployDest | Out-Null
+            Get-ChildItem -Path $_.FullName -Force | ForEach-Object {
+                if ($_.Name -eq "dist" -or $_.Name -eq "deploy.local.env") { return }
+                if ($_.PSIsContainer) {
+                    Copy-Item -Path $_.FullName -Destination (Join-Path $deployDest $_.Name) -Recurse -Force
+                } else {
+                    Copy-Item -Path $_.FullName -Destination (Join-Path $deployDest $_.Name) -Force
+                }
+            }
+            return
+        }
         Copy-Item -Path $_.FullName -Destination (Join-Path $Temp $name) -Recurse -Force
     } else {
         if ($ExcludeFiles -contains $name) { return }

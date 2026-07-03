@@ -590,6 +590,20 @@
     #dash-pedido-modal .ui-mini-btn.ui-dash-btn-pronto:hover {
       background: rgba(245, 158, 11, 0.24);
     }
+    .flash-messages { margin: 0 0 14px; }
+    .flash-msg {
+      margin: 0 0 8px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .flash-msg--error {
+      background: rgba(220, 38, 38, 0.12);
+      border: 0.5px solid rgba(220, 38, 38, 0.35);
+      color: #f87171;
+    }
   </style>
 </head>
 <body>
@@ -613,6 +627,15 @@
         <span class="title-spacer" aria-hidden="true"></span>
       </div>
       <p class="sub">Atalhos rápidos para operações do dia a dia.</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-messages" role="alert" aria-live="polite">
+        {% for category, message in messages %}
+        <p class="flash-msg flash-msg--{{ category }}">{{ message }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
       <nav class="grid" aria-label="Navegação principal">
         <a class="tile primary" href="{{ url_prefix }}/casa{% if IS_RETAIL %}?modo=balcao{% endif %}">
           <span class="ico"><i data-lucide="shopping-cart" width="24" height="24"></i></span>
@@ -653,8 +676,11 @@
       <div class="foot">
         <a class="sair" href="{{ url_for('logout') }}">Sair</a>
         <p class="support" style="margin-bottom:8px;">
+          {% if is_platform_admin %}
           <a href="{{ url_prefix }}/admin/lojas" style="color:var(--link-support,#a78bfa);font-weight:700;">Cadastrar nova loja</a>
-          — acesso restrito (usuário: {{ session.get('usuario_logado') or '?' }})
+          {% else %}
+          <span style="color:var(--muted);">Cadastro de lojas: equipe técnica</span>
+          {% endif %}
         </p>
         <p class="support">
           Suporte <strong>PcTrim</strong> —
