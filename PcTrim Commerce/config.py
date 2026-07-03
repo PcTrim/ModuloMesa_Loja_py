@@ -17,6 +17,16 @@ class Config:
     MYSQL_PORT = int(os.environ.get("MYSQL_PORT", "3308"))
     MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "loja2001")
 
+    MYSQL_DATABASE_INTERNO = (os.environ.get("MYSQL_DATABASE_INTERNO") or "interno").strip()
+    MYSQL_INTERN_CONNECT_TIMEOUT = int(os.environ.get("MYSQL_INTERN_CONNECT_TIMEOUT", "5"))
+
+    # WhatsApp(s) que recebem aviso de comprovante de pagamento (vírgula)
+    FINANCEIRO_AVISO_WHATSAPP = [
+        p.strip()
+        for p in (os.environ.get("FINANCEIRO_AVISO_WHATSAPP") or "").split(",")
+        if p.strip()
+    ]
+
     # --- uazapi (WhatsApp) — opcional, não obrigatório ---
     # URL do servidor uazapi (mesmo subdomínio para todas as lojas).
     UZAPI_URL = (os.environ.get("UZAPI_URL", "") or "").strip().rstrip("/")
@@ -126,6 +136,24 @@ class Config:
             "password": password,
             "database": database,
         }
+
+    @classmethod
+    def interno_db_profile(cls) -> dict:
+        """Credenciais MySQL da base interna (cadastro de clientes PcTrim)."""
+        return {
+            "label": "Interno",
+            "host": cls.MYSQL_HOST,
+            "port": cls.MYSQL_PORT,
+            "user": cls.MYSQL_USER,
+            "password": cls.MYSQL_PASSWORD,
+            "database": cls.MYSQL_DATABASE_INTERNO,
+            "connect_timeout": cls.MYSQL_INTERN_CONNECT_TIMEOUT,
+        }
+
+    @classmethod
+    def interno_db_configured(cls) -> bool:
+        profile = cls.interno_db_profile()
+        return bool(profile.get("password") and profile.get("user") and profile.get("database"))
 
     @classmethod
     def admin_db_configured(cls, target: str) -> bool:

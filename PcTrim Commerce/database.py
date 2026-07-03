@@ -50,14 +50,26 @@ def _connect_profile(profile: dict):
         raise Exception(
             f"Senha ausente para base {profile.get('label', database)} ({database})."
         )
-    return mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
-        port=port,
-        database=database,
-        autocommit=False,
-    )
+    kwargs = {
+        "host": host,
+        "user": user,
+        "password": password,
+        "port": port,
+        "database": database,
+        "autocommit": False,
+    }
+    if profile.get("connect_timeout") is not None:
+        kwargs["connection_timeout"] = int(profile["connect_timeout"])
+    return mysql.connector.connect(**kwargs)
+
+
+def conectar_interno():
+    """Conexão read-only com a base interna (clientes PcTrim)."""
+    from config import Config
+
+    if not Config.interno_db_configured():
+        raise Exception("Base Interno não configurada (MYSQL_DATABASE_INTERNO).")
+    return _connect_profile(Config.interno_db_profile())
 
 
 def conectar_admin(target: str, session=None):

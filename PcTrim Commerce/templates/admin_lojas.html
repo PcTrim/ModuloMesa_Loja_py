@@ -59,6 +59,9 @@
     .env-row > div { flex: 1; min-width: 180px; }
     .env-status { margin: 0; font-size: 13px; color: var(--muted); }
     .empty { color: var(--muted); font-size: 13px; padding: 12px 0; }
+    .cliente-select-wrap { grid-column: 1 / -1; }
+    .cliente-select-status { margin: 6px 0 0; font-size: 12px; color: var(--muted); min-height: 1.2em; }
+    .cliente-select-status.err { color: var(--danger); }
   </style>
 </head>
 <body>
@@ -77,10 +80,13 @@
     <section class="card" aria-labelledby="form-title">
       <h2 id="form-title">Nova loja</h2>
       <form id="form-nova-loja" class="grid grid-2">
-        <div>
-          <label for="id_cliente">ID cliente</label>
-          <input id="id_cliente" name="id_cliente" inputmode="numeric" pattern="[0-9]*" placeholder="Ex.: 2003 (vazio = automático)" data-hint="Código numérico da loja. Deixe vazio para o sistema gerar.">
-          <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px;" id="id-cliente-hint">Deixe em branco para gerar automaticamente.</small>
+        <div class="cliente-select-wrap">
+          <label for="filtro-cliente">Cliente (base Interno) *</label>
+          <input id="filtro-cliente" type="search" placeholder="Buscar por Cliente, Fantasia ou KeyChave…" autocomplete="off" data-hint="Filtre e selecione o cliente cadastrado na base Interno.">
+          <select id="id_cliente" name="id_cliente" required disabled data-hint="Somente clientes ativos ainda não cadastrados no Pctrim_Commerce.">
+            <option value="">Carregando clientes…</option>
+          </select>
+          <p class="cliente-select-status" id="cliente-select-status" aria-live="polite"></p>
         </div>
         <div>
           <label for="nome">Nome fantasia *</label>
@@ -166,8 +172,135 @@
     const listaHost = document.getElementById("lista-lojas");
     const form = document.getElementById("form-nova-loja");
     const btnSubmit = document.getElementById("btn-submit");
-    const idClienteInput = document.getElementById("id_cliente");
-    const idClienteHint = document.getElementById("id-cliente-hint");
+    const idClienteSelect = document.getElementById("id_cliente");
+    const filtroClienteInput = document.getElementById("filtro-cliente");
+    const clienteSelectStatus = document.getElementById("cliente-select-status");
+    let clientesInternos = [];
+    let clientesInternosFiltrados = [];
+
+    function setClienteSelectStatus(msg, isErr) {
+      if (!clienteSelectStatus) return;
+      clienteSelectStatus.textContent = msg || "";
+      clienteSelectStatus.className = "cliente-select-status" + (isErr ? " err" : "");
+    }
+
+    function renderClienteOptions(list) {
+      if (!idClienteSelect) return;
+      const prev = idClienteSelect.value;
+      idClienteSelect.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = list.length
+        ? "Selecione um cliente…"
+        : "Nenhum cliente elegível encontrado";
+      idClienteSelect.appendChild(placeholder);
+      list.forEach(function (c) {
+        const opt = document.createElement("option");
+        opt.value = String(c.id);
+        opt.textContent = c.label || (c.cliente + " - " + c.fantasia + " - " + c.id);
+        if (c.documento) opt.title = c.documento;
+        opt.dataset.fantasia = c.fantasia || "";
+        opt.dataset.cliente = c.cliente || "";
+        idClienteSelect.appendChild(opt);
+      });
+      if (prev && list.some(function (c) { return String(c.id) === prev; })) {
+        idClienteSelect.value = prev;
+      }
+      idClienteSelect.disabled = list.length === 0;
+      btnSubmit.disabled = list.length === 0;
+    }
+
+    function aplicarFiltroClientes() {
+      const q = (filtroClienteInput && filtroClienteInput.value || "").trim().toLowerCase();
+      if (!q) {
+        clientesInternosFiltrados = clientesInternos.slice();
+      } else {
+        clientesInternosFiltrados = clientesInternos.filter(function (c) {
+          const blob = [c.cliente, c.fantasia, String(c.id), c.documento, c.label]
+            .join(" ")
+            .toLowerCase();
+          return blob.indexOf(q) !== -1;
+        });
+      }
+      renderClienteOptions(clientesInternosFiltrados);
+    }
+
+    function preencherNomeDoCliente() {
+      const opt = idClienteSelect && idClienteSelect.selectedOptions[0];
+      const nomeInput = document.getElementById("nome");
+      if (!opt || !nomeInput || !idClienteSelect.value) return;
+      const fantasia = (opt.dataset.fantasia || "").trim();
+      if (fantasia) nomeInput.value = fantasia;
+    }
+
+    async function validarClienteSelecionado() {
+      const id = idClienteSelect && idClienteSelect.value;
+      if (!id) {
+        setClienteSelectStatus("");
+        return;
+      }
+      try {
+        const r = await fetch("/api/clientes-internos-disponiveis/" + encodeURIComponent(id), {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        const d = await r.json().catch(function () { return {}; });
+        if (!r.ok || d.sucesso === false) {
+          setClienteSelectStatus(d.erro || "Não foi possível validar o cliente.", true);
+          return;
+        }
+        if (!d.disponivel) {
+          setClienteSelectStatus("Este cliente não está mais disponível. Atualize a lista.", true);
+          idClienteSelect.value = "";
+          await loadClientesInternos();
+          return;
+        }
+        setClienteSelectStatus("");
+      } catch (e) {
+        setClienteSelectStatus("Não foi possível validar o cliente.", true);
+      }
+    }
+
+    async function loadClientesInternos() {
+      if (!idClienteSelect) return;
+      idClienteSelect.disabled = true;
+      btnSubmit.disabled = true;
+      idClienteSelect.innerHTML = '<option value="">Carregando clientes…</option>';
+      setClienteSelectStatus("Carregando clientes…", false);
+      try {
+        const r = await fetch("/api/clientes-internos-disponiveis", {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        const d = await r.json().catch(function () { return {}; });
+        if (!r.ok || d.sucesso === false) {
+          throw new Error((d && d.erro) || "Não foi possível carregar os clientes no momento");
+        }
+        clientesInternos = Array.isArray(d.clientes) ? d.clientes : [];
+        clientesInternosFiltrados = clientesInternos.slice();
+        if (filtroClienteInput) filtroClienteInput.value = "";
+        renderClienteOptions(clientesInternosFiltrados);
+        if (!clientesInternos.length) {
+          setClienteSelectStatus("Nenhum cliente elegível encontrado", false);
+        } else {
+          setClienteSelectStatus(clientesInternos.length + " cliente(s) disponível(is)", false);
+        }
+      } catch (e) {
+        idClienteSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+        setClienteSelectStatus(e.message || "Não foi possível carregar os clientes no momento", true);
+      }
+    }
+
+    if (filtroClienteInput) {
+      filtroClienteInput.addEventListener("input", aplicarFiltroClientes);
+    }
+    if (idClienteSelect) {
+      idClienteSelect.addEventListener("change", function () {
+        preencherNomeDoCliente();
+        validarClienteSelecionado();
+      });
+    }
+
     const modalEditar = document.getElementById("modal-editar");
     const editTipoSelect = document.getElementById("edit-tipo-negocio");
     const editAmbienteSelect = document.getElementById("edit-ambiente");
@@ -262,13 +395,6 @@
           throw new Error((d && d.erro) || "Falha ao carregar lojas");
         }
         const lojas = Array.isArray(d.lojas) ? d.lojas : [];
-        if (d.proximo_id_sugerido && idClienteInput && !idClienteInput.value.trim()) {
-          idClienteInput.placeholder = "Sugerido: " + d.proximo_id_sugerido;
-          if (idClienteHint) {
-            idClienteHint.textContent =
-              "Próximo ID livre sugerido: " + d.proximo_id_sugerido + ". Deixe em branco para gerar automaticamente.";
-          }
-        }
         if (!lojas.length) {
           listaHost.innerHTML = '<p class="empty">Nenhuma loja em dadosloja.</p>';
           return;
@@ -318,8 +444,13 @@
         showAlert("Senha e confirmação não conferem.", false);
         return;
       }
-      const idClienteRaw = idClienteInput.value.trim();
+      const idClienteRaw = idClienteSelect ? idClienteSelect.value.trim() : "";
+      if (!idClienteRaw) {
+        showAlert("Selecione um cliente.", false);
+        return;
+      }
       const payload = {
+        id_cliente: parseInt(idClienteRaw, 10),
         nome: document.getElementById("nome").value.trim(),
         usuario: document.getElementById("usuario").value.trim(),
         senha: senha,
@@ -330,12 +461,9 @@
         tipo_negocio: document.getElementById("tipo_negocio").value,
         ambiente: document.getElementById("ambiente").value,
       };
-      if (idClienteRaw) {
-        payload.id_cliente = parseInt(idClienteRaw, 10);
-        if (!Number.isFinite(payload.id_cliente) || payload.id_cliente <= 0) {
-          showAlert("ID cliente inválido. Use um número inteiro positivo.", false);
-          return;
-        }
+      if (!Number.isFinite(payload.id_cliente) || payload.id_cliente <= 0) {
+        showAlert("Selecione um cliente válido.", false);
+        return;
       }
       btnSubmit.disabled = true;
       btnSubmit.textContent = "Criando…";
@@ -357,6 +485,7 @@
         );
         form.reset();
         document.getElementById("ambiente").value = "production";
+        await loadClientesInternos();
         await loadLojas();
       } catch (e) {
         showAlert(e.message || "Erro ao criar loja", false);
@@ -366,7 +495,11 @@
       }
     });
 
-    document.getElementById("btn-refresh").addEventListener("click", loadLojas);
+    document.getElementById("btn-refresh").addEventListener("click", function () {
+      loadLojas();
+      loadClientesInternos();
+    });
+    loadClientesInternos();
     loadLojas();
   </script>
   {% include 'partials/context_hint_bar.html' %}

@@ -30,6 +30,7 @@ from blueprints import register_domain_blueprints
 from decorators import login_required, restaurant_only, gerente_required
 from services.business_mode import is_retail
 from services.dados_loja import obter_dados_loja
+from services.financeiro_inadimplencia import FinanceiroBloqueioError, assert_nova_venda_permitida
 from services.impressao_layout import get_impressao_meta
 from services import uazapi as uazapi_service
 from services import terminal_impressao as terminal_impressao_service
@@ -1778,6 +1779,10 @@ def api_casa_add_item():
                         "erro": "Cliente obrigatório no balcão: informe o nome do cliente.",
                     }), 400
         if origem in ("BALCAO", "DELIVERY") and not nropedido_int:
+            try:
+                assert_nova_venda_permitida(id_cliente)
+            except FinanceiroBloqueioError as e:
+                return jsonify({"sucesso": False, "erro": e.message}), 403
             nropedido_int = _alocar_proximo_nropedido(cur, id_cliente)
         if origem == "BALCAO":
             telefone = _normalizar_telefone_balcao(telefone, nropedido_int, id_cliente)

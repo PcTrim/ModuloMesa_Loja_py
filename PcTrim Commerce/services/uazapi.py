@@ -438,6 +438,67 @@ def enviar_texto_plataforma(telefone, mensagem, evento="plataforma", id_cliente_
         return {"ok": False, "erro": str(e)}
 
 
+def enviar_midia_plataforma(
+    telefone,
+    *,
+    file_base64: str,
+    mimetype: str,
+    filename: str = "comprovante",
+    caption: str = "",
+    evento="financeiro_comprovante",
+    id_cliente_log=None,
+):
+    """Envia imagem ou documento pela instância central (UZAPI_TOKEN)."""
+    telefone_norm = normalizar_telefone(telefone, None)
+    log_cliente = id_cliente_log if id_cliente_log is not None else 0
+    if not telefone_norm:
+        _log(log_cliente, telefone, evento, "erro", "telefone inválido")
+        return {"ok": False, "erro": "Telefone inválido."}
+
+    url = _url_base(None)
+    token = (Config.UZAPI_TOKEN or "").strip()
+    if not url or not token:
+        _log(log_cliente, telefone_norm, evento, "erro", "plataforma não configurada")
+        return {"ok": False, "erro": "WhatsApp plataforma não configurado."}
+
+    mt = (mimetype or "").lower().strip()
+    is_pdf = mt == "application/pdf" or (filename or "").lower().endswith(".pdf")
+    endpoint = f"{url}/send/document" if is_pdf else f"{url}/send/image"
+    data_uri = file_base64
+    if file_base64 and not file_base64.startswith("data:"):
+        data_uri = f"data:{mt or 'application/octet-stream'};base64,{file_base64}"
+
+    payload = {
+        "number": telefone_norm,
+        "file": data_uri,
+        "url": data_uri,
+        "caption": (caption or "")[:1024],
+    }
+    if is_pdf:
+        payload["fileName"] = (filename or "comprovante.pdf")[:120]
+
+    try:
+        resp = requests.post(
+            endpoint,
+            json=payload,
+            headers={"token": token, "Content-Type": "application/json"},
+            timeout=TIMEOUT_INSTANCIA,
+        )
+        data = _json_seguro(resp)
+        if not resp.ok:
+            erro = _erro_resposta(resp, data)
+            _log(log_cliente, telefone_norm, evento, "erro", erro)
+            return {"ok": False, "erro": erro}
+        _log(log_cliente, telefone_norm, evento, "ok", None)
+        return {"ok": True}
+    except requests.RequestException as e:
+        _log(log_cliente, telefone_norm, evento, "erro", f"conexao: {e}")
+        return {"ok": False, "erro": f"Falha de conexão com a uazapi: {e}"}
+    except Exception as e:
+        _log(log_cliente, telefone_norm, evento, "erro", str(e))
+        return {"ok": False, "erro": str(e)}
+
+
 # ----------------------------------------------------------------------------
 # Helpers internos
 # ----------------------------------------------------------------------------

@@ -9,6 +9,7 @@ from decorators import login_required, restaurant_only
 from database import conectar
 from repositories.mesa_repo import fetch_mesa_recent_for_client
 from services.dados_loja import obter_dados_loja
+from services.financeiro_inadimplencia import FinanceiroBloqueioError, assert_nova_venda_permitida
 import time
 
 mesa_shop_bp = Blueprint("mesa_shop", __name__)
@@ -129,6 +130,24 @@ def salvar_mesa():
         if cursor.fetchone():
             conn.rollback()
             return jsonify({"sucesso": False, "mensagem": "Mesa está em CONTA e não pode ser alterada."}), 409
+        cursor.execute(
+            """
+            SELECT 1
+            FROM pedido_diarios
+            WHERE origem = 'MESA'
+              AND nropedido = %s
+              AND id_cliente = %s
+            LIMIT 1
+            """,
+            (mesanro, id_cliente),
+        )
+        mesa_ja_aberta = cursor.fetchone() is not None
+        if not mesa_ja_aberta:
+            try:
+                assert_nova_venda_permitida(id_cliente)
+            except FinanceiroBloqueioError as e:
+                conn.rollback()
+                return jsonify({"sucesso": False, "mensagem": e.message}), 403
         cursor_class.execute(
             "SELECT formadecobrar FROM classificacao WHERE nomeclassificacao = %s AND id_cliente = %s LIMIT 1",
             (classe, id_cliente),

@@ -5,6 +5,13 @@ from config import Config
 from decorators import login_required, platform_admin_required
 from database import resolve_tenant_db_target
 from services.dados_loja import obter_dados_loja
+from services.clientes_internos import (
+    ClientesInternosError,
+    cliente_interno_disponivel,
+    invalidate_clientes_internos_cache,
+    list_clientes_internos_disponiveis,
+    ensure_cliente_disponivel_para_loja,
+)
 from services.loja_ambiente import normalize_ambiente
 from services.tenant_provision import (
     TenantProvisionError,
@@ -55,6 +62,34 @@ def api_admin_lojas_list():
         return jsonify({"sucesso": False, "erro": str(e)}), 500
 
 
+@platform_admin_bp.route("/api/clientes-internos-disponiveis", methods=["GET"])
+@login_required
+@platform_admin_required
+def api_clientes_internos_disponiveis():
+    try:
+        clientes = list_clientes_internos_disponiveis()
+        return jsonify({"sucesso": True, "clientes": clientes})
+    except ClientesInternosError as e:
+        return jsonify({"sucesso": False, "erro": e.message}), e.status
+    except Exception:
+        return jsonify(
+            {"sucesso": False, "erro": "Não foi possível carregar os clientes no momento"}
+        ), 503
+
+
+@platform_admin_bp.route("/api/clientes-internos-disponiveis/<int:key_chave>", methods=["GET"])
+@login_required
+@platform_admin_required
+def api_cliente_interno_disponivel_check(key_chave):
+    try:
+        ok = cliente_interno_disponivel(key_chave)
+        return jsonify({"sucesso": True, "disponivel": ok, "id": key_chave})
+    except Exception:
+        return jsonify(
+            {"sucesso": False, "erro": "Não foi possível carregar os clientes no momento"}
+        ), 503
+
+
 @platform_admin_bp.route("/api/admin/lojas", methods=["POST"])
 @login_required
 @platform_admin_required
@@ -64,18 +99,34 @@ def api_admin_lojas_create():
     senha2 = data.get("senha_confirmacao") or data.get("senha2") or ""
     if senha != senha2:
         return jsonify({"sucesso": False, "erro": "Senha e confirmação não conferem."}), 400
+
+    id_cliente_raw = data.get("id_cliente")
+    if id_cliente_raw is None or str(id_cliente_raw).strip() == "":
+        return jsonify({"sucesso": False, "erro": "Selecione um cliente."}), 400
+
+    try:
+        id_cliente = int(id_cliente_raw)
+    except (TypeError, ValueError):
+        return jsonify({"sucesso": False, "erro": "Selecione um cliente válido."}), 400
+
+    try:
+        ensure_cliente_disponivel_para_loja(id_cliente)
+    except ClientesInternosError as e:
+        return jsonify({"sucesso": False, "erro": e.message}), e.status
+
     try:
         result = provision_tenant(
             nome=data.get("nome"),
             usuario=data.get("usuario"),
             senha=senha,
-            id_cliente=data.get("id_cliente"),
+            id_cliente=id_cliente,
             ddd=data.get("ddd"),
             telefone=data.get("telefone"),
             cidade=data.get("cidade"),
             tipo_negocio=data.get("tipo_negocio", "restaurante"),
             ambiente=data.get("ambiente", "production"),
         )
+        invalidate_clientes_internos_cache()
         return jsonify(result)
     except TenantProvisionError as e:
         return jsonify({"sucesso": False, "erro": e.message}), e.status

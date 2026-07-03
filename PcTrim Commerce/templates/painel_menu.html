@@ -604,6 +604,138 @@
       border: 0.5px solid rgba(220, 38, 38, 0.35);
       color: #f87171;
     }
+    .finance-alert {
+      border-radius: 14px;
+      padding: 0;
+      margin-bottom: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .finance-alert__inner {
+      display: flex;
+      gap: 14px;
+      padding: 16px 18px;
+      align-items: flex-start;
+    }
+    .finance-alert__icon {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .finance-alert--warn .finance-alert__icon {
+      background: rgba(234, 179, 8, 0.2);
+      color: #ca8a04;
+    }
+    .finance-alert--critical .finance-alert__icon {
+      background: rgba(220, 38, 38, 0.15);
+      color: #dc2626;
+    }
+    .finance-alert__body { flex: 1; min-width: 0; }
+    .finance-alert__title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    .finance-alert__text {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      margin: 0 0 10px;
+      line-height: 1.45;
+    }
+    .finance-alert__block {
+      font-size: 13px;
+      font-weight: 800;
+      margin: 0 0 10px;
+      color: #dc2626;
+    }
+    .finance-alert__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .finance-alert__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .finance-alert__cta--link {
+      background: transparent;
+      border-color: var(--line);
+      color: var(--link-support);
+    }
+    .finance-alert__cta--primary {
+      background: var(--purple);
+      color: #fff;
+      border-color: var(--purple);
+    }
+    .finance-alert--warn .finance-alert__cta--primary { background: #ca8a04; border-color: #ca8a04; }
+    .finance-alert--critical .finance-alert__cta--primary { background: #dc2626; border-color: #dc2626; }
+    .finance-alert__cta:hover { opacity: 0.92; }
+    #finance-aviso-modal .ui-modal-panel { max-width: 480px; }
+    .finance-aviso-form label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .finance-aviso-form textarea,
+    .finance-aviso-form input[type="file"] {
+      width: 100%;
+      font-family: inherit;
+      font-size: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text);
+      padding: 10px 12px;
+      margin-bottom: 14px;
+    }
+    .finance-aviso-hint {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .finance-aviso-status {
+      text-align: center;
+      padding: 24px 12px;
+    }
+    .finance-aviso-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--line);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: finance-spin 0.8s linear infinite;
+      margin: 0 auto 14px;
+    }
+    @keyframes finance-spin { to { transform: rotate(360deg); } }
+    .finance-aviso-status p { margin: 0; font-size: 14px; font-weight: 600; color: var(--text); }
+    .finance-aviso-success { color: #16a34a; font-weight: 700; margin-bottom: 8px; }
+    .tile.disabled-venda {
+      opacity: 0.55;
+      pointer-events: none;
+      cursor: not-allowed;
+      filter: grayscale(0.25);
+    }
   </style>
 </head>
 <body>
@@ -636,8 +768,9 @@
       </div>
       {% endif %}
       {% endwith %}
+      <div id="finance-alert" class="finance-alert" role="alert" aria-live="polite" hidden></div>
       <nav class="grid" aria-label="Navegação principal">
-        <a class="tile primary" href="{{ url_prefix }}/casa{% if IS_RETAIL %}?modo=balcao{% endif %}">
+        <a class="tile primary" href="{{ url_prefix }}/casa{% if IS_RETAIL %}?modo=balcao{% endif %}" id="tile-venda">
           <span class="ico"><i data-lucide="shopping-cart" width="24" height="24"></i></span>
           <div class="tile-copy">
             <h2>{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %}</h2>
@@ -876,12 +1009,202 @@
       </section>
     </div>
   </div>
+  <div id="finance-aviso-modal" class="ui-modal" role="dialog" aria-modal="true" aria-label="Avisar pagamento" hidden>
+    <div class="ui-modal-backdrop" data-finance-aviso-close></div>
+    <div class="ui-modal-panel" role="document">
+      <div class="ui-modal-head">
+        <div class="baixa-title">Avisar pagamento</div>
+        <button type="button" class="ui-mini-btn ui-focus" data-finance-aviso-close>Fechar</button>
+      </div>
+      <section class="ui-dash" style="border:none;background:transparent;padding:0 0 8px">
+        <div id="finance-aviso-form-wrap" class="finance-aviso-form">
+          <p class="finance-aviso-hint">Tenha o comprovante em mãos. A equipe PcTrim pode solicitar informações adicionais durante a análise.</p>
+          <label for="finance-aviso-obs">Observação (opcional)</label>
+          <textarea id="finance-aviso-obs" rows="2" maxlength="500" placeholder="Ex.: pago via PIX hoje"></textarea>
+          <label for="finance-aviso-file">Comprovante (JPG, PNG, WEBP ou PDF — máx. 5 MB)</label>
+          <input id="finance-aviso-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf">
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button type="button" class="ui-mini-btn" data-finance-aviso-close>Cancelar</button>
+            <button type="button" class="ui-mini-btn ui-focus" id="finance-aviso-submit">Enviar comprovante</button>
+          </div>
+        </div>
+        <div id="finance-aviso-status" class="finance-aviso-status" hidden>
+          <div class="finance-aviso-spinner" id="finance-aviso-spinner"></div>
+          <p id="finance-aviso-status-text">Enviando comprovante…</p>
+        </div>
+      </section>
+    </div>
+  </div>
   <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
   <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=9"></script>
   <script src="{{ url_for('static', filename='receber-hotkeys.js') }}?v=1"></script>
   {% include 'partials/retail_mode.html' %}
   <script>
     lucide.createIcons();
+
+    (function initFinanceiroUi() {
+      var alertEl = document.getElementById("finance-alert");
+      var tileVenda = document.getElementById("tile-venda");
+      var modal = document.getElementById("finance-aviso-modal");
+      var formWrap = document.getElementById("finance-aviso-form-wrap");
+      var statusWrap = document.getElementById("finance-aviso-status");
+      var statusText = document.getElementById("finance-aviso-status-text");
+      var spinner = document.getElementById("finance-aviso-spinner");
+      var submitBtn = document.getElementById("finance-aviso-submit");
+      var fileInput = document.getElementById("finance-aviso-file");
+      var obsInput = document.getElementById("finance-aviso-obs");
+      var urlPrefix = "{{ url_prefix }}";
+      var PCTrimSite = "https://pctrim.site";
+
+      var MSG = {
+        aVencer: "Existem duplicatas com vencimento em até 2 dias.",
+        vencidas: "Existem duplicatas vencidas.",
+        bloqueio: "Vendas bloqueadas por inadimplência.",
+        tituloWarn: "Atenção financeira",
+        tituloCrit: "Pendência financeira",
+      };
+
+      function esc(s) {
+        return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      }
+
+      function renderFinanceAlert(opts) {
+        if (!alertEl) return;
+        var temVencidas = !!opts.temVencidas;
+        var bloqueado = !!opts.bloqueado;
+        var cls = temVencidas ? "finance-alert finance-alert--critical" : "finance-alert finance-alert--warn";
+        var titulo = temVencidas ? MSG.tituloCrit : MSG.tituloWarn;
+        var texto = temVencidas ? MSG.vencidas : MSG.aVencer;
+        var blockHtml = bloqueado ? '<p class="finance-alert__block">' + esc(MSG.bloqueio) + "</p>" : "";
+        var avisoBtn = (bloqueado || temVencidas)
+          ? '<button type="button" class="finance-alert__cta finance-alert__cta--primary" id="finance-open-aviso">Avisar pagamento</button>'
+          : "";
+        alertEl.className = cls;
+        alertEl.innerHTML =
+          '<div class="finance-alert__inner">' +
+          '<div class="finance-alert__icon"><i data-lucide="alert-triangle" width="22" height="22"></i></div>' +
+          '<div class="finance-alert__body">' +
+          '<div class="finance-alert__title">' + esc(titulo) + "</div>" +
+          '<p class="finance-alert__text">' + esc(texto) + "</p>" +
+          blockHtml +
+          '<div class="finance-alert__actions">' +
+          avisoBtn +
+          '<a class="finance-alert__cta finance-alert__cta--link" href="' + PCTrimSite + '" target="_blank" rel="noopener noreferrer">' +
+          'Acessar e regularizar <i data-lucide="external-link" width="14" height="14"></i></a>' +
+          "</div></div></div>";
+        alertEl.hidden = false;
+        if (window.lucide) lucide.createIcons();
+        var openBtn = document.getElementById("finance-open-aviso");
+        if (openBtn) openBtn.addEventListener("click", openAvisoModal);
+      }
+
+      function openAvisoModal() {
+        if (!modal) return;
+        if (formWrap) formWrap.hidden = false;
+        if (statusWrap) statusWrap.hidden = true;
+        if (statusText) statusText.textContent = "Enviando comprovante…";
+        if (spinner) spinner.hidden = false;
+        if (fileInput) fileInput.value = "";
+        if (obsInput) obsInput.value = "";
+        if (submitBtn) submitBtn.disabled = false;
+        modal.hidden = false;
+      }
+
+      function closeAvisoModal() {
+        if (modal) modal.hidden = true;
+      }
+
+      function showAvisoLoading(text) {
+        if (formWrap) formWrap.hidden = true;
+        if (statusWrap) statusWrap.hidden = false;
+        if (statusText) statusText.textContent = text;
+        if (spinner) spinner.hidden = false;
+      }
+
+      function showAvisoDone(html) {
+        if (spinner) spinner.hidden = true;
+        if (statusText) statusText.innerHTML = html;
+      }
+
+      function delay(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+      }
+
+      function submitAviso() {
+        if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+          alert("Selecione o comprovante para enviar.");
+          return;
+        }
+        if (submitBtn) submitBtn.disabled = true;
+        showAvisoLoading("Enviando comprovante…");
+        var fd = new FormData();
+        fd.append("comprovante", fileInput.files[0]);
+        fd.append("observacao", (obsInput && obsInput.value) || "");
+        var started = Date.now();
+        fetch(urlPrefix + "/financeiro/avisar-pagamento", {
+          method: "POST",
+          credentials: "same-origin",
+          body: fd,
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); })
+          .then(function (res) {
+            var elapsed = Date.now() - started;
+            var wait = Math.max(0, 2500 - elapsed);
+            return delay(wait).then(function () {
+              showAvisoLoading("Analisando pagamento…");
+              return delay(1200).then(function () { return res; });
+            });
+          })
+          .then(function (res) {
+            if (res.ok && res.data && res.data.sucesso !== false) {
+              showAvisoDone(
+                '<div class="finance-aviso-success">Comprovante recebido</div>' +
+                esc((res.data && res.data.mensagem) || "Será analisado pela equipe PcTrim.")
+              );
+              setTimeout(closeAvisoModal, 5000);
+            } else {
+              showAvisoDone(esc((res.data && res.data.erro) || "Não foi possível enviar. Tente novamente ou acesse pctrim.site."));
+              if (submitBtn) submitBtn.disabled = false;
+              if (formWrap) formWrap.hidden = false;
+              if (statusWrap) statusWrap.hidden = true;
+            }
+          })
+          .catch(function () {
+            showAvisoDone("Não foi possível enviar. Tente novamente ou acesse pctrim.site.");
+            if (submitBtn) submitBtn.disabled = false;
+            if (formWrap) formWrap.hidden = false;
+            if (statusWrap) statusWrap.hidden = true;
+          });
+      }
+
+      if (modal) {
+        modal.querySelectorAll("[data-finance-aviso-close]").forEach(function (el) {
+          el.addEventListener("click", closeAvisoModal);
+        });
+      }
+      if (submitBtn) submitBtn.addEventListener("click", submitAviso);
+
+      fetch(urlPrefix + "/financeiro/status", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      })
+        .then(function (r) { return r.json().catch(function () { return null; }); })
+        .then(function (d) {
+          if (!d) return;
+          var temAVencer = !!d.temAVencer;
+          var temVencidas = !!d.temVencidas;
+          var bloqueado = !!d.bloqueadoVenda;
+          if (!temAVencer && !temVencidas) return;
+          renderFinanceAlert({ temAVencer: temAVencer, temVencidas: temVencidas, bloqueado: bloqueado });
+          if (bloqueado && tileVenda) {
+            tileVenda.classList.add("disabled-venda");
+            tileVenda.setAttribute("aria-disabled", "true");
+            tileVenda.setAttribute("title", MSG.bloqueio);
+            tileVenda.setAttribute("tabindex", "-1");
+          }
+        })
+        .catch(function () { /* fail-open */ });
+    })();
 
     var IS_RETAIL = window.IS_RETAIL;
     var LABEL_PEDIDO = window.LABEL_PEDIDO;
