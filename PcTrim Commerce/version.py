@@ -3,7 +3,7 @@
 import os
 import re
 
-APP_VERSION = "265-18"
+APP_VERSION = "265-22"
 
 _VERSION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "version.py")
 _VERSION_RE = re.compile(r"""^APP_VERSION\s*=\s*["']([^"']+)["']""", re.M)

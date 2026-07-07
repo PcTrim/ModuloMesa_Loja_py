@@ -60,7 +60,7 @@ def insert_usuario_row(
 ) -> None:
     """INSERT em usuarios com fallback se colunas funcao/ativo/whatsapp não existirem."""
     funcao = normalize_funcao(funcao)
-    wa = _normalize_whatsapp(whatsapp).strip() or None
+    wa = _normalize_whatsapp(whatsapp).strip() or ""
     try:
         cur.execute(
             """
@@ -335,7 +335,7 @@ def update_usuario(
             params.append(senha_hash)
         if whatsapp is not None:
             sets.append("whatsapp = %s")
-            params.append(_normalize_whatsapp(whatsapp).strip() or None)
+            params.append(_normalize_whatsapp(whatsapp).strip() or "")
 
         if not sets:
             raise UsuariosLojaError("Nenhuma alteração informada.")

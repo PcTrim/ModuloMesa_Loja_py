@@ -1,0 +1,17 @@
+# Pastas/arquivos que NÃO devem ser enviados ao servidor (FileZilla: Filtro de diretório)
+.venv
+.venv-1
+__pycache__
+.git
+.env
+ultimo_arranque_loja.txt
+loja_erros.log
+*.pyc
+.pytest_cache
+.idea
+.vscode
+pedidos_salvos_export
+output
+pedidos
+deploy/dist
+deploy/deploy.local.env

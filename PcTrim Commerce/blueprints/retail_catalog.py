@@ -12,6 +12,7 @@ from services.retail_catalog import (
     editar_categoria,
     editar_subcategoria,
     listar_categorias,
+    listar_produtos_pdv_retail,
     listar_subcategorias,
     obter_categoria,
     obter_subcategoria,
@@ -180,6 +181,63 @@ def api_categoria_ativo(categoria_id):
     except mysql.connector.Error as db_err:
         print("[DB ERROR]", db_err)
         return jsonify({"sucesso": False, "erro": "Erro ao atualizar categoria"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+@retail_catalog_bp.route("/api/retail/pdv/produtos", methods=["GET"])
+@login_required
+@retail_only
+def api_pdv_produtos():
+    conn = None
+    cur = None
+    try:
+        categoria_raw = request.args.get("categoria_id")
+        if categoria_raw in (None, ""):
+            return jsonify({"sucesso": False, "erro": "categoria_id é obrigatório."}), 400
+        try:
+            categoria_id = int(categoria_raw)
+        except (TypeError, ValueError):
+            return jsonify({"sucesso": False, "erro": "categoria_id inválido."}), 400
+
+        subcategoria_id = None
+        sub_raw = request.args.get("subcategoria_id")
+        if sub_raw not in (None, ""):
+            try:
+                subcategoria_id = int(sub_raw)
+            except (TypeError, ValueError):
+                return jsonify({"sucesso": False, "erro": "subcategoria_id inválido."}), 400
+
+        id_cliente = _id_cliente()
+        conn = conectar()
+        cur = conn.cursor(dictionary=True)
+
+        cat = obter_categoria(cur, id_cliente, categoria_id)
+        if not cat:
+            return jsonify({"sucesso": False, "erro": "Categoria não encontrada."}), 404
+
+        if subcategoria_id is not None:
+            sub = obter_subcategoria(cur, id_cliente, subcategoria_id)
+            if not sub:
+                return jsonify({"sucesso": False, "erro": "Subcategoria não encontrada."}), 404
+            if int(sub["categoria_id"]) != categoria_id:
+                return jsonify({"sucesso": False, "erro": "Subcategoria não pertence à categoria."}), 400
+
+        produtos = listar_produtos_pdv_retail(
+            cur,
+            id_cliente,
+            categoria_id=categoria_id,
+            subcategoria_id=subcategoria_id,
+        )
+        return jsonify({"sucesso": True, "produtos": produtos})
+    except RetailCatalogError as err:
+        return jsonify({"sucesso": False, "erro": str(err)}), 400
+    except mysql.connector.Error as db_err:
+        print("[DB ERROR]", db_err)
+        return jsonify({"sucesso": False, "erro": "Erro ao listar produtos do PDV."}), 500
     finally:
         if cur:
             cur.close()

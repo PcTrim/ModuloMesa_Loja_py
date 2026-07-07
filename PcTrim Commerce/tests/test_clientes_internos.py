@@ -20,6 +20,34 @@ class ClientesInternosServiceTests(unittest.TestCase):
     def setUp(self):
         invalidate_clientes_internos_cache()
 
+    @patch.dict(
+        "os.environ",
+        {
+            "MYSQL_HOST": "127.0.0.1",
+            "MYSQL_PORT": "3306",
+            "MYSQL_USER": "app",
+            "MYSQL_PASSWORD": "app_pw",
+            "MYSQL_HOST_INTERNO": "92.113.33.100",
+            "MYSQL_PORT_INTERNO": "3308",
+            "MYSQL_USER_INTERNO": "root",
+            "MYSQL_PASSWORD_INTERNO": "root_pw",
+            "MYSQL_DATABASE_INTERNO": "interno",
+        },
+        clear=False,
+    )
+    def test_interno_db_profile_uses_overrides(self):
+        from importlib import reload
+
+        import config as config_mod
+
+        reload(config_mod)
+        profile = config_mod.Config.interno_db_profile()
+        self.assertEqual(profile["host"], "92.113.33.100")
+        self.assertEqual(profile["port"], 3308)
+        self.assertEqual(profile["user"], "root")
+        self.assertEqual(profile["password"], "root_pw")
+        self.assertEqual(profile["database"], "interno")
+
     @patch("services.clientes_internos.collect_id_clientes_em_uso", return_value={2003})
     @patch("services.clientes_internos.fetch_clientes_ativos")
     def test_excludes_registered_and_inactive(self, mock_fetch, _mock_used):

@@ -105,6 +105,75 @@ def listar_categorias(cur, id_cliente: int, ativo: int | None = None) -> list[di
     return cur.fetchall() or []
 
 
+def listar_produtos_pdv_retail(
+    cur,
+    id_cliente: int,
+    *,
+    categoria_id: int,
+    subcategoria_id: int | None = None,
+    limit: int = 200,
+) -> list[dict]:
+    """Produtos ativos para PDV retail filtrados por categoria/subcategoria."""
+    _ensure_categoria_loja(cur, id_cliente, categoria_id)
+    if subcategoria_id is not None:
+        sub = _ensure_subcategoria_loja(cur, id_cliente, subcategoria_id)
+        if int(sub["categoria_id"]) != int(categoria_id):
+            raise RetailCatalogError("Subcategoria não pertence à categoria.")
+
+    sql = """
+        SELECT
+            p.chave,
+            COALESCE(NULLIF(TRIM(pr.nome_vitrine), ''), p.produto) AS produto,
+            p.descricao,
+            p.barcode,
+            p.classe,
+            s.nome AS subcategoria_nome,
+            pr.preco_varejo,
+            p.preco AS preco_base
+        FROM produtos p
+        JOIN produto_retail pr ON pr.product_id = p.chave AND pr.id_cliente = p.id_cliente
+        JOIN categoria c ON c.id = p.category_id AND c.id_cliente = p.id_cliente
+        LEFT JOIN subcategoria s ON s.id = p.subcategory_id AND s.id_cliente = p.id_cliente
+        WHERE p.id_cliente = %s
+          AND p.category_id = %s
+          AND UPPER(COALESCE(p.vendaliberada, '')) = 'SIM'
+          AND COALESCE(pr.ativo, 1) = 1
+          AND c.ativo = 1
+    """
+    params: list[Any] = [id_cliente, categoria_id]
+    if subcategoria_id is not None:
+        sql += " AND p.subcategory_id = %s"
+        params.append(subcategoria_id)
+    sql += """
+        ORDER BY pr.ordem_exibicao, pr.nome_vitrine, p.produto
+        LIMIT %s
+    """
+    params.append(max(1, int(limit)))
+    cur.execute(sql, tuple(params))
+    rows = cur.fetchall() or []
+    result: list[dict] = []
+    for row in rows:
+        preco_raw = row.get("preco_varejo")
+        if preco_raw is None:
+            preco_raw = row.get("preco_base")
+        try:
+            preco = float(preco_raw or 0)
+        except (TypeError, ValueError):
+            preco = 0.0
+        result.append(
+            {
+                "chave": row["chave"],
+                "produto": row["produto"],
+                "preco": preco,
+                "barcode": row.get("barcode"),
+                "classe": row.get("classe"),
+                "descricao": row.get("descricao"),
+                "subcategoria_nome": row.get("subcategoria_nome"),
+            }
+        )
+    return result
+
+
 def obter_categoria(cur, id_cliente: int, categoria_id: int) -> dict | None:
     cur.execute(
         """

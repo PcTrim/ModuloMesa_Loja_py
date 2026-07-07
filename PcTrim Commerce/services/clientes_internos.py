@@ -1,9 +1,12 @@
 """Clientes elegíveis da base Interno para cadastro de loja."""
 from __future__ import annotations
 
+import logging
 import time
 
 import mysql.connector
+
+logger = logging.getLogger(__name__)
 
 from database import conectar_admin_optional
 from repositories.clientes_internos_repo import fetch_cliente_ativo_by_id, fetch_clientes_ativos
@@ -100,8 +103,10 @@ def list_clientes_internos_disponiveis(*, use_cache: bool = True) -> list[dict]:
     try:
         raw = fetch_clientes_ativos()
     except mysql.connector.Error as e:
+        logger.warning("clientes_internos: falha MySQL ao listar ativos: %s", e)
         raise ClientesInternosError(MSG_LOAD_ERROR, status=503) from e
     except Exception as e:
+        logger.warning("clientes_internos: erro inesperado ao listar ativos: %s", e)
         raise ClientesInternosError(MSG_LOAD_ERROR, status=503) from e
 
     normalized = [_normalize_row(r) for r in raw]

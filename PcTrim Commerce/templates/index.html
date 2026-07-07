@@ -33,7 +33,7 @@
     .toggle button:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(124,58,237,.28);}
 
     .shell{flex:1;display:grid;grid-template-columns:260px 1fr 300px;min-height:0;}
-    .left,.right{background:var(--side);min-height:0;padding:8px;display:flex;flex-direction:column;gap:8px;}
+    .left,.right{background:var(--side);min-height:0;padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0;}
     .left{overflow-y:auto;}
     .left{border-right:.5px solid var(--line);} .right{border-left:.5px solid var(--line);} 
     .center{padding:8px;display:flex;flex-direction:column;gap:8px;min-height:0;}
@@ -59,7 +59,19 @@
 
     #class-tabs{display:flex;gap:4px;overflow-x:auto;min-height:34px;}
     #class-tabs button{border:.5px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
-    #class-tabs button.active{background:rgba(124,58,237,.2);color:var(--tab-active);border-color:var(--purple);}    
+    #class-tabs button.active{background:rgba(124,58,237,.2);color:var(--tab-active);border-color:var(--purple);}
+    #subcat-tabs{display:flex;gap:4px;overflow-x:auto;min-height:28px;margin-top:4px;}
+    #subcat-tabs:empty{display:none;}
+    .retail-pdv #class-tabs button{border-color:var(--purple);}
+    .retail-pdv #class-tabs button.active{background:var(--purple);color:var(--on-primary);box-shadow:0 2px 8px rgba(124,58,237,.35);border-color:var(--purple);}
+    .retail-pdv #subcat-tabs button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
+    .retail-pdv #subcat-tabs button.active{background:rgba(124,58,237,.15);color:var(--tab-active);border-color:var(--purple);box-shadow:0 1px 4px rgba(124,58,237,.25);}
+    .retail-pdv #frac-inline{display:none!important;}
+    .retail-pdv .prod-card{cursor:pointer;padding:10px;transition:border-color .15s,box-shadow .15s;}
+    .retail-pdv .prod-card:hover{border-color:var(--purple);box-shadow:0 2px 8px rgba(0,0,0,.12);}
+    .retail-pdv .prod-card .name{font-size:11px;font-weight:600;}
+    .retail-pdv .prod-card .price{font-size:14px;}
+    .retail-pdv .item-desc{-webkit-line-clamp:1;}
     .search{display:flex;align-items:center;gap:8px;background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--muted);} 
     #busca-produto{flex:1;border:none;outline:none;background:transparent;font-family:inherit;font-size:13px;color:var(--text);} 
     .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;align-content:start;overflow-y:auto;min-height:0;}
@@ -70,22 +82,22 @@
     .prod-card .name{font-size:12px;font-weight:700;line-height:1.25;} .prod-card .code{font-size:10px;color:var(--muted);font-weight:600;} .prod-card .price{font-size:12px;color:var(--green);font-weight:700;}
     .btn-plus{width:100%;margin-top:auto;border:none;border-radius:6px;background:var(--purple);color:var(--on-primary);font-weight:600;font-size:15px;padding:8px;cursor:pointer;font-family:inherit;}
 
-    #itens-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;}
-    .item{background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:8px;font-size:12px;display:grid;gap:6px;}
+    #itens-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;min-width:0;}
+    .item{background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:8px;font-size:12px;display:grid;gap:6px;min-width:0;max-width:100%;overflow:hidden;}
     .item.ajuste-tecnico{border-color:var(--purple);background:rgba(124,58,237,.08);}
-    .item-top{display:flex;flex-direction:column;gap:4px;}
-    .item-header{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}
-    .item-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px;}
-    .item-mid,.item-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-    .item-name{font-weight:700;font-size:12px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .item-desc{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .item-mid{color:var(--muted);}
-    .item-qty{display:flex;align-items:center;gap:4px;}
+    .item-top{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .item-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-width:0;}
+    .item-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .item-mid,.item-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}
+    .item-name{font-weight:700;font-size:12px;flex:1;min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.25;word-break:break-word;}
+    .item-desc{font-size:11px;color:var(--muted);min-width:0;max-width:100%;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.3;word-break:break-word;}
+    .item-mid{color:var(--muted);flex-wrap:wrap;}
+    .item-qty{display:flex;align-items:center;gap:4px;flex-shrink:0;}
     .qty-btn{min-width:24px;height:24px;border:.5px solid var(--line);border-radius:6px;background:var(--control-bg);color:var(--text);cursor:pointer;font-size:13px;line-height:1;padding:0 6px;}
     .qty-input{width:44px;height:24px;text-align:center;border:.5px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--text);font-size:12px;}
-    .unit-price{font-size:11px;}
-    .item-obs{display:grid;grid-template-columns:1fr auto;gap:6px;}
-    .item-obs input{height:26px;padding:4px 8px;border:.5px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--text);font-size:12px;}
+    .unit-price{font-size:11px;white-space:nowrap;flex-shrink:0;margin-left:auto;}
+    .item-obs{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;min-width:0;}
+    .item-obs input{height:26px;padding:4px 8px;border:.5px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--text);font-size:12px;min-width:0;width:100%;}
     .item-obs.sep{border-top:.5px dashed var(--line);padding-top:6px;margin-top:2px;}
     .item-obs-label{font-size:10px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .obs-save{height:26px;padding:0 8px;border:.5px solid var(--line);border-radius:6px;background:var(--btn-secondary);color:var(--accent-soft);cursor:pointer;font-size:11px;font-weight:700;}
@@ -231,7 +243,7 @@
     }
   </style>
 </head>
-<body>
+<body{% if IS_RETAIL %} class="retail-pdv"{% endif %}>
 <div class="pdv">
   <header class="topbar">
     <a class="home" href="{{ url_prefix }}/" title="Painel"><i data-lucide="home" width="18" height="18"></i></a>
@@ -316,7 +328,8 @@
 
     <section class="center">
       <div id="class-tabs"></div>
-      <div class="search"><i data-lucide="search" width="16" height="16"></i><input id="busca-produto" placeholder="Buscar por nome, código ou código de barras..."></div>
+      <div id="subcat-tabs"></div>
+      <div class="search"><i data-lucide="search" width="16" height="16"></i><input id="busca-produto" placeholder="{% if IS_RETAIL %}Buscar produto ou bipar código...{% else %}Buscar por nome, código ou código de barras...{% endif %}"></div>
       <div id="frac-inline" class="frac-inline" aria-live="polite">
         <div class="frac-inline-top">
           <span id="frac-inline-pie" class="frac-inline-pie" aria-hidden="true"></span>
@@ -417,7 +430,7 @@
   }
   let impressoraCasaLabel="(carregando impressora…)";
   let impressoraCasaFeed=6;
-  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, clienteObrigatorioBalcao:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
+  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], retailCategoriaId:null, retailSubcategoriaId:null, retailCategoriaNome:null, pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, clienteObrigatorioBalcao:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
   function msgCasaPedidoBloqueado(){ return IS_RETAIL ? "Comanda cancelada ou venda em ROTA/RECEBIDA não pode ser alterada na tela /casa." : "Comanda cancelada ou pedido em ROTA/RECEBIDO não pode ser alterado na tela /casa."; }
   function aplicarBloqueioCasaUi(host){
     const bloq = !!state.pedidoBloqueadoCasa && (Number(state.pedidoId)||0) > 0;
@@ -856,6 +869,9 @@
 
   async function refreshTaxaServico(){ try{ const r=await fetch("/api/buscar-configuracao"); const d=await r.json(); state.servicoPct=(d.sucesso&&d.config&&d.config.servicomesa!=null)?(parseFloat(d.config.servicomesa)||0):0; }catch(_){ state.servicoPct=0; } }
   function escapeHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;"); }
+  function formatItemDesc(raw){
+    return String(raw||"").replace(/\s+/g," ").trim();
+  }
   function parseOpcoesTxt(txt){
     const raw=String(txt||"").replace(/\r/g,"").trim();
     if(!raw) return [];
@@ -1312,7 +1328,7 @@
         grupos.delete(lanc);
       }
     });
-    simples.forEach((it)=>{ const id=pkItem(it); const qtd=Number(it.quantidade)||1; const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const desc=(it.descricao_produto||"").trim(); const ehAjuste=String(it.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO"; const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":""); row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name">${escapeHtml(it.produto||it.nome||"-")}</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del="${id}" aria-label="Remover item">×</button></div></div>${desc?`<div class="item-desc">${escapeHtml(desc)}</div>`:""}</div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`; host.appendChild(row); });
+    simples.forEach((it)=>{ const id=pkItem(it); const qtd=Number(it.quantidade)||1; const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const desc=formatItemDesc(it.descricao_produto); const ehAjuste=String(it.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO"; const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":""); row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name" title="${escapeHtml(it.produto||it.nome||"-")}">${escapeHtml(it.produto||it.nome||"-")}</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del="${id}" aria-label="Remover item">×</button></div></div>${desc?`<div class="item-desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>`:""}</div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`; host.appendChild(row); });
     grupos.forEach((itens,lanc)=>{
       const idRef=pkItem(itens[0]);
       const qtd=Number(itens[0]?.quantidade)||1;
@@ -1577,13 +1593,30 @@
       if(busca) busca.focus();
     });
   }
+  function pdvCategoriaAtiva(){
+    if(IS_RETAIL) return !!(state.retailCategoriaId);
+    return !!state.classificacao;
+  }
+  function pdvClasseItem(p){
+    if(IS_RETAIL){
+      return String((p&&p.classe)||state.retailCategoriaNome||"VAREJO").trim()||"VAREJO";
+    }
+    return state.classificacao;
+  }
   async function addItem(p, btn){
-    if(!state.classificacao){ alert("Selecione uma categoria."); return; }
+    if(!pdvCategoriaAtiva()){ alert("Selecione uma categoria."); return; }
     if(state.modo==="delivery" && !state.clienteLocalizado){ alert("Localize o cliente antes de incluir itens."); return; }
     if(IS_RETAIL && state.modo==="balcao" && state.clienteObrigatorioBalcao && !clienteBalcaoPronto()){
       alert("Localize ou cadastre o cliente antes de incluir itens.");
       const card=el("balcao-cliente-card"); if(card) card.open=true;
       const f=el("balcao-fone"); if(f) f.focus();
+      return;
+    }
+    if(IS_RETAIL){
+      const nome=p.nome||p.produto;
+      const cod=p.chave!=null?String(p.chave):String(Date.now());
+      const basePayload={ ...clienteCasaPayload(), obs_geral:(el("obs-geral").value||"").trim(), item:{ nome, preco:Number(p.preco)||0, qtd:1, codigoproduto:cod, classe:pdvClasseItem(p), obs_item:"", dados_item:"" } };
+      await enviarItemCasa(basePayload, btn);
       return;
     }
     const draft=state.fracionadoDraftInline;
@@ -3492,7 +3525,7 @@
       onConfirm:()=>{ receberBaixaBalcao(); },
     });
   }
-  document.addEventListener("DOMContentLoaded",async()=>{ bindPedidoPreviewRefresh(); if(window.lojaPrintHeader) window.lojaPrintHeader.ensureLojaDados(); window.applyRetailUi(); bindHotkeys(); refreshImpressoraCasaLabel(); if(!IS_RETAIL) await carregarDddPadrao(); if(IS_RETAIL) await carregarConfigBalcao(); const params=new URLSearchParams(window.location.search); const modoParam=params.get("modo"); if(IS_RETAIL){ state.modo="balcao"; }else{ state.modo=(modoParam==="balcao"||modoParam==="delivery")?modoParam:"delivery"; } const pedidoParam=Number(String(params.get("pedido")||"").replace(/[^\d]/g,""))||0; const telParam=String(params.get("tel")||"").replace(/\D/g,""); const recParam=params.get("rec")==="1"; if(pedidoParam>0 && recParam){ state.pedidoId=pedidoParam; state.pedidoReservado=true; state.pedidoPreview=state.pedidoId; state.emRecuperacao=true; updatePedidoBadge(); if(state.modo==="delivery" && telParam){ const local=telParam.length>9?telParam.slice(-9):telParam; if(el("cli-fone")) el("cli-fone").value=local; } } await syncPedidoAtual(); syncModeUi(); captureClienteSnapshot(); applyInitialUiState(); if(!IS_RETAIL) setClienteStatus("Pedidos anteriores: -"); await refreshTaxaServico(); await loadClassTabs(); const _ldMode=pedidoParam>0 && recParam ? "recuperacao" : "normal"; const _ldOk=await loadItens(_ldMode); if(pedidoParam>0 && recParam && _ldOk===false){ state.emRecuperacao=false; state.pedidoId=0; state.pedidoReservado=false; await syncPedidoAtual(); await loadItens("normal"); updatePedidoBadge(); } if(!IS_RETAIL){ await refreshPendentesAguarde(); const btnPend=el("btn-pend-aguarde"); if(btnPend) btnPend.onclick=async()=>{ await refreshPendentesAguarde(); renderAguardePendentesModal(); openModal("modal-aguarde-pendentes"); }; } if(IS_RETAIL){ history.replaceState({},"",lojaUrl("/casa?modo=balcao")); await resetPedidoRapido(true); syncModeUi(); } lucide.createIcons(); });
+  document.addEventListener("DOMContentLoaded",async()=>{ bindPedidoPreviewRefresh(); if(window.lojaPrintHeader) window.lojaPrintHeader.ensureLojaDados(); window.applyRetailUi(); bindHotkeys(); refreshImpressoraCasaLabel(); if(!IS_RETAIL) await carregarDddPadrao(); if(IS_RETAIL) await carregarConfigBalcao(); const params=new URLSearchParams(window.location.search); const modoParam=params.get("modo"); if(IS_RETAIL){ state.modo="balcao"; }else{ state.modo=(modoParam==="balcao"||modoParam==="delivery")?modoParam:"delivery"; } const pedidoParam=Number(String(params.get("pedido")||"").replace(/[^\d]/g,""))||0; const telParam=String(params.get("tel")||"").replace(/\D/g,""); const recParam=params.get("rec")==="1"; if(pedidoParam>0 && recParam){ state.pedidoId=pedidoParam; state.pedidoReservado=true; state.pedidoPreview=state.pedidoId; state.emRecuperacao=true; updatePedidoBadge(); if(state.modo==="delivery" && telParam){ const local=telParam.length>9?telParam.slice(-9):telParam; if(el("cli-fone")) el("cli-fone").value=local; } } await syncPedidoAtual(); syncModeUi(); captureClienteSnapshot(); applyInitialUiState(); if(!IS_RETAIL) setClienteStatus("Pedidos anteriores: -"); await refreshTaxaServico(); if(IS_RETAIL && window.RetailPdv) await window.RetailPdv.loadCatalogTabs({state,el,renderProdutos}); else await loadClassTabs(); const _ldMode=pedidoParam>0 && recParam ? "recuperacao" : "normal"; const _ldOk=await loadItens(_ldMode); if(pedidoParam>0 && recParam && _ldOk===false){ state.emRecuperacao=false; state.pedidoId=0; state.pedidoReservado=false; await syncPedidoAtual(); await loadItens("normal"); updatePedidoBadge(); } if(!IS_RETAIL){ await refreshPendentesAguarde(); const btnPend=el("btn-pend-aguarde"); if(btnPend) btnPend.onclick=async()=>{ await refreshPendentesAguarde(); renderAguardePendentesModal(); openModal("modal-aguarde-pendentes"); }; } if(IS_RETAIL){ history.replaceState({},"",lojaUrl("/casa?modo=balcao")); await resetPedidoRapido(true); syncModeUi(); } lucide.createIcons(); });
 })();
 </script>
 {% if not IS_RETAIL %}

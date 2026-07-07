@@ -12,7 +12,6 @@ from services.clientes_internos import (
     list_clientes_internos_disponiveis,
     ensure_cliente_disponivel_para_loja,
 )
-from services.loja_ambiente import normalize_ambiente
 from services.tenant_provision import (
     TenantProvisionError,
     hml_admin_disponivel,
@@ -21,6 +20,8 @@ from services.tenant_provision import (
     suggested_next_id_cliente,
     update_tenant_loja,
 )
+from services.tenant_promote import promote_tenant_hml_to_production
+from services.loja_ambiente import AMBIENTE_PRODUCTION, normalize_ambiente
 
 platform_admin_bp = Blueprint("platform_admin", __name__)
 
@@ -125,6 +126,7 @@ def api_admin_lojas_create():
             cidade=data.get("cidade"),
             tipo_negocio=data.get("tipo_negocio", "restaurante"),
             ambiente=data.get("ambiente", "production"),
+            criar_ambos_bancos=bool(data.get("criar_ambos_bancos")),
         )
         invalidate_clientes_internos_cache()
         return jsonify(result)
@@ -138,11 +140,35 @@ def api_admin_lojas_create():
 def api_admin_lojas_update(id_cliente):
     data = request.get_json(silent=True) or {}
     try:
+        ambiente_raw = data.get("ambiente")
+        promover = bool(data.get("promover_dados"))
+        substituir = bool(data.get("substituir_catalogo"))
+
+        promote_result = None
+        if promover:
+            if ambiente_raw is None or normalize_ambiente(ambiente_raw) != AMBIENTE_PRODUCTION:
+                return jsonify({
+                    "sucesso": False,
+                    "erro": "Promoção de dados só ao mudar ambiente para Produção.",
+                }), 400
+            promote_result = promote_tenant_hml_to_production(
+                id_cliente,
+                substituir=substituir,
+            )
+
         result = update_tenant_loja(
             id_cliente,
             tipo_negocio=data.get("tipo_negocio"),
-            ambiente=data.get("ambiente"),
+            ambiente=ambiente_raw,
         )
+        if promote_result:
+            result["promocao"] = promote_result
+            if promote_result.get("mensagem"):
+                result["mensagem"] = (
+                    promote_result["mensagem"]
+                    + " "
+                    + (result.get("mensagem") or "")
+                ).strip()
         amb = data.get("ambiente")
         if amb and session.get("id_cliente") == id_cliente:
             result["requer_logout"] = True

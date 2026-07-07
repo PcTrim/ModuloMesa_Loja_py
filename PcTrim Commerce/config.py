@@ -140,12 +140,18 @@ class Config:
     @classmethod
     def interno_db_profile(cls) -> dict:
         """Credenciais MySQL da base interna (cadastro de clientes PcTrim)."""
+        host = (os.environ.get("MYSQL_HOST_INTERNO") or cls.MYSQL_HOST).strip()
+        port = int(os.environ.get("MYSQL_PORT_INTERNO") or cls.MYSQL_PORT)
+        user = (os.environ.get("MYSQL_USER_INTERNO") or cls.MYSQL_USER).strip()
+        password = os.environ.get("MYSQL_PASSWORD_INTERNO")
+        if password is None or password == "":
+            password = cls.MYSQL_PASSWORD
         return {
             "label": "Interno",
-            "host": cls.MYSQL_HOST,
-            "port": cls.MYSQL_PORT,
-            "user": cls.MYSQL_USER,
-            "password": cls.MYSQL_PASSWORD,
+            "host": host,
+            "port": port,
+            "user": user,
+            "password": password,
             "database": cls.MYSQL_DATABASE_INTERNO,
             "connect_timeout": cls.MYSQL_INTERN_CONNECT_TIMEOUT,
         }

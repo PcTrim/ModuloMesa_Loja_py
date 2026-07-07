@@ -52,6 +52,7 @@
     .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(124,58,237,.15); color: var(--purple); }
     .pill-prod { background: rgba(16,185,129,.15); color: var(--green); }
     .pill-hml { background: rgba(245,158,11,.18); color: #f59e0b; }
+    .pill-dual { background: rgba(59,130,246,.15); color: #3b82f6; }
     .env-card { border-color: rgba(124,58,237,.35); }
     .env-card[data-alvo="production"] { border-color: rgba(16,185,129,.4); }
     .env-card[data-alvo="homologation"] { border-color: rgba(245,158,11,.45); }
@@ -116,11 +117,17 @@
           <label for="senha2">Confirmar senha *</label>
           <input id="senha2" name="senha2" type="password" required minlength="4" autocomplete="new-password" data-hint="Digite a mesma senha novamente.">
         </div>
+        <div style="grid-column: 1 / -1;">
+          <label class="checkbox-row" style="display:flex;align-items:flex-start;gap:10px;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;">
+            <input type="checkbox" id="criar_ambos_bancos" name="criar_ambos_bancos" checked style="width:auto;margin-top:3px;" data-hint="Cria a mesma loja em pctrim_commerce e pctrim_commerce_hml. O ambiente ativo abaixo define onde o login opera até você editar.">
+            <span>Cadastrar nos dois bancos (produção + homologação)</span>
+          </label>
+        </div>
         <div>
-          <label for="ambiente">Ambiente do cliente *</label>
-          <select id="ambiente" name="ambiente" required data-hint="Produção = pctrim_commerce. Homologação = pctrim_commerce_hml (login e pedidos neste banco).">
-            <option value="production" selected>Produção</option>
-            <option value="homologation">Homologação</option>
+          <label for="ambiente">Ambiente ativo no login *</label>
+          <select id="ambiente" name="ambiente" required data-hint="Define em qual banco o login e os pedidos operam. Com os dois bancos marcados, use Homologação para testes e mude para Produção quando for ao ar.">
+            <option value="homologation" selected>Homologação</option>
+            <option value="production">Produção</option>
           </select>
         </div>
         <div>
@@ -148,7 +155,7 @@
     <div class="modal-panel">
       <h3 id="modal-editar-title">Editar loja</h3>
       <p class="modal-meta" id="modal-editar-meta"></p>
-      <label for="edit-ambiente">Ambiente do cliente *</label>
+      <label for="edit-ambiente">Ambiente ativo no login *</label>
       <select id="edit-ambiente" required data-hint="Altera o banco MySQL usado no login e nas operações desta loja.">
         <option value="production">Produção</option>
         <option value="homologation">Homologação</option>
@@ -175,8 +182,30 @@
     const idClienteSelect = document.getElementById("id_cliente");
     const filtroClienteInput = document.getElementById("filtro-cliente");
     const clienteSelectStatus = document.getElementById("cliente-select-status");
+    const criarAmbosCheckbox = document.getElementById("criar_ambos_bancos");
+    const ambienteSelect = document.getElementById("ambiente");
     let clientesInternos = [];
     let clientesInternosFiltrados = [];
+
+    function applyHmlUi(hmlDisponivel) {
+      if (!criarAmbosCheckbox) return;
+      if (!hmlDisponivel) {
+        criarAmbosCheckbox.checked = false;
+        criarAmbosCheckbox.disabled = true;
+        criarAmbosCheckbox.closest("label").style.opacity = "0.55";
+      } else {
+        criarAmbosCheckbox.disabled = false;
+        criarAmbosCheckbox.closest("label").style.opacity = "";
+        if (!criarAmbosCheckbox.dataset.touched) {
+          criarAmbosCheckbox.checked = true;
+        }
+      }
+    }
+    if (criarAmbosCheckbox) {
+      criarAmbosCheckbox.addEventListener("change", function () {
+        criarAmbosCheckbox.dataset.touched = "1";
+      });
+    }
 
     function setClienteSelectStatus(msg, isErr) {
       if (!clienteSelectStatus) return;
@@ -308,6 +337,8 @@
     const btnEditSave = document.getElementById("btn-edit-save");
     const btnEditCancel = document.getElementById("btn-edit-cancel");
     let editIdCliente = null;
+    let editAmbienteInicial = "production";
+    let editEmAmbosBancos = false;
 
     function pillClass(amb) {
       return amb === "homologation" ? "pill pill-hml" : "pill pill-prod";
@@ -316,11 +347,13 @@
       return amb === "homologation" ? "Homologação" : "Produção";
     }
 
-    function openEditModal(id, nome, tipo, ambiente) {
+    function openEditModal(id, nome, tipo, ambiente, emAmbos) {
       editIdCliente = id;
+      editAmbienteInicial = ambiente === "homologation" ? "homologation" : "production";
+      editEmAmbosBancos = !!emAmbos;
       modalEditarMeta.textContent = "Loja #" + id + " — " + nome;
       editTipoSelect.value = tipo === "varejo" ? "varejo" : "restaurante";
-      editAmbienteSelect.value = ambiente === "homologation" ? "homologation" : "production";
+      editAmbienteSelect.value = editAmbienteInicial;
       modalEditar.hidden = false;
     }
     function closeEditModal() {
@@ -331,19 +364,53 @@
     async function saveEditTipo() {
       if (!editIdCliente) return;
       hideAlert();
-      btnEditSave.disabled = true;
-      btnEditSave.textContent = "Salvando…";
-      try {
-        const r = await fetch("/api/admin/lojas/" + encodeURIComponent(String(editIdCliente)), {
+      const novoAmbiente = editAmbienteSelect.value;
+      const vaiParaProducao = novoAmbiente === "production";
+      const mudouAmbiente = novoAmbiente !== editAmbienteInicial;
+
+      let promoverDados = false;
+      let substituirCatalogo = false;
+
+      if (vaiParaProducao && mudouAmbiente && editEmAmbosBancos) {
+        promoverDados = window.confirm(
+          "Copiar catálogo e configurações de homologação para produção?\n\n" +
+          "OK = copiar e mudar login para Produção\n" +
+          "Cancelar = só mudar login (produção pode ficar sem produtos)"
+        );
+      }
+
+      async function enviarPatch(opts) {
+        return fetch("/api/admin/lojas/" + encodeURIComponent(String(editIdCliente)), {
           method: "PATCH",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({
             tipo_negocio: editTipoSelect.value,
-            ambiente: editAmbienteSelect.value,
+            ambiente: novoAmbiente,
+            promover_dados: !!opts.promover,
+            substituir_catalogo: !!opts.substituir,
           }),
         });
-        const d = await r.json().catch(() => ({}));
+      }
+
+      btnEditSave.disabled = true;
+      btnEditSave.textContent = "Salvando…";
+      try {
+        let r = await enviarPatch({ promover: promoverDados, substituir: substituirCatalogo });
+        let d = await r.json().catch(() => ({}));
+
+        if (!r.ok && r.status === 409 && promoverDados && !substituirCatalogo) {
+          const substituir = window.confirm(
+            (d.erro || "Produção já tem produtos.") +
+            "\n\nSubstituir o catálogo de produção pelos dados do HML?"
+          );
+          if (substituir) {
+            substituirCatalogo = true;
+            r = await enviarPatch({ promover: true, substituir: true });
+            d = await r.json().catch(() => ({}));
+          }
+        }
+
         if (!r.ok || d.sucesso === false) {
           throw new Error((d && d.erro) || "Falha ao atualizar loja");
         }
@@ -399,34 +466,38 @@
           listaHost.innerHTML = '<p class="empty">Nenhuma loja em dadosloja.</p>';
           return;
         }
-        let html = '<table><thead><tr><th>ID</th><th>Nome</th><th>Ambiente</th><th>Banco</th><th>Tipo</th><th>Gerente</th><th>Cidade</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+        let html = '<table><thead><tr><th>ID</th><th>Nome</th><th>Login ativo</th><th>Bancos</th><th>Tipo</th><th>Gerente</th><th>Cidade</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
         lojas.forEach(function (l) {
           const st = l.ativo === false ? "Inativo" : "Ativo";
           const tipoRaw = l.tipo_negocio === "varejo" ? "varejo" : "restaurante";
           const tipo = tipoRaw === "varejo" ? "Varejo" : "Restaurante";
           const ambRaw = l.ambiente === "homologation" ? "homologation" : "production";
           const amb = ambLabel(ambRaw);
-          const banco = l.banco_ativo || "—";
+          const bancosHtml = l.em_ambos_bancos
+            ? '<span class="pill pill-dual">Prod+HML</span>'
+            : '<code style="font-size:11px;">' + esc(l.banco_ativo || "—") + "</code>";
           html +=
             "<tr><td><span class=\"pill\">" + esc(l.id_cliente) + "</span></td>" +
             "<td>" + esc(l.nome) + "</td>" +
             "<td><span class=\"" + pillClass(ambRaw) + "\">" + esc(amb) + "</span></td>" +
-            "<td><code style=\"font-size:11px;\">" + esc(banco) + "</code></td>" +
+            "<td>" + bancosHtml + "</td>" +
             "<td>" + esc(tipo) + "</td>" +
             "<td>" + esc(l.usuario_gerente || "—") + "</td>" +
             "<td>" + esc(l.cidade || "—") + "</td>" +
             "<td>" + esc(st) + "</td>" +
-            "<td><button type=\"button\" class=\"btn btn-ghost btn-edit\" data-id=\"" + esc(l.id_cliente) + "\" data-nome=\"" + esc(l.nome) + "\" data-tipo=\"" + esc(tipoRaw) + "\" data-ambiente=\"" + esc(ambRaw) + "\">Editar</button></td></tr>";
+            "<td><button type=\"button\" class=\"btn btn-ghost btn-edit\" data-id=\"" + esc(l.id_cliente) + "\" data-nome=\"" + esc(l.nome) + "\" data-tipo=\"" + esc(tipoRaw) + "\" data-ambiente=\"" + esc(ambRaw) + "\" data-ambos=\"" + (l.em_ambos_bancos ? "1" : "0") + "\">Editar</button></td></tr>";
         });
         html += "</tbody></table>";
         listaHost.innerHTML = html;
+        applyHmlUi(d.hml_disponivel !== false);
         listaHost.querySelectorAll(".btn-edit").forEach(function (btn) {
           btn.addEventListener("click", function () {
             openEditModal(
               parseInt(btn.getAttribute("data-id"), 10),
               btn.getAttribute("data-nome") || "",
               btn.getAttribute("data-tipo") || "restaurante",
-              btn.getAttribute("data-ambiente") || "production"
+              btn.getAttribute("data-ambiente") || "production",
+              btn.getAttribute("data-ambos") === "1"
             );
           });
         });
@@ -460,6 +531,7 @@
         cidade: document.getElementById("cidade").value.trim(),
         tipo_negocio: document.getElementById("tipo_negocio").value,
         ambiente: document.getElementById("ambiente").value,
+        criar_ambos_bancos: !!(criarAmbosCheckbox && criarAmbosCheckbox.checked),
       };
       if (!Number.isFinite(payload.id_cliente) || payload.id_cliente <= 0) {
         showAlert("Selecione um cliente válido.", false);
@@ -484,7 +556,11 @@
           true
         );
         form.reset();
-        document.getElementById("ambiente").value = "production";
+        if (ambienteSelect) ambienteSelect.value = "homologation";
+        if (criarAmbosCheckbox) {
+          delete criarAmbosCheckbox.dataset.touched;
+          criarAmbosCheckbox.checked = true;
+        }
         await loadClientesInternos();
         await loadLojas();
       } catch (e) {
