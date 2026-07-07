@@ -1322,6 +1322,13 @@ def _ensure_clientes_cpf_cnpj_column():
             conn.close()
 
 
+
+
+def _ensure_campanhas_table():
+    from services.campanhas import ensure_campanhas_schema
+
+    ensure_campanhas_schema()
+
 def bootstrap_schema():
     try:
         _ensure_tipo_negocio_column()
@@ -1342,6 +1349,7 @@ def bootstrap_schema():
         _ensure_whatsapp_config_table()
         _ensure_whatsapp_log_table()
         _ensure_usuario_login_otp_table()
+        _ensure_campanhas_table()
         from services.retail_catalog_schema import ensure_retail_catalog_schema
         ensure_retail_catalog_schema()
     except Exception as e:

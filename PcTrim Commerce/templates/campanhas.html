@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campanhas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
+    {% include 'partials/topbar_meta_assets.html' %}
+    {% include 'partials/context_hint_assets.html' %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+    <div class="cfg-page">
+    <header class="topbar">
+        <a class="home" href="{{ url_prefix }}/" title="Menu"><i data-lucide="home" width="18" height="18"></i></a>
+        <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+        <div class="brand">Campanhas</div>
+        {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/topbar_meta.html' %}
+        <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+            <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+            <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+        </button>
+    </header>
+
+    <main class="cfg-content cfg-cadastro-page">
+        <div class="cfg-wrap cfg-cadastro-wrap">
+            <div id="mensagem" class="mensagem" style="display:none;"></div>
+
+            <section class="cfg-section-card" id="campanhasListPanel">
+                <div class="cfg-cadastro-head">
+                    <h2 class="cfg-section-title">Campanhas cadastradas</h2>
+                    <button type="button" class="btn-purple cfg-cadastro-btn-inline" onclick="novoRegistroCampanha()">Nova</button>
+                </div>
+                <div class="cfg-cadastro-table-wrap">
+                    <table class="tbl cfg-table" id="tabelaCampanhas">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ID</th>
+                                <th>Nome</th>
+                                <th style="width: 130px;">Tipo</th>
+                                <th style="width: 80px;">Ativo</th>
+                                <th style="width: 160px;">Período</th>
+                                <th style="width: 200px; text-align: center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabelaCampanhas">
+                            <tr><td colspan="6" class="empty">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="campanhaModal" class="cfg-cadastro-modal" aria-hidden="true">
+        <div class="cfg-cadastro-modal-backdrop" data-close-campanha-modal tabindex="-1"></div>
+        <div class="cfg-cadastro-modal-card" role="dialog" aria-modal="true" aria-labelledby="campanhaModalTitle">
+            <div class="cfg-cadastro-modal-head">
+                <h2 id="campanhaModalTitle" class="cfg-section-title">Nova campanha</h2>
+                <button type="button" class="cfg-cadastro-modal-close" data-close-campanha-modal aria-label="Fechar">&times;</button>
+            </div>
+            <div id="campanhaFormPanel">
+                <form id="formCampanha" class="form">
+                    <div id="campanhaFormErro" class="mensagem erro" style="display:none;" role="alert"></div>
+                    <input type="text" id="campanhaNome" required placeholder="Nome da campanha">
+                    <select id="campanhaTipo">
+                        <option value="desconto_percentual">Desconto percentual (%)</option>
+                        <option value="desconto_valor">Desconto em valor (R$)</option>
+                        <option value="frete_gratis" id="opt-frete-gratis">Frete grátis</option>
+                        <option value="brinde">Brinde</option>
+                    </select>
+                    <input type="number" id="campanhaValor" step="0.01" min="0" placeholder="Valor / percentual (conforme o tipo)">
+                    <input type="number" id="campanhaMinimo" step="0.01" min="0" placeholder="Valor mínimo do pedido (opcional)">
+                    <select id="campanhaAplica">
+                        <option value="todos">Aplica em: todos os produtos</option>
+                        <option value="produtos">Aplica em: produtos selecionados</option>
+                        <option value="categorias">Aplica em: categorias selecionadas</option>
+                    </select>
+                    <input type="text" id="campanhaProdutosIds" placeholder="IDs dos produtos (ex: [10, 20] ou 10, 20)" style="display:none;">
+                    <input type="hidden" id="campanhaCategoriasIds" value="">
+                    <div id="campanhaCategoriasPick" style="display:none; max-height:160px; overflow:auto; border:1px solid var(--line,#2a2a40); border-radius:8px; padding:8px;"></div>
+                    <label style="display:flex;align-items:center;gap:8px;margin:8px 0;">
+                        <input type="checkbox" id="campanhaAtivo" checked> Ativa
+                    </label>
+                    <input type="datetime-local" id="campanhaInicio" placeholder="Data início (opcional)">
+                    <input type="datetime-local" id="campanhaFim" placeholder="Data fim (opcional)">
+                    <input type="hidden" id="campanhaId" value="">
+                    <div class="cfg-cadastro-actions">
+                        <button type="button" class="btn-outline" onclick="window.location.href='{{ url_prefix }}/'">Voltar ao menu</button>
+                        <button type="button" class="btn-modal" id="btnCancelarCampanha" onclick="cancelarEdicao()">Cancelar</button>
+                        <button type="submit" class="btn-green" id="btnSalvarCampanha">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        const IS_RETAIL = {{ 'true' if is_retail else 'false' }};
+
+        function showMsg(text, ok) {
+            const el = document.getElementById('mensagem');
+            if (!el) return;
+            el.className = 'mensagem ' + (ok ? 'sucesso' : 'erro');
+            el.textContent = text;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 3500);
+        }
+
+        function showFormErro(text) {
+            const el = document.getElementById('campanhaFormErro');
+            if (!el) return;
+            el.textContent = String(text || 'Erro.');
+            el.style.display = 'block';
+        }
+
+        function clearFormErro() {
+            const el = document.getElementById('campanhaFormErro');
+            if (!el) return;
+            el.textContent = '';
+            el.style.display = 'none';
+        }
+
+        function parseIds(raw) {
+            const t = String(raw || '').trim();
+            if (!t) return [];
+            if (t.startsWith('[')) { try { return JSON.parse(t); } catch (e) { return []; } }
+            return t.split(',').map((x) => x.trim()).filter(Boolean).map((x) => Number(x)).filter((n) => Number.isFinite(n));
+        }
+
+        function tipoLabel(t) {
+            const m = { desconto_percentual: 'Desconto %', desconto_valor: 'Desconto R$', frete_gratis: 'Frete grátis', brinde: 'Brinde' };
+            return m[String(t || '').toLowerCase()] || t;
+        }
+
+        function fmtPeriodo(c) {
+            const ini = c.data_inicio ? String(c.data_inicio).slice(0, 16).replace('T', ' ') : '';
+            const fim = c.data_fim ? String(c.data_fim).slice(0, 16).replace('T', ' ') : '';
+            if (ini && fim) return ini + ' — ' + fim;
+            if (ini) return 'A partir de ' + ini;
+            if (fim) return 'Até ' + fim;
+            return 'Sem prazo';
+        }
+
+        function openCampanhaModal() {
+            clearFormErro();
+            const modal = document.getElementById('campanhaModal');
+            if (!modal) return;
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.getElementById('campanhaNome')?.focus();
+        }
+
+        function closeCampanhaModal() {
+            const modal = document.getElementById('campanhaModal');
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function syncTipoUi() {
+            const tipo = document.getElementById('campanhaTipo')?.value || '';
+            const val = document.getElementById('campanhaValor');
+            if (val) val.style.display = (tipo === 'frete_gratis' || tipo === 'brinde') ? 'none' : '';
+        }
+
+        function syncAplicaUi() {
+            const a = document.getElementById('campanhaAplica')?.value || 'todos';
+            const prod = document.getElementById('campanhaProdutosIds');
+            const pick = document.getElementById('campanhaCategoriasPick');
+            const tipo = document.getElementById('campanhaTipo')?.value || '';
+            if (prod) prod.style.display = (a === 'produtos' || tipo === 'brinde') ? '' : 'none';
+            if (pick) pick.style.display = a === 'categorias' ? '' : 'none';
+        }
+
+        function resetCampanhaForm() {
+            clearFormErro();
+            document.getElementById('campanhaId').value = '';
+            document.getElementById('campanhaNome').value = '';
+            document.getElementById('campanhaTipo').value = 'desconto_percentual';
+            document.getElementById('campanhaValor').value = '';
+            document.getElementById('campanhaMinimo').value = '';
+            document.getElementById('campanhaAplica').value = 'todos';
+            document.getElementById('campanhaProdutosIds').value = '';
+            document.getElementById('campanhaCategoriasIds').value = '';
+            document.getElementById('campanhaInicio').value = '';
+            document.getElementById('campanhaFim').value = '';
+            document.getElementById('campanhaAtivo').checked = true;
+            document.getElementById('btnSalvarCampanha').textContent = 'Salvar';
+            document.getElementById('campanhaModalTitle').textContent = 'Nova campanha';
+            document.querySelectorAll('#campanhaCategoriasPick input[data-cat-id]').forEach((el) => { el.checked = false; });
+            if (IS_RETAIL) {
+                const opt = document.getElementById('opt-frete-gratis');
+                if (opt) opt.style.display = 'none';
+            }
+            syncTipoUi();
+            syncAplicaUi();
+        }
+
+        async function loadCategoriasOpcoes() {
+            const pick = document.getElementById('campanhaCategoriasPick');
+            if (!pick) return;
+            try {
+                const res = await fetch('/api/campanhas/categorias-opcoes');
+                const data = await res.json();
+                const opcoes = (data && data.opcoes) || [];
+                pick.innerHTML = opcoes.map((o) =>
+                    `<label style="display:block;margin:4px 0;"><input type="checkbox" data-cat-id="${o.id}" /> ${String(o.nome || '')}</label>`
+                ).join('');
+            } catch (e) {
+                pick.innerHTML = '<p class="muted">Erro ao carregar categorias.</p>';
+            }
+        }
+
+        function selectedCategoriaIds() {
+            const pick = document.getElementById('campanhaCategoriasPick');
+            if (!pick) return [];
+            return Array.from(pick.querySelectorAll('input[data-cat-id]:checked')).map((el) => Number(el.getAttribute('data-cat-id')));
+        }
+
+        async function carregarCampanhas() {
+            const tbody = document.getElementById('corpoTabelaCampanhas');
+            try {
+                const res = await fetch('/api/campanhas');
+                const data = await res.json();
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                if (!res.ok || data.sucesso === false) {
+                    const msg = (data && data.erro) || 'Erro ao carregar campanhas.';
+                    showMsg(msg, false);
+                    tbody.innerHTML = `<tr><td colspan="6" class="empty">${msg}</td></tr>`;
+                    return;
+                }
+                const list = Array.isArray(data.campanhas) ? data.campanhas : [];
+                if (!list.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma campanha cadastrada.</td></tr>';
+                    return;
+                }
+                list.forEach((c) => {
+                    const tr = document.createElement('tr');
+                    const ativo = Number(c.ativo) === 1;
+                    tr.innerHTML = `
+                        <td class="kcell">#${c.id}</td>
+                        <td>${String(c.nome || '')}</td>
+                        <td>${tipoLabel(c.tipo)}</td>
+                        <td>${ativo ? '<span class="pill ok">Sim</span>' : '<span class="pill bad">Não</span>'}</td>
+                        <td>${fmtPeriodo(c)}</td>
+                        <td style="text-align:center;">
+                            <span class="tbl-actions">
+                                <button class="btn-mini" data-edit="${c.id}">Editar</button>
+                                <button class="btn-mini" data-toggle="${c.id}" data-ativo="${ativo ? '0' : '1'}">${ativo ? 'Desativar' : 'Ativar'}</button>
+                            </span>
+                        </td>`;
+                    tbody.appendChild(tr);
+                });
+                tbody.querySelectorAll('[data-edit]').forEach((btn) => {
+                    btn.onclick = () => editarCampanha(Number(btn.getAttribute('data-edit')));
+                });
+                tbody.querySelectorAll('[data-toggle]').forEach((btn) => {
+                    btn.onclick = () => toggleAtivo(Number(btn.getAttribute('data-toggle')), btn.getAttribute('data-ativo') === '1');
+                });
+            } catch (e) {
+                if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>';
+            }
+        }
+
+        function toDatetimeLocal(val) {
+            if (!val) return '';
+            const s = String(val).replace(' ', 'T');
+            return s.length >= 16 ? s.slice(0, 16) : s;
+        }
+
+        async function editarCampanha(id) {
+            clearFormErro();
+            const res = await fetch(`/api/campanhas/${id}`);
+            const data = await res.json();
+            const c = data.campanha;
+            if (!c) return;
+            document.getElementById('campanhaId').value = String(c.id);
+            document.getElementById('campanhaNome').value = c.nome || '';
+            document.getElementById('campanhaTipo').value = c.tipo || 'desconto_percentual';
+            document.getElementById('campanhaValor').value = c.valor_beneficio != null ? c.valor_beneficio : '';
+            document.getElementById('campanhaMinimo').value = c.condicao_valor_minimo != null ? c.condicao_valor_minimo : '';
+            document.getElementById('campanhaAplica').value = c.aplica_em || 'todos';
+            document.getElementById('campanhaProdutosIds').value = (c.tipo === 'brinde' && c.valor_beneficio != null)
+                ? String(c.valor_beneficio)
+                : JSON.stringify(c.produtos_ids || []);
+            document.getElementById('campanhaAtivo').checked = Number(c.ativo) === 1;
+            document.getElementById('campanhaInicio').value = toDatetimeLocal(c.data_inicio);
+            document.getElementById('campanhaFim').value = toDatetimeLocal(c.data_fim);
+            const cats = c.categorias_ids || [];
+            syncTipoUi();
+            syncAplicaUi();
+            document.querySelectorAll('#campanhaCategoriasPick input[data-cat-id]').forEach((el) => {
+                el.checked = cats.includes(Number(el.getAttribute('data-cat-id')));
+            });
+            document.getElementById('btnSalvarCampanha').textContent = 'Atualizar';
+            document.getElementById('campanhaModalTitle').textContent = 'Editar campanha';
+            openCampanhaModal();
+        }
+
+        function novoRegistroCampanha() {
+            resetCampanhaForm();
+            openCampanhaModal();
+        }
+
+        function cancelarEdicao() {
+            resetCampanhaForm();
+            closeCampanhaModal();
+        }
+
+        async function salvarCampanha(ev) {
+            ev.preventDefault();
+            clearFormErro();
+            const id = String(document.getElementById('campanhaId').value || '').trim();
+            const tipo = document.getElementById('campanhaTipo').value;
+            let aplica = document.getElementById('campanhaAplica').value;
+            if (tipo === 'brinde') aplica = 'produtos';
+            const body = {
+                nome: document.getElementById('campanhaNome').value.trim(),
+                tipo: tipo,
+                valor_beneficio: document.getElementById('campanhaValor').value || null,
+                condicao_valor_minimo: document.getElementById('campanhaMinimo').value || null,
+                aplica_em: aplica,
+                produtos_ids: (aplica === 'produtos' || tipo === 'brinde') ? parseIds(document.getElementById('campanhaProdutosIds').value) : [],
+                categorias_ids: aplica === 'categorias' ? selectedCategoriaIds() : [],
+                ativo: document.getElementById('campanhaAtivo').checked,
+                data_inicio: document.getElementById('campanhaInicio').value || null,
+                data_fim: document.getElementById('campanhaFim').value || null,
+            };
+            if (tipo === 'brinde') {
+                const ids = body.produtos_ids;
+                if (ids.length !== 1) {
+                    showFormErro('Brinde exige exatamente um produto (informe o ID em produtos).');
+                    return;
+                }
+                body.valor_beneficio = ids[0];
+            }
+            const url = id ? `/api/campanhas/${encodeURIComponent(id)}` : '/api/campanhas';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const data = await res.json();
+            if (data && data.sucesso) {
+                clearFormErro();
+                showMsg('Campanha salva.', true);
+                closeCampanhaModal();
+                resetCampanhaForm();
+                await carregarCampanhas();
+            } else {
+                const msg = (data && data.erro) || 'Erro ao salvar.';
+                showFormErro(msg);
+            }
+        }
+
+        async function toggleAtivo(id, ativo) {
+            const res = await fetch(`/api/campanhas/${id}/ativo`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ativo: !!Number(ativo) })
+            });
+            const data = await res.json();
+            if (data && data.sucesso) await carregarCampanhas();
+            else showMsg((data && data.erro) || 'Erro.', false);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-close-campanha-modal]').forEach((el) => el.addEventListener('click', cancelarEdicao));
+            document.getElementById('campanhaAplica')?.addEventListener('change', syncAplicaUi);
+            document.getElementById('campanhaTipo')?.addEventListener('change', () => { syncTipoUi(); syncAplicaUi(); });
+            document.getElementById('formCampanha')?.addEventListener('submit', salvarCampanha);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('campanhaModal')?.classList.contains('open')) {
+                    cancelarEdicao();
+                }
+            });
+            loadCategoriasOpcoes();
+            resetCampanhaForm();
+            carregarCampanhas();
+        });
+    </script>
+{% include 'partials/modal_despacho_delivery.html' %}
+<script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>
+<script>try { lucide.createIcons(); } catch (e) {}</script>
+{% include 'partials/context_hint_bar.html' %}
+</body>
+</html>

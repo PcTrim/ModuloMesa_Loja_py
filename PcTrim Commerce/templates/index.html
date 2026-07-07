@@ -368,6 +368,8 @@
           <div class="func-list">
             <button type="button" class="hotkey-btn" id="btn-recuperar-comanda"><kbd>F7</kbd>Recuperar comanda</button>
             <button type="button" class="hotkey-btn" id="btn-ajuste-extra"><kbd>F6</kbd>Taxa extra / desconto</button>
+            <button type="button" class="hotkey-btn" id="btn-aplicar-campanha">Aplicar campanha</button>
+            <button type="button" class="hotkey-btn" id="btn-remover-campanha" style="display:none;">Remover campanha</button>
           </div>
         </details>
         <div class="sum" id="sum-ajuste" style="display:none;"><span id="ajuste-label">Ajuste</span><strong id="ajuste-valor">R$ 0,00</strong></div>
@@ -391,6 +393,7 @@
 
 <div class="modal" id="modal-opcoes-item"><div class="modal-card zoom"><h3>Montagem do item</h3><p class="muted" id="opcoes-sub">Selecione as opções e confirme</p><div id="opcoes-body" class="opt-grid"></div><div class="opt-footer"><div class="opt-total" id="opcoes-total">+ R$ 0,00</div><div class="modal-actions" style="margin-top:0;"><button class="btn-modal" id="btn-opcoes-confirmar">Confirmar</button><button class="btn-modal" id="btn-opcoes-cancelar" data-close-modal>Cancelar</button></div></div></div></div>
 
+<div class="modal" id="modal-campanhas"><div class="modal-card zoom"><h3>Campanhas elegíveis</h3><p class="muted">Selecione uma campanha para aplicar</p><div id="campanhas-elegiveis-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 <div class="modal" id="modal-dados-item"><div class="modal-card zoom"><h3>Detalhes do item</h3><pre id="dados-item-body" class="conferencia-pre" style="white-space:pre-wrap;"></pre><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
@@ -430,7 +433,7 @@
   }
   let impressoraCasaLabel="(carregando impressora…)";
   let impressoraCasaFeed=6;
-  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], retailCategoriaId:null, retailSubcategoriaId:null, retailCategoriaNome:null, pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, clienteObrigatorioBalcao:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
+  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], retailCategoriaId:null, retailSubcategoriaId:null, retailCategoriaNome:null, pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0,taxaEntregaZeradaCampanha:false,campanhaAplicadaId:null, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, clienteObrigatorioBalcao:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
   function msgCasaPedidoBloqueado(){ return IS_RETAIL ? "Comanda cancelada ou venda em ROTA/RECEBIDA não pode ser alterada na tela /casa." : "Comanda cancelada ou pedido em ROTA/RECEBIDO não pode ser alterado na tela /casa."; }
   function aplicarBloqueioCasaUi(host){
     const bloq = !!state.pedidoBloqueadoCasa && (Number(state.pedidoId)||0) > 0;
@@ -457,7 +460,7 @@
   }
   function recalcTotals(subtotal){
     const serv=0;
-    const taxa=state.modo==="delivery"?numOrZero(state.taxaEntrega):0;
+    const taxa=state.modo==="delivery"?(state.taxaEntregaZeradaCampanha?0:numOrZero(state.taxaEntrega)):0;
     const ajuste=numOrZero(state.ajusteValor);
     state.subtotal=numOrZero(subtotal);
     el("subtotal").textContent=money(state.subtotal);
@@ -466,7 +469,7 @@
     updateAjusteUi();
     el("total").textContent=money(state.subtotal+serv+taxa+ajuste);
   }
-  function totalPedidoAtual(){ const serv=0; const taxa=state.modo==="delivery"?numOrZero(state.taxaEntrega):0; return numOrZero(state.subtotal)+serv+taxa+numOrZero(state.ajusteValor); }
+  function totalPedidoAtual(){ const serv=0; const taxa=state.modo==="delivery"?(state.taxaEntregaZeradaCampanha?0:numOrZero(state.taxaEntrega)):0; return numOrZero(state.subtotal)+serv+taxa+numOrZero(state.ajusteValor); }
   function formaCadastroExigeTroco(f){ const t=String(f&&f.troco!=null?f.troco:"").trim().toUpperCase(); return t==="S"||t==="SIM"||t==="1"||t==="Y"; }
   function refreshFormaPagamentoUi(){
     const fa=el("forma-pagamento-atual");
@@ -1328,7 +1331,7 @@
         grupos.delete(lanc);
       }
     });
-    simples.forEach((it)=>{ const id=pkItem(it); const qtd=Number(it.quantidade)||1; const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const desc=formatItemDesc(it.descricao_produto); const ehAjuste=String(it.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO"; const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":""); row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name" title="${escapeHtml(it.produto||it.nome||"-")}">${escapeHtml(it.produto||it.nome||"-")}</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del="${id}" aria-label="Remover item">×</button></div></div>${desc?`<div class="item-desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>`:""}</div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`; host.appendChild(row); });
+    simples.forEach((it)=>{ const id=pkItem(it); const qtd=Number(it.quantidade)||1; const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const desc=formatItemDesc(it.descricao_produto); const codItem=String(it.codigoproduto||"").toUpperCase(); const ehAjuste=codItem==="AJUSTE_TECNICO"||codItem==="CAMPANHA"||String(it.classe||"").toUpperCase()==="CAMPANHA"; const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":""); row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name" title="${escapeHtml(it.produto||it.nome||"-")}">${escapeHtml(it.produto||it.nome||"-")}</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del="${id}" aria-label="Remover item">×</button></div></div>${desc?`<div class="item-desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>`:""}</div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`; host.appendChild(row); });
     grupos.forEach((itens,lanc)=>{
       const idRef=pkItem(itens[0]);
       const qtd=Number(itens[0]?.quantidade)||1;
@@ -1358,6 +1361,9 @@
     host.querySelectorAll("[data-info]").forEach((b)=>{ b.onclick=()=>{ const id=String(b.getAttribute("data-info")||""); const raw=state.itemDadosMap[id]||""; const txt=formatDadosItem(raw); const body=el("dados-item-body"); if(body) body.textContent = txt || "Sem detalhes."; openModal("modal-dados-item"); }; });
     host.querySelectorAll("[data-info-group]").forEach((b)=>{ b.onclick=()=>{ const lanc=String(b.getAttribute("data-info-group")||""); const raw=state.grupoDadosMap[lanc]||""; const txt=formatDadosItem(raw); const body=el("dados-item-body"); if(body) body.textContent = txt || "Sem detalhes."; openModal("modal-dados-item"); }; });
     aplicarBloqueioCasaUi(host);
+    state.campanhaAplicadaId=null;
+    (regs||[]).forEach((it)=>{ const c=String(it.codigoproduto||"").toUpperCase(); if(c==="CAMPANHA"){ try{ const dj=JSON.parse(String(it.dados_item||"")); if(dj&&dj.campanha_id) state.campanhaAplicadaId=dj.campanha_id; }catch(_e){} } });
+    updateCampanhaUi();
     recalcTotals(subtotal);
     updatePrintState();
     updateDistribuirPreparoUiCasa();
@@ -2347,6 +2353,8 @@
     state.ultimoTelefoneLocalizado="";
     state.ultimoTelefoneCompleto="";
     state.ajusteValor=0;
+    state.taxaEntregaZeradaCampanha=false;
+    state.campanhaAplicadaId=null;
     state.ajusteDescricao="";
     state.conferenciaConteudo="";
     limparCamposCliente();
@@ -2390,6 +2398,79 @@
       alert("Não foi possível recuperar a comanda.");
     }
   }
+
+  function updateCampanhaUi(){
+    const btnRem=el("btn-remover-campanha");
+    if(!btnRem) return;
+    const tem=!!state.campanhaAplicadaId || !!state.taxaEntregaZeradaCampanha;
+    btnRem.style.display=tem?"":"none";
+  }
+  async function abrirModalCampanhas(){
+    const id=Number(state.pedidoId)||0;
+    if(id<=0){ alert("Abra ou crie um pedido antes de aplicar campanha."); return; }
+    if(state.pedidoBloqueadoCasa){ alert(msgCasaPedidoBloqueado()); return; }
+    const origem=origemImpressaoCasa();
+    const qp=new URLSearchParams({nropedido:String(id),origem});
+    const res=await fetch(`/api/campanhas/elegiveis?${qp.toString()}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.sucesso===false){ alert(data.erro||"Não foi possível listar campanhas."); return; }
+    let list=Array.isArray(data.campanhas)?data.campanhas:[];
+    if(IS_RETAIL) list=list.filter((c)=>String(c.tipo||"").toLowerCase()!=="frete_gratis");
+    const host=el("campanhas-elegiveis-list");
+    if(!host) return;
+    host.innerHTML="";
+    if(!list.length){
+      const indisponiveis=Array.isArray(data.indisponiveis)?data.indisponiveis:[];
+      let html='<p class="muted">Nenhuma campanha elegível para este pedido.</p>';
+      if(indisponiveis.length){
+        html+='<ul class="campanha-motivos" style="margin:10px 0 0;padding-left:18px;text-align:left;">';
+        indisponiveis.forEach((c)=>{
+          const nome=escapeHtml(String(c.nome||"Campanha"));
+          const motivo=escapeHtml(String(c.motivo||"Não elegível."));
+          html+=`<li><strong>${nome}</strong> — ${motivo}</li>`;
+        });
+        html+='</ul>';
+      }
+      host.innerHTML=html;
+      openModal("modal-campanhas");
+      return;
+    }
+    list.forEach((c)=>{
+      const b=document.createElement("button"); b.type="button"; b.className="pay-item";
+      const ben=c.beneficio||{}; let det=String(c.nome||"Campanha");
+      const tipo=String(c.tipo||"").toLowerCase();
+      if(tipo==="desconto_percentual") det+=` — ${c.valor_beneficio}%`;
+      else if(tipo==="desconto_valor") det+=` — ${money(c.valor_beneficio)}`;
+      else if(tipo==="frete_gratis") det+=" — Frete grátis";
+      else if(tipo==="brinde") det+=" — Brinde";
+      if(ben.valor&&tipo.startsWith("desconto")) det+=` (${money(ben.valor)})`;
+      b.textContent=det;
+      b.onclick=async()=>{ b.disabled=true; await aplicarCampanhaEscolhida(c.id, origem); closeModal("modal-campanhas"); };
+      host.appendChild(b);
+    });
+    openModal("modal-campanhas");
+  }
+  async function aplicarCampanhaEscolhida(campanhaId, origem){
+    const r=await fetch(`/api/casa/${state.pedidoId}/aplicar-campanha`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({campanha_id:campanhaId,origem})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.sucesso===false){ alert(d.erro||"Não foi possível aplicar campanha."); return; }
+    state.campanhaAplicadaId=d.campanha_id||campanhaId;
+    state.taxaEntregaZeradaCampanha=!!d.taxa_entrega_zerada;
+    if(state.taxaEntregaZeradaCampanha && el("cli-taxa")) el("cli-taxa").value=money(0);
+    await loadItens("normal"); updateCampanhaUi(); recalcTotals(state.subtotal);
+    const acoes=el("acoes-rapidas"); if(acoes) acoes.open=false;
+    alert(`Campanha aplicada: ${d.campanha_nome||"OK"}`);
+  }
+  async function removerCampanhaPedido(){
+    if(!confirm("Remover campanha deste pedido?")) return;
+    const origem=origemImpressaoCasa();
+    const r=await fetch(`/api/casa/${state.pedidoId}/campanha?origem=${encodeURIComponent(origem)}`,{method:"DELETE"});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.sucesso===false){ alert(d.erro||"Não foi possível remover campanha."); return; }
+    state.campanhaAplicadaId=null; state.taxaEntregaZeradaCampanha=false;
+    await loadItens("normal"); updateCampanhaUi();
+  }
+
   async function ajustarTaxaOuDesconto(){
     const raw=window.prompt("Informe o valor do ajuste. Use positivo para taxa extra e negativo para desconto.\nEx.: 5,00 ou -3,50","0");
     if(raw===null) return;
@@ -2768,7 +2849,7 @@
           const id=String(p.id||"").trim();
           if(!id) return;
           const meta=state.preparoMetaById[id];
-          if(meta && String(meta.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO") return;
+          if(meta && ["AJUSTE_TECNICO","CAMPANHA"].includes(String(meta.codigoproduto||"").toUpperCase())) return;
           if(meta && !_flagSimImp(meta.imp_preparo)) ids.push(id);
         });
         return;
@@ -2776,7 +2857,7 @@
       const id=String(it.id||"").trim();
       if(!id) return;
       const meta=state.preparoMetaById[id];
-      if(meta && String(meta.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO") return;
+      if(meta && ["AJUSTE_TECNICO","CAMPANHA"].includes(String(meta.codigoproduto||"").toUpperCase())) return;
       if(meta && !_flagSimImp(meta.imp_preparo)) ids.push(id);
     });
     return Array.from(new Set(ids));
@@ -2889,7 +2970,7 @@
           partes.forEach((p)=>{
             const meta=state.preparoMetaById[p.id]||{};
             const cod=String(meta.codigoproduto||"").toUpperCase();
-            if(cod==="AJUSTE_TECNICO") return;
+            if(cod==="AJUSTE_TECNICO"||cod==="CAMPANHA") return;
             const ns=_parseImprenros(meta.impressoras);
             if(!ns.length){
               missingSetor.push({nome:`(grupo) ${p.nome}`, codigoproduto:String(meta.codigoproduto||"")});
@@ -2910,7 +2991,7 @@
         const id=String(it.id||"");
         if(!id || !pendSet.has(id)) return;
         const meta=state.preparoMetaById[id]||{};
-        if(String(meta.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO") return;
+        if(["AJUSTE_TECNICO","CAMPANHA"].includes(String(meta.codigoproduto||"").toUpperCase())) return;
         const nros=_parseImprenros(meta.impressoras);
         if(!nros.length){
           missingSetor.push({nome:String(it.nome||"-"), codigoproduto:String(meta.codigoproduto||"")});
@@ -3075,7 +3156,7 @@
   async function salvarPedidoTxt(){ await salvarPedidoTxtInterno(true); }
   function totalAtualCasa(){
     const serv=0;
-    const taxa=state.modo==="delivery"?numOrZero(state.taxaEntrega):0;
+    const taxa=state.modo==="delivery"?(state.taxaEntregaZeradaCampanha?0:numOrZero(state.taxaEntrega)):0;
     const ajuste=numOrZero(state.ajusteValor);
     return Math.round((numOrZero(state.subtotal)+serv+taxa+ajuste)*100)/100;
   }
@@ -3419,6 +3500,8 @@
   });
   el("btn-recuperar-comanda").onclick=recuperarComanda;
   el("btn-ajuste-extra").onclick=ajustarTaxaOuDesconto;
+  if(el("btn-aplicar-campanha")) el("btn-aplicar-campanha").onclick=abrirModalCampanhas;
+  if(el("btn-remover-campanha")) el("btn-remover-campanha").onclick=removerCampanhaPedido;
   el("btn-conferencia-zoom").onclick=abrirConferenciaZoom;
   el("btn-zoom-aplicar").onclick=aplicarAlteracoesZoom;
   el("btn-historico-cliente").onclick=abrirHistoricoCliente;
