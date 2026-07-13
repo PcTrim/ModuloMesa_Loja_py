@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estoque do produto | {{ nome_fantasia or 'Loja' }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=23">
+  <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=4">
+  {% include 'partials/topbar_meta_assets.html' %}
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+  <div class="cfg-page">
+    <header class="topbar">
+      <a class="home" href="{{ url_for('index') }}" title="Menu"><i data-lucide="home" width="18" height="18"></i></a>
+      <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+      <div class="brand">Estoque</div>
+      {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+      {% include 'partials/topbar_meta.html' %}
+      <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+        <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+        <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+      </button>
+    </header>
+
+    <main class="cfg-content cfg-cadastro-page">
+      <div class="cfg-wrap cfg-cadastro-wrap">
+        <div class="cfg-cadastro-head">
+          <a class="btn-outline cfg-estoque-back" href="{{ url_prefix }}/estoque">Voltar para a lista</a>
+        </div>
+
+        <div id="mensagem" class="mensagem" style="display:none;"></div>
+
+        {% if not produto %}
+        <section class="cfg-section-card">
+          <h2 class="cfg-section-title">Produto não encontrado</h2>
+          <p class="help" style="margin:8px 0 0;">Este item não está com controle de estoque ativo.</p>
+        </section>
+        {% else %}
+        <div class="cfg-estoque-grid">
+          <section class="cfg-section-card">
+            <h2 class="cfg-section-title">{{ produto.nome }}</h2>
+            <p class="help" style="margin:8px 0 12px;">O estoque diminui automaticamente a cada venda.</p>
+            <div class="cfg-estoque-saldo">{{ '%.3f'|format(produto.estoque_atual) }}</div>
+            <p class="help" style="margin:0 0 12px;">Estoque mínimo: {{ '%.3f'|format(produto.estoque_minimo) }}</p>
+            {% if produto.estoque_baixo %}
+            <span class="pill bad">Estoque baixo</span>
+            {% else %}
+            <span class="pill ok">Em dia</span>
+            {% endif %}
+            <div class="cfg-estoque-quick-actions">
+              <button type="button" class="btn-mini" onclick="selecionarTipo('entrada')">Entrada</button>
+              <button type="button" class="btn-mini btn-mini-danger" onclick="selecionarTipo('ajuste')">Ajustar</button>
+            </div>
+          </section>
+
+          <section class="cfg-section-card">
+            <h2 class="cfg-section-title">Salvar movimento</h2>
+            <form id="estoqueForm" class="form" style="margin-top:12px;" onsubmit="salvarMovimento(event)">
+              <input type="hidden" id="produto_id" value="{{ produto.produto_id }}">
+              <input type="number" id="quantidade" min="0.001" step="0.001" placeholder="Quantidade" required>
+              <select id="tipo">
+                <option value="entrada" {% if tipo_padrao == 'entrada' %}selected{% endif %}>Entrada</option>
+                <option value="ajuste" {% if tipo_padrao == 'ajuste' %}selected{% endif %}>Ajuste</option>
+              </select>
+              <div class="cfg-cadastro-actions">
+                <button type="submit" class="btn-green">Salvar</button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        <section class="cfg-section-card">
+          <div class="cfg-cadastro-head">
+            <h2 class="cfg-section-title">Últimos movimentos</h2>
+          </div>
+          <div class="cfg-cadastro-table-wrap">
+            <table class="tbl cfg-table">
+              <thead>
+                <tr>
+                  <th style="width:160px;">Data</th>
+                  <th style="width:120px;">Tipo</th>
+                  <th>Movimento</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if historico %}
+                {% for item in historico %}
+                <tr>
+                  <td>{{ item.created_at.strftime('%d/%m/%Y %H:%M') if item.created_at else '—' }}</td>
+                  <td>{{ item.tipo|capitalize }}</td>
+                  <td>{{ item.descricao }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="3" class="empty">Nenhum movimento recente.</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+
+  {% if produto %}
+  <script>
+    function mostrarMensagem(texto, tipo) {
+      const el = document.getElementById('mensagem');
+      if (!el) return;
+      el.className = 'mensagem ' + tipo;
+      el.textContent = texto;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 3500);
+    }
+
+    function selecionarTipo(tipo) {
+      const campo = document.getElementById('tipo');
+      if (!campo) return;
+      campo.value = tipo;
+      document.getElementById('quantidade')?.focus();
+    }
+
+    async function salvarMovimento(event) {
+      event.preventDefault();
+      const produtoId = document.getElementById('produto_id')?.value;
+      const quantidade = document.getElementById('quantidade')?.value;
+      const tipo = document.getElementById('tipo')?.value || 'entrada';
+      const rota = tipo === 'ajuste' ? '{{ url_prefix }}/estoque/ajuste' : '{{ url_prefix }}/estoque/entrada';
+      try {
+        const resp = await fetch(rota, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ produto_id: produtoId, quantidade })
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.sucesso) {
+          mostrarMensagem(data.erro || 'Não foi possível salvar.', 'erro');
+          return;
+        }
+        mostrarMensagem('Estoque salvo com sucesso.', 'sucesso');
+        window.setTimeout(() => window.location.reload(), 500);
+      } catch (e) {
+        mostrarMensagem('Não foi possível salvar.', 'erro');
+      }
+    }
+  </script>
+  {% endif %}
+  <script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>

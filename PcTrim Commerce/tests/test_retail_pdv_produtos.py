@@ -18,6 +18,7 @@ load_dotenv(os.path.join(_ROOT, ".env"))
 
 from app import app  # noqa: E402
 from database import conectar  # noqa: E402
+from services.estoque import ensure_estoque_schema, registrar_movimento  # noqa: E402
 from services.retail_catalog_schema import ensure_retail_catalog_schema  # noqa: E402
 
 
@@ -63,6 +64,7 @@ class RetailPdvProdutosTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         ensure_retail_catalog_schema()
+        ensure_estoque_schema()
         cls.retail_id = _find_retail_cliente()
         cls.rest_id = _find_restaurant_cliente()
         cls.client = app.test_client()
@@ -111,12 +113,12 @@ class RetailPdvProdutosTests(unittest.TestCase):
                 "chave": codigo1,
                 "produto": f"{cls.tag}_COM_SUB",
                 "preco": 19.9,
-                "classe": "TESTE",
                 "porkilo": "Nao",
                 "vendaliberada": "Sim",
+                "controla_estoque": 1,
                 "category_id": cls.cat_id,
                 "subcategory_id": cls.sub_id,
-                "retail": {"estoque": 1, "ativo": 1, "preco_varejo": 19.9},
+                "retail": {"estoque_minimo": 2, "ativo": 1, "preco_varejo": 19.9},
             },
             headers={"Content-Type": "application/json", "Accept": "application/json"},
         )
@@ -129,11 +131,11 @@ class RetailPdvProdutosTests(unittest.TestCase):
                 "chave": codigo2,
                 "produto": f"{cls.tag}_SEM_SUB",
                 "preco": 9.9,
-                "classe": "TESTE",
                 "porkilo": "Nao",
                 "vendaliberada": "Sim",
+                "controla_estoque": 0,
                 "category_id": cls.cat_id,
-                "retail": {"estoque": 1, "ativo": 1, "preco_varejo": 9.9},
+                "retail": {"ativo": 1, "preco_varejo": 9.9},
             },
             headers={"Content-Type": "application/json", "Accept": "application/json"},
         )
@@ -153,6 +155,14 @@ class RetailPdvProdutosTests(unittest.TestCase):
             )
             row2 = cur.fetchone()
             cls.prod_sem_sub_id = int(row2["chave"]) if row2 else None
+            if cls.prod_com_sub_id:
+                registrar_movimento(
+                    cls.retail_id,
+                    cls.prod_com_sub_id,
+                    tipo="entrada",
+                    quantidade=7,
+                    origem="manual",
+                )
         finally:
             cur.close()
             conn.close()
@@ -197,6 +207,28 @@ class RetailPdvProdutosTests(unittest.TestCase):
         self.assertIn(self.prod_com_sub_id, chaves)
         self.assertIn(self.prod_sem_sub_id, chaves)
         self.assertLessEqual(len(produtos), 200)
+
+    def test_pdv_retorna_estoque_quando_controla_estoque(self):
+        if not self.cat_id or not self.prod_com_sub_id:
+            self.skipTest("Catálogo de teste não criado")
+        with self._retail_session() as sess:
+            sess["usuario_logado"] = "test_pdv"
+            sess["id_cliente"] = self.retail_id
+            sess["funcao"] = "gerente"
+        resp = self.client.get(
+            f"/api/retail/pdv/produtos?categoria_id={self.cat_id}",
+            headers=self._json_headers(),
+        )
+        self.assertEqual(resp.status_code, 200, resp.get_data(as_text=True))
+        produtos = resp.get_json().get("produtos") or []
+        com_sub = next((p for p in produtos if int(p["chave"]) == self.prod_com_sub_id), None)
+        sem_sub = next((p for p in produtos if int(p["chave"]) == self.prod_sem_sub_id), None)
+        self.assertIsNotNone(com_sub)
+        self.assertIsNotNone(sem_sub)
+        self.assertEqual(int(com_sub["controla_estoque"]), 1)
+        self.assertEqual(float(com_sub["estoque_atual"]), 7.0)
+        self.assertEqual(int(sem_sub["controla_estoque"]), 0)
+        self.assertIsNone(sem_sub.get("estoque_atual"))
 
     def test_subcategoria_filtra_corretamente(self):
         if not self.cat_id or not self.sub_id:

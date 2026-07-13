@@ -1351,7 +1351,9 @@ def bootstrap_schema():
         _ensure_usuario_login_otp_table()
         _ensure_campanhas_table()
         from services.retail_catalog_schema import ensure_retail_catalog_schema
+        from services.estoque import ensure_estoque_schema
         ensure_retail_catalog_schema()
+        ensure_estoque_schema()
     except Exception as e:
         print("[SCHEMA BOOTSTRAP ERRO]", e, flush=True)
         traceback.print_exc()
@@ -4218,6 +4220,8 @@ def api_dashboard_mesa_detalhe(mesanro):
 @app.route("/api/baixa/receber", methods=["POST"])
 @login_required
 def api_baixa_receber():
+    from services.estoque import registrar_movimento
+
     conn = None
     cur = None
     try:
@@ -4395,6 +4399,37 @@ def api_baixa_receber():
         if cur.rowcount <= 0:
             conn.rollback()
             return jsonify({"sucesso": False, "erro": "Não foi possível atualizar o pedido."}), 500
+
+        cur.execute(
+            """
+            SELECT
+                CAST(pd.codigoproduto AS UNSIGNED) AS produto_id,
+                SUM(COALESCE(pd.quantidade, 0)) AS quantidade
+            FROM pedido_diarios pd
+            JOIN produtos p
+              ON p.id_cliente = pd.id_cliente
+             AND p.chave = CAST(pd.codigoproduto AS UNSIGNED)
+            WHERE pd.nropedido = %s
+              AND pd.id_cliente = %s
+              AND pd.origem = %s
+              AND pd.codigoproduto REGEXP '^[0-9]+$'
+              AND UPPER(TRIM(COALESCE(pd.status_pedido, ''))) <> 'ITEM_REMOVIDO'
+              AND COALESCE(p.controla_estoque, 0) = 1
+            GROUP BY CAST(pd.codigoproduto AS UNSIGNED)
+            """,
+            (nropedido, id_cliente, origem),
+        )
+        itens_estoque = cur.fetchall() or []
+        for item in itens_estoque:
+            registrar_movimento(
+                id_cliente,
+                int(item["produto_id"]),
+                tipo="venda",
+                quantidade=item.get("quantidade") or 0,
+                nropedido=nropedido,
+                origem="venda",
+                cur=cur,
+            )
         conn.commit()
         return jsonify({"sucesso": True})
     except Exception as e:
@@ -5791,6 +5826,7 @@ def excluir_entregador(chave):
 
 @app.route("/cadastrar-classificacao")
 @login_required
+@restaurant_only
 def cadastrar_classificacao():
     """Página de cadastro de classificações"""
     id_cliente = session.get('id_cliente')
@@ -5800,6 +5836,7 @@ def cadastrar_classificacao():
 
 @app.route("/api/salvar-classificacao", methods=["POST"])
 @login_required
+@restaurant_only
 def salvar_classificacao():
     """Salva uma nova classificação"""
     conn = None
@@ -5860,6 +5897,7 @@ def salvar_classificacao():
 
 @app.route("/api/listar-classificacoes", methods=["GET"])
 @login_required
+@restaurant_only
 def listar_classificacoes():
     """Lista todas as classificações cadastradas"""
     conn = None
@@ -5893,6 +5931,7 @@ def listar_classificacoes():
 
 @app.route("/api/obter-classificacao/<int:chave>", methods=["GET"])
 @login_required
+@restaurant_only
 def obter_classificacao(chave):
     """Obtém dados de uma classificação específica"""
     conn = None
@@ -5928,6 +5967,7 @@ def obter_classificacao(chave):
 
 @app.route("/api/editar-classificacao/<int:chave>", methods=["PUT"])
 @login_required
+@restaurant_only
 def editar_classificacao(chave):
     """Edita uma classificação existente"""
     conn = None
@@ -6000,6 +6040,7 @@ def editar_classificacao(chave):
 
 @app.route("/api/excluir-classificacao/<int:chave>", methods=["DELETE"])
 @login_required
+@restaurant_only
 def excluir_classificacao(chave):
     """Exclui uma classificação"""
     conn = None

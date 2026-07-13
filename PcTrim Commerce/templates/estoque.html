@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estoque | {{ nome_fantasia or 'Loja' }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=23">
+  <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=4">
+  {% include 'partials/topbar_meta_assets.html' %}
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+</head>
+<body class="cfg-body">
+  <div class="cfg-page">
+    <header class="topbar">
+      <a class="home" href="{{ url_for('index') }}" title="Menu"><i data-lucide="home" width="18" height="18"></i></a>
+      <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
+      <div class="brand">Estoque</div>
+      {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+      {% include 'partials/topbar_meta.html' %}
+      <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
+        <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
+        <i data-lucide="moon" class="icon-dark" width="18" height="18"></i>
+      </button>
+    </header>
+
+    <main class="cfg-content cfg-cadastro-page">
+      <div class="cfg-wrap cfg-cadastro-wrap">
+        <p class="help" style="margin:0;">Veja o saldo dos produtos e registre entrada ou ajuste. O estoque diminui automaticamente a cada venda.</p>
+
+        <section class="cfg-section-card" aria-label="Lista de produtos com estoque">
+          <div class="cfg-cadastro-head">
+            <h2 class="cfg-section-title">Produtos com estoque</h2>
+          </div>
+          <div class="cfg-cadastro-table-wrap">
+            <table class="tbl cfg-table">
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th style="width:120px;">Saldo</th>
+                  <th style="width:120px;">Mínimo</th>
+                  <th style="width:130px;">Status</th>
+                  <th style="width:260px;text-align:center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if produtos %}
+                {% for produto in produtos %}
+                <tr>
+                  <td><strong>{{ produto.nome }}</strong></td>
+                  <td>{{ '%.3f'|format(produto.estoque_atual) }}</td>
+                  <td>{{ '%.3f'|format(produto.estoque_minimo) }}</td>
+                  <td>
+                    {% if produto.estoque_baixo %}
+                    <span class="pill bad">Baixo</span>
+                    {% else %}
+                    <span class="pill ok">Em dia</span>
+                    {% endif %}
+                  </td>
+                  <td style="text-align:center;">
+                    <span class="tbl-actions">
+                      <a class="btn-mini" href="{{ url_prefix }}/estoque/{{ produto.produto_id }}?tipo=entrada">Entrada</a>
+                      <a class="btn-mini btn-mini-danger" href="{{ url_prefix }}/estoque/{{ produto.produto_id }}?tipo=ajuste">Ajustar</a>
+                      <a class="btn-mini" href="{{ url_prefix }}/estoque/{{ produto.produto_id }}">Ver</a>
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="5" class="empty">Nenhum produto com controle de estoque ativo.</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>

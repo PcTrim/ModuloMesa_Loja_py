@@ -71,6 +71,8 @@
     .retail-pdv .prod-card:hover{border-color:var(--purple);box-shadow:0 2px 8px rgba(0,0,0,.12);}
     .retail-pdv .prod-card .name{font-size:11px;font-weight:600;}
     .retail-pdv .prod-card .price{font-size:14px;}
+    .retail-pdv .prod-card .stock{font-size:10px;color:var(--muted);font-weight:600;}
+    .retail-pdv .prod-card .stock.stock-low{color:var(--accent-soft,#fbbf24);}
     .retail-pdv .item-desc{-webkit-line-clamp:1;}
     .search{display:flex;align-items:center;gap:8px;background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--muted);} 
     #busca-produto{flex:1;border:none;outline:none;background:transparent;font-family:inherit;font-size:13px;color:var(--text);} 
@@ -80,6 +82,8 @@
     .prod-card.sel-frac{border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.2);}
     .prod-card.sel-frac .code{color:var(--accent-soft);}
     .prod-card .name{font-size:12px;font-weight:700;line-height:1.25;} .prod-card .code{font-size:10px;color:var(--muted);font-weight:600;} .prod-card .price{font-size:12px;color:var(--green);font-weight:700;}
+    .prod-card .stock{font-size:10px;color:var(--muted);font-weight:600;}
+    .prod-card .stock.stock-low{color:var(--accent-soft,#fbbf24);}
     .btn-plus{width:100%;margin-top:auto;border:none;border-radius:6px;background:var(--purple);color:var(--on-primary);font-weight:600;font-size:15px;padding:8px;cursor:pointer;font-family:inherit;}
 
     #itens-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;min-width:0;}
@@ -1386,6 +1390,12 @@
     state.produtos=Array.isArray(raw)?raw:[];
     renderProdutos();
   }
+  function formatEstoquePdv(val){
+    const n=Number(val);
+    if(!Number.isFinite(n)) return "0";
+    const safe=Math.max(0,n);
+    return safe.toFixed(3).replace(/\.?0+$/,"");
+  }
   function renderProdutos(){
     const q=(el("busca-produto").value||"").toLowerCase().trim();
     const wrap=el("prod-grid");
@@ -1418,7 +1428,10 @@
         const selecionado=!!(draft && draft.partes.some((x)=>String(x.codigoproduto||"")===chaveAtual));
         card.className="prod-card"+(selecionado?" sel-frac":"");
         if(desc) card.title=`Descrição: ${desc}`;
-        card.innerHTML=`<span class="name">${escapeHtml(p.nome||p.produto||"-")}</span><span class="code">Cód: ${escapeHtml(codigo||"-")}</span><span class="price">${money(p.preco)}</span><button class="btn-plus">+</button>`;
+        const stockHtml=Number(p.controla_estoque)
+          ? `<span class="stock${p.estoque_baixo?" stock-low":""}">Est: ${formatEstoquePdv(p.estoque_atual)}</span>`
+          : "";
+        card.innerHTML=`<span class="name">${escapeHtml(p.nome||p.produto||"-")}</span><span class="code">Cód: ${escapeHtml(codigo||"-")}</span>${stockHtml}<span class="price">${money(p.preco)}</span><button class="btn-plus">+</button>`;
         card.querySelector("button").onclick=(e)=>addItem(p,e.currentTarget);
         wrap.appendChild(card);
       });

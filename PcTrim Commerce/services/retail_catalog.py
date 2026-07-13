@@ -9,6 +9,57 @@ class RetailCatalogError(ValueError):
     """Erro de validação ou regra de negócio do catálogo retail."""
 
 
+SQL_JOIN_SALDO_ESTOQUE = """
+        LEFT JOIN (
+            SELECT
+                id_cliente,
+                produto_id,
+                SUM(
+                    CASE
+                        WHEN tipo = 'entrada' THEN quantidade
+                        WHEN tipo = 'venda' THEN -quantidade
+                        WHEN tipo = 'ajuste' THEN -quantidade
+                        ELSE 0
+                    END
+                ) AS saldo_atual
+            FROM estoque_movimentos
+            WHERE id_cliente = %s
+            GROUP BY id_cliente, produto_id
+        ) mv ON mv.id_cliente = p.id_cliente AND mv.produto_id = p.chave
+"""
+
+
+def saldo_estoque_de_linha(row: dict) -> float:
+    raw = row.get("estoque_atual")
+    if raw is None:
+        raw = row.get("saldo_atual")
+    try:
+        return max(0.0, float(raw or 0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def campos_estoque_pdv(
+    row: dict,
+    *,
+    estoque_minimo: float | None = None,
+    sempre_numero: bool = False,
+) -> dict[str, Any]:
+    controla = int(row.get("controla_estoque") or 0)
+    saldo = saldo_estoque_de_linha(row)
+    out: dict[str, Any] = {"controla_estoque": controla}
+    if controla:
+        out["estoque_atual"] = saldo
+        if estoque_minimo is not None:
+            out["estoque_minimo"] = estoque_minimo
+            out["estoque_baixo"] = estoque_minimo > 0 and saldo <= estoque_minimo
+    elif sempre_numero:
+        out["estoque_atual"] = 0.0
+    else:
+        out["estoque_atual"] = None
+    return out
+
+
 def _normalize_nome(nome: str) -> str:
     nome = (nome or "").strip()
     if not nome:
@@ -129,18 +180,23 @@ def listar_produtos_pdv_retail(
             p.classe,
             s.nome AS subcategoria_nome,
             pr.preco_varejo,
-            p.preco AS preco_base
+            p.preco AS preco_base,
+            COALESCE(p.controla_estoque, 0) AS controla_estoque,
+            COALESCE(pr.permite_venda_sem_estoque, 0) AS permite_venda_sem_estoque,
+            COALESCE(pr.estoque_minimo, 0) AS estoque_minimo,
+            COALESCE(mv.saldo_atual, 0) AS estoque_atual
         FROM produtos p
         JOIN produto_retail pr ON pr.product_id = p.chave AND pr.id_cliente = p.id_cliente
         JOIN categoria c ON c.id = p.category_id AND c.id_cliente = p.id_cliente
         LEFT JOIN subcategoria s ON s.id = p.subcategory_id AND s.id_cliente = p.id_cliente
+""" + SQL_JOIN_SALDO_ESTOQUE + """
         WHERE p.id_cliente = %s
           AND p.category_id = %s
           AND UPPER(COALESCE(p.vendaliberada, '')) = 'SIM'
           AND COALESCE(pr.ativo, 1) = 1
           AND c.ativo = 1
     """
-    params: list[Any] = [id_cliente, categoria_id]
+    params: list[Any] = [id_cliente, id_cliente, categoria_id]
     if subcategoria_id is not None:
         sql += " AND p.subcategory_id = %s"
         params.append(subcategoria_id)
@@ -160,17 +216,51 @@ def listar_produtos_pdv_retail(
             preco = float(preco_raw or 0)
         except (TypeError, ValueError):
             preco = 0.0
-        result.append(
-            {
-                "chave": row["chave"],
-                "produto": row["produto"],
-                "preco": preco,
-                "barcode": row.get("barcode"),
-                "classe": row.get("classe"),
-                "descricao": row.get("descricao"),
-                "subcategoria_nome": row.get("subcategoria_nome"),
-            }
-        )
+        estoque_minimo = float(row.get("estoque_minimo") or 0)
+        item = {
+            "chave": row["chave"],
+            "produto": row["produto"],
+            "preco": preco,
+            "barcode": row.get("barcode"),
+            "classe": row.get("classe"),
+            "descricao": row.get("descricao"),
+            "subcategoria_nome": row.get("subcategoria_nome"),
+            "permite_venda_sem_estoque": int(row.get("permite_venda_sem_estoque") or 0),
+            **campos_estoque_pdv(row, estoque_minimo=estoque_minimo),
+        }
+        result.append(item)
+    return result
+
+
+def listar_produtos_por_classificacao(cur, id_cliente: int, classe: str) -> list[dict]:
+    """Produtos de uma classificação (PDV restaurante) com saldo agregado."""
+    sql = """
+        SELECT
+            p.chave,
+            p.produto AS nome,
+            p.preco,
+            p.descricao AS observacao,
+            p.barcode,
+            COALESCE(p.controla_estoque, 0) AS controla_estoque,
+            COALESCE(mv.saldo_atual, 0) AS estoque_atual
+        FROM produtos p
+""" + SQL_JOIN_SALDO_ESTOQUE + """
+        WHERE p.classe = %s AND p.id_cliente = %s
+        ORDER BY p.produto
+    """
+    cur.execute(sql, (id_cliente, classe, id_cliente))
+    rows = cur.fetchall() or []
+    result: list[dict] = []
+    for row in rows:
+        item = {
+            "chave": row["chave"],
+            "nome": row["nome"],
+            "preco": row["preco"],
+            "observacao": row.get("observacao"),
+            "barcode": row.get("barcode"),
+            **campos_estoque_pdv(row, sempre_numero=True),
+        }
+        result.append(item)
     return result
 
 
@@ -348,7 +438,7 @@ def get_produto_retail(cur, id_cliente: int, product_id: int) -> dict | None:
     cur.execute(
         """
         SELECT id, product_id, nome_vitrine, descricao_vitrine,
-               preco_varejo, preco_atacado, comissao, estoque,
+               preco_varejo, preco_atacado, comissao, estoque, estoque_minimo,
                permite_venda_sem_estoque, destaque, ativo, ordem_exibicao
         FROM produto_retail
         WHERE product_id = %s AND id_cliente = %s
@@ -369,8 +459,12 @@ def upsert_produto_retail(cur, id_cliente: int, product_id: int, dados: dict | N
     preco_varejo = _parse_decimal(dados.get("preco_varejo"), "Preço varejo")
     preco_atacado = _parse_decimal(dados.get("preco_atacado"), "Preço atacado")
     comissao = _parse_decimal(dados.get("comissao"), "Comissão")
-    estoque_raw = dados.get("estoque")
-    estoque = Decimal("0") if estoque_raw in (None, "") else _parse_decimal(estoque_raw, "Estoque")
+    estoque_minimo_raw = dados.get("estoque_minimo")
+    estoque_minimo = (
+        Decimal("0")
+        if estoque_minimo_raw in (None, "")
+        else _parse_decimal(estoque_minimo_raw, "Estoque mínimo")
+    )
     permite = _parse_bool(dados.get("permite_venda_sem_estoque"), default=0)
     destaque = _parse_bool(dados.get("destaque"), default=0)
     ativo = _parse_bool(dados.get("ativo"), default=1)
@@ -383,7 +477,7 @@ def upsert_produto_retail(cur, id_cliente: int, product_id: int, dados: dict | N
             UPDATE produto_retail
             SET nome_vitrine = %s, descricao_vitrine = %s,
                 preco_varejo = %s, preco_atacado = %s, comissao = %s,
-                estoque = %s, permite_venda_sem_estoque = %s,
+                estoque_minimo = %s, permite_venda_sem_estoque = %s,
                 destaque = %s, ativo = %s, ordem_exibicao = %s
             WHERE product_id = %s AND id_cliente = %s
             """,
@@ -393,7 +487,7 @@ def upsert_produto_retail(cur, id_cliente: int, product_id: int, dados: dict | N
                 preco_varejo,
                 preco_atacado,
                 comissao,
-                estoque,
+                estoque_minimo,
                 permite,
                 destaque,
                 ativo,
@@ -407,7 +501,7 @@ def upsert_produto_retail(cur, id_cliente: int, product_id: int, dados: dict | N
             """
             INSERT INTO produto_retail (
                 id_cliente, product_id, nome_vitrine, descricao_vitrine,
-                preco_varejo, preco_atacado, comissao, estoque,
+                preco_varejo, preco_atacado, comissao, estoque_minimo,
                 permite_venda_sem_estoque, destaque, ativo, ordem_exibicao
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
@@ -419,7 +513,7 @@ def upsert_produto_retail(cur, id_cliente: int, product_id: int, dados: dict | N
                 preco_varejo,
                 preco_atacado,
                 comissao,
-                estoque,
+                estoque_minimo,
                 permite,
                 destaque,
                 ativo,

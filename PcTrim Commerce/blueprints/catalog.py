@@ -38,6 +38,36 @@ def _sincronizar_auto_increment_produtos(cursor):
     cursor.execute("ALTER TABLE produtos AUTO_INCREMENT = %s", (prox,))
 
 
+def _parse_bool_flag(value, default: int = 0) -> int:
+    if value is None or value == "":
+        return int(default)
+    if isinstance(value, bool):
+        return 1 if value else 0
+    if isinstance(value, (int, float)):
+        return 1 if int(value) != 0 else 0
+    return 1 if str(value).strip().lower() in ("1", "true", "sim", "s", "yes", "y") else 0
+
+
+def _resolver_classe_retail(cursor, id_cliente: int, dados: dict) -> str:
+    """No varejo, classe vem do nome da categoria retail selecionada."""
+    category_id = dados.get("category_id")
+    if category_id in (None, ""):
+        raise RetailCatalogError("Categoria retail é obrigatória.")
+    try:
+        cat_id = int(category_id)
+    except (TypeError, ValueError) as exc:
+        raise RetailCatalogError("Categoria retail inválida.") from exc
+    cursor.execute(
+        "SELECT nome FROM categoria WHERE id = %s AND id_cliente = %s LIMIT 1",
+        (cat_id, id_cliente),
+    )
+    row = cursor.fetchone()
+    if not row:
+        raise RetailCatalogError("Categoria retail não encontrada.")
+    nome = str(row.get("nome") or "").strip().upper()
+    return nome or "VAREJO"
+
+
 @catalog_bp.route("/api/proximo-codigo-produto", methods=["GET"])
 @login_required
 def proximo_codigo_produto():
@@ -90,14 +120,22 @@ def salvar_produto():
         descricao = dados.get("descricao", "")
         barcode = (dados.get("barcode") or "").strip() or None
         chave_informada = dados.get("chave")
+        controla_estoque = _parse_bool_flag(dados.get("controla_estoque"), default=0)
 
-        if not classe or not produto:
-            return jsonify({"sucesso": False, "erro": "Classe e nome do produto são obrigatórios"}), 400
+        if not produto:
+            return jsonify({"sucesso": False, "erro": "Nome do produto é obrigatório"}), 400
 
         conn = conectar()
         cursor = conn.cursor(dictionary=True)
 
         id_cliente = session.get("id_cliente")
+        if is_retail():
+            try:
+                classe = _resolver_classe_retail(cursor, id_cliente, dados)
+            except RetailCatalogError as err:
+                return jsonify({"sucesso": False, "erro": str(err)}), 400
+        elif not classe:
+            return jsonify({"sucesso": False, "erro": "Classe e nome do produto são obrigatórios"}), 400
         chave_explicita = None
         if chave_informada is not None and str(chave_informada).strip() != "":
             try:
@@ -124,14 +162,15 @@ def salvar_produto():
             vendaliberada,
             descricao,
             barcode,
+            controla_estoque,
             id_cliente,
         )
 
         if chave_explicita is not None:
             cursor.execute(
                 """
-                INSERT INTO produtos (chave, produto, preco, classe, porkilo, impressora, cfop, ncm, display, vendaliberada, descricao, barcode, id_cliente)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO produtos (chave, produto, preco, classe, porkilo, impressora, cfop, ncm, display, vendaliberada, descricao, barcode, controla_estoque, id_cliente)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
                 (chave_explicita, *valores),
             )
@@ -140,8 +179,8 @@ def salvar_produto():
         else:
             cursor.execute(
                 """
-                INSERT INTO produtos (produto, preco, classe, porkilo, impressora, cfop, ncm, display, vendaliberada, descricao, barcode, id_cliente)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO produtos (produto, preco, classe, porkilo, impressora, cfop, ncm, display, vendaliberada, descricao, barcode, controla_estoque, id_cliente)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
                 valores,
             )
@@ -190,23 +229,42 @@ def listar_produtos():
                 """
                 SELECT p.chave, p.produto, p.preco, p.classe, p.porkilo, p.impressora, p.cfop, p.ncm,
                        p.display, p.vendaliberada, p.descricao, p.barcode,
+                       p.controla_estoque,
                        p.category_id, p.subcategory_id,
                        c.nome AS categoria_nome, s.nome AS subcategoria_nome,
-                       pr.estoque, pr.destaque, pr.ativo AS retail_ativo
+                       COALESCE(mv.saldo_atual, 0) AS estoque,
+                       COALESCE(pr.estoque_minimo, 0) AS estoque_minimo,
+                       pr.destaque, pr.ativo AS retail_ativo
                 FROM produtos p
                 LEFT JOIN categoria c ON c.id = p.category_id AND c.id_cliente = p.id_cliente
                 LEFT JOIN subcategoria s ON s.id = p.subcategory_id AND s.id_cliente = p.id_cliente
                 LEFT JOIN produto_retail pr ON pr.product_id = p.chave AND pr.id_cliente = p.id_cliente
+                LEFT JOIN (
+                    SELECT
+                        id_cliente,
+                        produto_id,
+                        SUM(
+                            CASE
+                                WHEN tipo = 'entrada' THEN quantidade
+                                WHEN tipo = 'venda' THEN -quantidade
+                                WHEN tipo = 'ajuste' THEN -quantidade
+                                ELSE 0
+                            END
+                        ) AS saldo_atual
+                    FROM estoque_movimentos
+                    WHERE id_cliente = %s
+                    GROUP BY id_cliente, produto_id
+                ) mv ON mv.id_cliente = p.id_cliente AND mv.produto_id = p.chave
                 WHERE p.id_cliente = %s
                 ORDER BY p.produto
                 """,
-                (id_cliente,),
+                (id_cliente, id_cliente),
             )
         else:
             cursor.execute(
                 """
-                SELECT chave, produto, preco, classe, porkilo, impressora, cfop, ncm, 
-                       display, vendaliberada, descricao, barcode
+                SELECT chave, produto, preco, classe, porkilo, impressora, cfop, ncm,
+                       display, vendaliberada, descricao, barcode, controla_estoque
                 FROM produtos
                 WHERE id_cliente = %s
                 ORDER BY produto
@@ -242,8 +300,8 @@ def obter_produto(chave):
         id_cliente = session.get("id_cliente")
         cursor.execute(
             """
-            SELECT chave, produto, preco, classe, porkilo, impressora, cfop, ncm, 
-                   display, vendaliberada, descricao, barcode
+            SELECT chave, produto, preco, classe, porkilo, impressora, cfop, ncm,
+                   display, vendaliberada, descricao, barcode, controla_estoque
             FROM produtos
             WHERE chave = %s AND id_cliente = %s
         """,
@@ -341,20 +399,40 @@ def editar_produto(chave):
         vendaliberada = dados.get("vendaliberada", "Sim")
         descricao = dados.get("descricao", "")
         barcode = (dados.get("barcode") or "").strip() or None
+        controla_estoque_raw = dados.get("controla_estoque")
 
-        if not classe or not produto:
-            return jsonify({"sucesso": False, "erro": "Classe e nome do produto são obrigatórios"}), 400
+        if not produto:
+            return jsonify({"sucesso": False, "erro": "Nome do produto é obrigatório"}), 400
 
         conn = conectar()
         cursor = conn.cursor(dictionary=True)
 
         id_cliente = session.get("id_cliente")
+        if is_retail():
+            try:
+                classe = _resolver_classe_retail(cursor, id_cliente, dados)
+            except RetailCatalogError as err:
+                return jsonify({"sucesso": False, "erro": str(err)}), 400
+        elif not classe:
+            return jsonify({"sucesso": False, "erro": "Classe e nome do produto são obrigatórios"}), 400
+
+        cursor.execute(
+            "SELECT chave, COALESCE(controla_estoque, 0) AS controla_estoque FROM produtos WHERE chave = %s AND id_cliente = %s LIMIT 1",
+            (chave, id_cliente),
+        )
+        produto_atual = cursor.fetchone()
+        if not produto_atual:
+            return jsonify({"sucesso": False, "erro": "Produto não encontrado"}), 404
+        controla_estoque = _parse_bool_flag(
+            controla_estoque_raw,
+            default=int(produto_atual.get("controla_estoque") or 0),
+        )
         cursor.execute(
             """
-            UPDATE produtos 
-            SET produto = %s, preco = %s, classe = %s, porkilo = %s, 
-                impressora = %s, cfop = %s, ncm = %s, display = %s, 
-                vendaliberada = %s, descricao = %s, barcode = %s
+            UPDATE produtos
+            SET produto = %s, preco = %s, classe = %s, porkilo = %s,
+                impressora = %s, cfop = %s, ncm = %s, display = %s,
+                vendaliberada = %s, descricao = %s, barcode = %s, controla_estoque = %s
             WHERE chave = %s AND id_cliente = %s
         """,
             (
@@ -369,13 +447,11 @@ def editar_produto(chave):
                 vendaliberada,
                 descricao,
                 barcode,
+                controla_estoque,
                 chave,
                 id_cliente,
             ),
         )
-
-        if cursor.rowcount <= 0:
-            return jsonify({"sucesso": False, "erro": "Produto não encontrado"}), 404
 
         if is_retail():
             apply_retail_produto_save(cursor, id_cliente, chave, dados)

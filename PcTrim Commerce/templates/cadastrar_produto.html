@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-{% set label_classif = 'Categoria' if is_retail else 'Classificação' %}
-{% set label_classif_pl = 'Categorias' if is_retail else 'Classificações' %}
+{% set label_classif = 'Grupo PDV' if is_retail else 'Classificação' %}
+{% set label_classif_pl = 'Grupos PDV' if is_retail else 'Classificações' %}
 <head>
     <meta charset="UTF-8">
     <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
@@ -49,9 +49,11 @@
                                 <th style="width: 90px;">Código</th>
                                 <th>Produto</th>
                                 <th style="width: 110px;">Preço</th>
-                                <th style="width: 130px;">{{ label_classif if is_retail else 'Classe' }}</th>
+                                {% if not is_retail %}
+                                <th style="width: 130px;">Classe</th>
+                                {% endif %}
                                 {% if is_retail %}
-                                <th style="width: 130px;">Cat. retail</th>
+                                <th style="width: 130px;">Categoria</th>
                                 <th style="width: 90px;">Estoque</th>
                                 {% endif %}
                                 <th style="width: 110px;">Por kilo</th>
@@ -60,7 +62,7 @@
                             </tr>
                         </thead>
                         <tbody id="corpoTabela">
-                            <tr><td colspan="{{ 9 if is_retail else 7 }}" class="empty">Carregando produtos...</td></tr>
+                            <tr><td colspan="{{ 8 if is_retail else 7 }}" class="empty">Carregando produtos...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -84,12 +86,20 @@
 
                     <div class="row-split">
                         <input type="number" id="preco" step="0.01" required placeholder="Preço (R$)" data-hint="Valor de venda em reais.">
+                        {% if not is_retail %}
                         <select id="classificacaoSelect" required data-hint="Grupo do produto no cardápio ou PDV.">
                             <option value="">{{ label_classif }}...</option>
                         </select>
+                        {% endif %}
                     </div>
+                    {% if not is_retail %}
+                    <div class="help" id="classificacaoHelp" style="margin-top:-4px;margin-bottom:8px;"></div>
 
-                    <input type="text" id="classe" required placeholder="{% if is_retail %}{{ label_classif }}{% else %}Classe (preenchida pela {{ label_classif|lower }}){% endif %}" readonly>
+                    <input type="text" id="classe" required placeholder="Classe (preenchida pela {{ label_classif|lower }})" readonly>
+                    {% else %}
+                    <input type="hidden" id="classe" value="">
+                    <input type="hidden" id="classificacaoSelect" value="">
+                    {% endif %}
 
                     <div class="row-split">
                         <select id="porkilo">
@@ -115,6 +125,13 @@
                     <input type="hidden" id="display" value="0">
                     {% endif %}
 
+                    {% if not is_retail %}
+                    <div style="margin-top:8px;">
+                        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="controla_estoque"> Controlar estoque</label>
+                        <p class="help" style="margin:4px 0 0;">O saldo é ajustado na tela Estoque.</p>
+                    </div>
+                    {% endif %}
+
                     {% set papel = (session.get('funcao') or 'gerente')|lower %}
                     {% if papel == 'gerente' %}
                     <div class="row-split">
@@ -131,9 +148,9 @@
                     {% if is_retail %}
                     <details class="details cfg-section-card" style="margin-top:8px;padding:12px;" open>
                         <summary style="font-weight:700;cursor:pointer;">Catálogo retail / vitrine</summary>
-                        <p class="help" style="margin:8px 0;">Organização para vitrine (independente do grupo PDV acima).</p>
+                        <p class="help" style="margin:8px 0;">Categoria usada no PDV e na vitrine.</p>
                         <div class="row-split">
-                            <select id="category_id" data-hint="Categoria do catálogo retail.">
+                            <select id="category_id" required data-hint="Categoria do catálogo retail.">
                                 <option value="">Categoria retail...</option>
                             </select>
                             <select id="subcategory_id" data-hint="Subcategoria (opcional).">
@@ -147,10 +164,12 @@
                             <input type="number" id="preco_atacado" step="0.01" min="0" placeholder="Preço atacado (opcional)">
                         </div>
                         <div class="row-split">
-                            <input type="number" id="estoque" step="0.001" min="0" value="0" placeholder="Estoque">
+                            <input type="number" id="estoque_minimo" step="0.001" min="0" value="0" placeholder="Estoque mínimo">
                             <input type="number" id="ordem_exibicao" step="1" value="0" placeholder="Ordem vitrine">
                         </div>
+                        <p class="help" style="margin:-2px 0 8px;">O saldo do estoque é ajustado na tela Estoque.</p>
                         <div class="row-split">
+                            <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="controla_estoque"> Controlar estoque</label>
                             <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="permite_venda_sem_estoque"> Venda sem estoque</label>
                             <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="destaque"> Destaque</label>
                             <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="retail_ativo" checked> Ativo na vitrine</label>
@@ -176,6 +195,7 @@
         const LABEL_CLASSIF = window.LABEL_CLASSIF || {{ label_classif|tojson }};
         const LABEL_CLASSIF_PL = window.LABEL_CLASSIF_PL || {{ label_classif_pl|tojson }};
         const LABEL_CLASSIF_LOWER = IS_RETAIL ? 'categoria' : 'classificação';
+        const COL_SPAN_PRODUTOS = IS_RETAIL ? 8 : 7;
 
         function mostrarMensagem(texto, tipo) {
             const mensagemDiv = document.getElementById('mensagem');
@@ -239,10 +259,12 @@
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
-            const est = document.getElementById('estoque');
-            if (est) est.value = '0';
+            const estMin = document.getElementById('estoque_minimo');
+            if (estMin) estMin.value = '0';
             const ord = document.getElementById('ordem_exibicao');
             if (ord) ord.value = '0';
+            const ctrl = document.getElementById('controla_estoque');
+            if (ctrl) ctrl.checked = false;
             const pve = document.getElementById('permite_venda_sem_estoque');
             if (pve) pve.checked = false;
             const dest = document.getElementById('destaque');
@@ -312,10 +334,12 @@
             if (pvar) pvar.value = retail.preco_varejo != null ? retail.preco_varejo : '';
             const pat = document.getElementById('preco_atacado');
             if (pat) pat.value = retail.preco_atacado != null ? retail.preco_atacado : '';
-            const est = document.getElementById('estoque');
-            if (est) est.value = retail.estoque != null ? retail.estoque : '0';
+            const estMin = document.getElementById('estoque_minimo');
+            if (estMin) estMin.value = retail.estoque_minimo != null ? retail.estoque_minimo : '0';
             const ord = document.getElementById('ordem_exibicao');
             if (ord) ord.value = retail.ordem_exibicao != null ? retail.ordem_exibicao : '0';
+            const ctrl = document.getElementById('controla_estoque');
+            if (ctrl) ctrl.checked = !!Number(p.controla_estoque);
             const pve = document.getElementById('permite_venda_sem_estoque');
             if (pve) pve.checked = !!Number(retail.permite_venda_sem_estoque);
             const dest = document.getElementById('destaque');
@@ -329,6 +353,7 @@
             const catVal = document.getElementById('category_id')?.value || '';
             const subVal = document.getElementById('subcategory_id')?.value || '';
             return {
+                controla_estoque: document.getElementById('controla_estoque')?.checked ? 1 : 0,
                 category_id: catVal ? parseInt(catVal, 10) : null,
                 subcategory_id: subVal ? parseInt(subVal, 10) : null,
                 retail: {
@@ -336,7 +361,7 @@
                     descricao_vitrine: document.getElementById('descricao_vitrine')?.value.trim() || null,
                     preco_varejo: document.getElementById('preco_varejo')?.value || null,
                     preco_atacado: document.getElementById('preco_atacado')?.value || null,
-                    estoque: document.getElementById('estoque')?.value || 0,
+                    estoque_minimo: document.getElementById('estoque_minimo')?.value || 0,
                     ordem_exibicao: parseInt(document.getElementById('ordem_exibicao')?.value, 10) || 0,
                     permite_venda_sem_estoque: document.getElementById('permite_venda_sem_estoque')?.checked ? 1 : 0,
                     destaque: document.getElementById('destaque')?.checked ? 1 : 0,
@@ -364,7 +389,31 @@
             const classeEl = document.getElementById('classe');
             if (!selClass || !classeEl) return;
             const val = (selClass.value || '').trim().toUpperCase();
-            classeEl.value = val;
+            if (val) {
+                classeEl.value = val;
+            }
+        }
+
+        function configurarGrupoPdv(totalItens) {
+            const select = document.getElementById('classificacaoSelect');
+            const classeEl = document.getElementById('classe');
+            const help = document.getElementById('classificacaoHelp');
+            if (!select || !classeEl || !help) return;
+            const semItens = Number(totalItens || 0) <= 0;
+            if (semItens) {
+                select.required = false;
+                select.disabled = true;
+                select.innerHTML = `<option value="">Nenhum ${LABEL_CLASSIF_LOWER} cadastrado</option>`;
+                classeEl.readOnly = false;
+                classeEl.placeholder = `Digite o ${LABEL_CLASSIF_LOWER}`;
+                help.textContent = `Nenhum ${LABEL_CLASSIF_LOWER} cadastrado. Você pode digitar um nome simples agora ou cadastrar em Configurações > ${LABEL_CLASSIF}.`;
+                return;
+            }
+            select.required = true;
+            select.disabled = false;
+            classeEl.readOnly = true;
+            classeEl.placeholder = `${LABEL_CLASSIF}`;
+            help.textContent = `Selecione o ${LABEL_CLASSIF_LOWER} usado na venda.`;
         }
 
         function preencherSelectClassificacao(items) {
@@ -380,6 +429,7 @@
                 opt.textContent = nome;
                 select.appendChild(opt);
             });
+            configurarGrupoPdv(items.length);
         }
 
         function configurarValidacaoPtBr() {
@@ -388,9 +438,16 @@
                 nome: 'Informe o nome do produto.',
                 preco: 'Informe o preco do produto.',
                 classificacaoSelect: `Selecione uma ${LABEL_CLASSIF_LOWER}.`,
-                classe: `Selecione uma ${LABEL_CLASSIF_LOWER}.`
+                classe: `Informe um ${LABEL_CLASSIF_LOWER}.`,
+                category_id: 'Selecione uma categoria retail.'
             };
-            ['codigo', 'nome', 'preco', 'classificacaoSelect', 'classe'].forEach(id => {
+            const camposValidacao = ['codigo', 'nome', 'preco'];
+            if (!IS_RETAIL) {
+                camposValidacao.push('classificacaoSelect', 'classe');
+            } else {
+                camposValidacao.push('category_id');
+            }
+            camposValidacao.forEach(id => {
                 const campo = document.getElementById(id);
                 if (!campo) return;
                 const atualizarMensagem = () => {
@@ -427,8 +484,7 @@
                 'nome',
                 'barcode',
                 'preco',
-                'classificacaoSelect',
-                'classe',
+                ...(IS_RETAIL ? ['category_id', 'subcategory_id'] : ['classificacaoSelect', 'classe']),
                 'porkilo',
                 'vendaliberada',
                 ...(IS_RETAIL ? [] : ['impressora', 'display']),
@@ -457,21 +513,23 @@
                 if (el) el.addEventListener('keydown', avancar);
             });
 
-            // Carrega categorias/classificações e preenche select
-            const urlClassif = IS_RETAIL ? '/api/listar-classificacoes' : '/carrossel-imagens';
-            fetch(urlClassif)
-                .then(r => r.json())
-                .then(data => {
-                    const items = IS_RETAIL
-                        ? (Array.isArray(data) ? data : []).map(c => ({ nome: c.nomeclassificacao }))
-                        : (Array.isArray(data) ? data : []);
-                    preencherSelectClassificacao(items);
-                })
-                .catch(err => console.error(`Erro ao carregar ${LABEL_CLASSIF_LOWER}:`, err));
+            // Carrega classificações (somente restaurante)
+            if (!IS_RETAIL) {
+                fetch('/carrossel-imagens')
+                    .then(r => r.json())
+                    .then(data => {
+                        const items = Array.isArray(data) ? data : [];
+                        preencherSelectClassificacao(items);
+                    })
+                    .catch(err => {
+                        console.error(`Erro ao carregar ${LABEL_CLASSIF_LOWER}:`, err);
+                        preencherSelectClassificacao([]);
+                    });
 
-            const selClass = document.getElementById('classificacaoSelect');
-            if (selClass) {
-                selClass.addEventListener('change', sincronizarClasseDoSelect);
+                const selClass = document.getElementById('classificacaoSelect');
+                if (selClass) {
+                    selClass.addEventListener('change', sincronizarClasseDoSelect);
+                }
             }
 
             if (!IS_RETAIL) {
@@ -547,7 +605,6 @@
                 tbody.innerHTML = '';
                 
                 if (result.sucesso && result.produtos.length > 0) {
-                    const colSpan = IS_RETAIL ? 9 : 7;
                     result.produtos.forEach(produto => {
                         const tr = document.createElement('tr');
                         const porkiloBadge = produto.porkilo === 'Sim' ? 
@@ -558,14 +615,15 @@
                             '<span class="pill bad">Não</span>';
                         const retailCols = IS_RETAIL ? `
                             <td><span class="pill">${produto.categoria_nome || '—'}</span></td>
-                            <td>${produto.estoque != null ? Number(produto.estoque).toFixed(3) : '—'}</td>
+                            <td>${Number(produto.controla_estoque) ? Number(produto.estoque || 0).toFixed(3) : '—'}</td>
                         ` : '';
+                        const classeCol = IS_RETAIL ? '' : `<td><span class="pill">${produto.classe}</span></td>`;
                         
                         tr.innerHTML = `
                             <td class="kcell">#${produto.chave}</td>
                             <td>${produto.produto}</td>
                             <td>R$ ${parseFloat(produto.preco).toFixed(2)}</td>
-                            <td><span class="pill">${produto.classe}</span></td>
+                            ${classeCol}
                             ${retailCols}
                             <td>${porkiloBadge}</td>
                             <td>${vendaBadge}</td>
@@ -579,14 +637,12 @@
                         tbody.appendChild(tr);
                     });
                 } else {
-                    const colSpan = IS_RETAIL ? 9 : 7;
-                    tbody.innerHTML = `<tr><td colspan="${colSpan}" class="empty">Nenhum produto cadastrado.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="${COL_SPAN_PRODUTOS}" class="empty">Nenhum produto cadastrado.</td></tr>`;
                 }
             } catch (erro) {
                 console.error('Erro ao carregar produtos:', erro);
                 const tbody = document.getElementById('corpoTabela');
-                const colSpan = IS_RETAIL ? 9 : 7;
-                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="empty">Erro ao carregar produtos</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${COL_SPAN_PRODUTOS}" class="empty">Erro ao carregar produtos</td></tr>`;
             }
         }
         
@@ -604,7 +660,20 @@
                     document.getElementById('nome').value = p.produto;
                     document.getElementById('barcode').value = p.barcode || '';
                     document.getElementById('preco').value = p.preco;
-                    document.getElementById('classe').value = p.classe;
+                    if (!IS_RETAIL) {
+                        document.getElementById('classe').value = p.classe;
+                        const selectClass = document.getElementById('classificacaoSelect');
+                        if (selectClass) {
+                            const options = selectClass.options;
+                            for (let i = 0; i < options.length; i++) {
+                                if (options[i].value.toUpperCase() === p.classe.toUpperCase()) {
+                                    selectClass.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                            sincronizarClasseDoSelect();
+                        }
+                    }
                     document.getElementById('porkilo').value = p.porkilo;
                     document.getElementById('vendaliberada').value = p.vendaliberada;
                     document.getElementById('impressora').value = p.impressora;
@@ -612,18 +681,10 @@
                     document.getElementById('cfop').value = p.cfop;
                     document.getElementById('ncm').value = p.ncm || '';
                     document.getElementById('descricao').value = p.descricao || '';
-                    
-                    // Busca a classificação correspondente
-                    const selectClass = document.getElementById('classificacaoSelect');
-                    if (selectClass) {
-                        const options = selectClass.options;
-                        for (let i = 0; i < options.length; i++) {
-                            if (options[i].value.toUpperCase() === p.classe.toUpperCase()) {
-                                selectClass.selectedIndex = i;
-                                break;
-                            }
-                        }
-                        sincronizarClasseDoSelect();
+
+                    if (!IS_RETAIL) {
+                        const ctrl = document.getElementById('controla_estoque');
+                        if (ctrl) ctrl.checked = !!Number(p.controla_estoque);
                     }
 
                     if (IS_RETAIL) {
@@ -684,14 +745,19 @@
         async function salvarProduto(event) {
             event.preventDefault();
 
-            sincronizarClasseDoSelect();
+            if (!IS_RETAIL) {
+                sincronizarClasseDoSelect();
+            }
             const form = document.getElementById('formProduto');
             if (form && !form.reportValidity()) {
                 return;
             }
-            if (!(document.getElementById('classe').value || '').trim()) {
-                mostrarMensagem(`Selecione uma ${LABEL_CLASSIF_LOWER} antes de salvar.`, 'erro');
-                document.getElementById('classificacaoSelect')?.focus();
+            if (!IS_RETAIL && !(document.getElementById('classe').value || '').trim()) {
+                mostrarMensagem(`Informe um ${LABEL_CLASSIF_LOWER} antes de salvar.`, 'erro');
+                const destino = document.getElementById('classificacaoSelect')?.disabled
+                    ? document.getElementById('classe')
+                    : document.getElementById('classificacaoSelect');
+                destino?.focus();
                 return;
             }
             
@@ -700,7 +766,6 @@
                 produto: document.getElementById('nome').value.trim().toUpperCase(),
                 barcode: document.getElementById('barcode').value.trim() || null,
                 preco: parseFloat(document.getElementById('preco').value),
-                classe: document.getElementById('classe').value.trim().toUpperCase(),
                 porkilo: document.getElementById('porkilo').value.toUpperCase(),
                 vendaliberada: document.getElementById('vendaliberada').value.toUpperCase(),
                 impressora: parseInt(document.getElementById('impressora').value) || 1,
@@ -709,6 +774,12 @@
                 ncm: document.getElementById('ncm').value.trim().toUpperCase() || '',
                 descricao: document.getElementById('descricao').value.trim().toUpperCase() || ''
             };
+
+            if (!IS_RETAIL) {
+                dados.classe = document.getElementById('classe').value.trim().toUpperCase();
+                const ctrl = document.getElementById('controla_estoque');
+                if (ctrl) dados.controla_estoque = ctrl.checked ? 1 : 0;
+            }
 
             if (IS_RETAIL) {
                 Object.assign(dados, montarPayloadRetail());

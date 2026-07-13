@@ -18,6 +18,7 @@ load_dotenv(os.path.join(_ROOT, ".env"))
 
 from app import app  # noqa: E402
 from database import conectar  # noqa: E402
+from services.estoque import calcular_saldo, ensure_estoque_schema, registrar_movimento  # noqa: E402
 from services.retail_catalog_schema import ensure_retail_catalog_schema  # noqa: E402
 
 
@@ -63,6 +64,7 @@ class RetailCatalogCrudTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         ensure_retail_catalog_schema()
+        ensure_estoque_schema()
         cls.retail_id = _find_retail_cliente()
         cls.rest_id = _find_restaurant_cliente()
         cls.client = app.test_client()
@@ -142,14 +144,14 @@ class RetailCatalogCrudTests(unittest.TestCase):
                 "chave": codigo,
                 "produto": prod_nome,
                 "preco": 9.99,
-                "classe": "TESTE",
                 "porkilo": "Nao",
                 "vendaliberada": "Sim",
+                "controla_estoque": 1,
                 "category_id": cat_id,
                 "subcategory_id": sub_id,
                 "retail": {
                     "nome_vitrine": f"{prod_nome} Vitrine",
-                    "estoque": 5,
+                    "estoque_minimo": 2,
                     "destaque": 1,
                     "ativo": 1,
                 },
@@ -165,7 +167,8 @@ class RetailCatalogCrudTests(unittest.TestCase):
         try:
             cur.execute(
                 """
-                SELECT p.chave, p.category_id, p.subcategory_id, pr.estoque, pr.nome_vitrine
+                SELECT p.chave, p.category_id, p.subcategory_id, p.controla_estoque,
+                       pr.estoque_minimo, pr.nome_vitrine
                 FROM produtos p
                 LEFT JOIN produto_retail pr ON pr.product_id = p.chave AND pr.id_cliente = p.id_cliente
                 WHERE p.id_cliente = %s AND p.produto = %s
@@ -178,36 +181,55 @@ class RetailCatalogCrudTests(unittest.TestCase):
             self.__class__.created_produto_id = int(row["chave"])
             self.assertEqual(int(row["category_id"]), cat_id)
             self.assertEqual(int(row["subcategory_id"]), sub_id)
-            self.assertEqual(float(row["estoque"]), 5.0)
+            self.assertEqual(int(row["controla_estoque"]), 1)
+            self.assertEqual(float(row["estoque_minimo"]), 2.0)
         finally:
             cur.close()
             conn.close()
+
+        registrar_movimento(
+            self.retail_id,
+            self.created_produto_id,
+            tipo="entrada",
+            quantidade=5,
+            origem="manual",
+        )
+        self.assertEqual(calcular_saldo(self.retail_id, self.created_produto_id), 5.0)
 
         upd = self.client.put(
             f"/api/editar-produto/{self.created_produto_id}",
             json={
                 "produto": prod_nome,
                 "preco": 10.5,
-                "classe": "TESTE",
                 "porkilo": "Nao",
                 "vendaliberada": "Sim",
+                "controla_estoque": 1,
                 "category_id": cat_id,
                 "subcategory_id": sub_id,
-                "retail": {"estoque": 7, "ativo": 1},
+                "retail": {"estoque_minimo": 3, "ativo": 1},
             },
             headers=self._json_headers(),
         )
         self.assertEqual(upd.status_code, 200, upd.get_data(as_text=True))
 
+        registrar_movimento(
+            self.retail_id,
+            self.created_produto_id,
+            tipo="ajuste",
+            quantidade=1,
+            origem="manual",
+        )
+
         conn = conectar()
         cur = conn.cursor(dictionary=True)
         try:
             cur.execute(
-                "SELECT estoque FROM produto_retail WHERE product_id = %s AND id_cliente = %s",
+                "SELECT estoque_minimo FROM produto_retail WHERE product_id = %s AND id_cliente = %s",
                 (self.created_produto_id, self.retail_id),
             )
             pr = cur.fetchone()
-            self.assertEqual(float(pr["estoque"]), 7.0)
+            self.assertEqual(float(pr["estoque_minimo"]), 3.0)
+            self.assertEqual(calcular_saldo(self.retail_id, self.created_produto_id), 4.0)
 
             cur.execute(
                 "SELECT COUNT(*) AS n FROM produto_retail WHERE product_id = %s AND id_cliente = %s",
@@ -226,6 +248,11 @@ class RetailCatalogCrudTests(unittest.TestCase):
         conn = conectar()
         cur = conn.cursor()
         try:
+            if cls.created_produto_id:
+                cur.execute(
+                    "DELETE FROM estoque_movimentos WHERE produto_id = %s AND id_cliente = %s",
+                    (cls.created_produto_id, cls.retail_id),
+                )
             if cls.created_produto_id:
                 cur.execute(
                     "DELETE FROM produtos WHERE chave = %s AND id_cliente = %s",

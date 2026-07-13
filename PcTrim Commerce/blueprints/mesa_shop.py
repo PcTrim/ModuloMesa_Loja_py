@@ -9,6 +9,7 @@ from decorators import login_required, restaurant_only
 from database import conectar
 from repositories.mesa_repo import fetch_mesa_recent_for_client
 from services.dados_loja import obter_dados_loja
+from services.retail_catalog import listar_produtos_por_classificacao
 from services.financeiro_inadimplencia import FinanceiroBloqueioError, assert_nova_venda_permitida
 import time
 
@@ -427,16 +428,7 @@ def produtos_por_classificacao(nome_classificacao):
         nome_classificacao_db = row["nomeclassificacao"]
         print(f"[LOG] nomeclassificacao encontrada: {nome_classificacao_db}", flush=True)
 
-        print(
-            f"[LOG] Executando SELECT chave, produto, preco, descricao FROM produtos WHERE classe = %s AND id_cliente = %s",
-            (nome_classificacao_db, id_cliente),
-            flush=True,
-        )
-        cursor.execute(
-            "SELECT chave, produto AS nome, preco, descricao AS observacao, barcode FROM produtos WHERE classe = %s AND id_cliente = %s",
-            (nome_classificacao_db, id_cliente),
-        )
-        produtos = cursor.fetchall()
+        produtos = listar_produtos_por_classificacao(cursor, id_cliente, nome_classificacao_db)
         print(f"[LOG] Produtos retornados: {produtos}", flush=True)
         if not produtos:
             cursor.execute("SELECT DISTINCT classe, id_cliente FROM produtos")

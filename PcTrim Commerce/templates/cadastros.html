@@ -83,7 +83,9 @@
         <div class="content">
             <a href="/cadastrar-produto" class="btn-voltar">🍕 Produtos</a>
             <a href="/cadastrar-entregador" class="btn-voltar">🚚 Entregador</a>
+            {% if not is_retail %}
             <a href="/cadastrar-classificacao" class="btn-voltar">📁 {{ label_classif }}</a>
+            {% endif %}
             <a href="/cadastrar-taxa" class="btn-voltar">💰 Taxas de Entrega</a>
             <a href="#" class="btn-voltar" onclick="abrirModalFormaPagamento(); return false;">💳 Forma de Pagamento</a>
             <a href="/dados-loja" class="btn-voltar">🏪 Dados da Loja</a>
