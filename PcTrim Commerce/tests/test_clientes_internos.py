@@ -24,7 +24,7 @@ class ClientesInternosServiceTests(unittest.TestCase):
         "os.environ",
         {
             "MYSQL_HOST": "127.0.0.1",
-            "MYSQL_PORT": "3306",
+            "MYSQL_PORT": "3308",
             "MYSQL_USER": "app",
             "MYSQL_PASSWORD": "app_pw",
             "MYSQL_HOST_INTERNO": "92.113.33.100",

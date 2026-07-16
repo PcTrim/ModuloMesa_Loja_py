@@ -1,0 +1,24 @@
+{# Injeta cor primária do tenant; sobrescreve --purple e acentos derivados. #}
+<style>
+:root {
+  --cor-primaria: {{ cor_primaria or '#7c3aed' }};
+  --cor-primaria-hover: color-mix(in srgb, var(--cor-primaria) 85%, #000);
+  --cor-primaria-texto: #ffffff;
+  --purple: var(--cor-primaria);
+  --on-primary: var(--cor-primaria-texto);
+  --accent-soft: color-mix(in srgb, var(--cor-primaria) 40%, #fff);
+  --tab-active: color-mix(in srgb, var(--cor-primaria) 50%, #fff);
+  --outline-fg: color-mix(in srgb, var(--cor-primaria) 40%, #fff);
+  --sum-open: color-mix(in srgb, var(--cor-primaria) 55%, #fff);
+}
+html[data-theme="light"] {
+  --cor-primaria: {{ cor_primaria or '#6d28d9' }};
+  --cor-primaria-hover: color-mix(in srgb, var(--cor-primaria) 85%, #000);
+  --purple: var(--cor-primaria);
+  --on-primary: var(--cor-primaria-texto);
+  --accent-soft: var(--cor-primaria);
+  --tab-active: var(--cor-primaria);
+  --outline-fg: var(--cor-primaria);
+  --sum-open: var(--cor-primaria);
+}
+</style>

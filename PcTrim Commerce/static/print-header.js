@@ -196,20 +196,27 @@
     var loja = opts.loja || cacheLoja || {};
     var meta = opts.meta || {};
     var ctx = fmtCtx();
+    var F = ctx.F;
+    var formato = F.normFormato ? F.normFormato(opts.formato) : "completa";
+    var simples = F.isSimples ? F.isSimples(formato) : false;
     var out = [];
     var nome = trimStr(loja.nome) || "Minha Loja";
 
-    out.push(ctx.ESC + "a" + String.fromCharCode(1));
-    out.push(
-      ctx.ESC +
-        "!" +
-        String.fromCharCode(0x30) +
-        nome +
+    if (!simples) out.push(ctx.ESC + "a" + String.fromCharCode(1));
+    if (F.bigTitle) {
+      out.push(F.bigTitle(nome, formato, ctx.W));
+    } else {
+      out.push(
         ctx.ESC +
-        "!" +
-        String.fromCharCode(0x00)
-    );
-    out.push(ctx.ESC + "a" + String.fromCharCode(0));
+          "!" +
+          String.fromCharCode(0x30) +
+          nome +
+          ctx.ESC +
+          "!" +
+          String.fromCharCode(0x00)
+      );
+    }
+    if (!simples) out.push(ctx.ESC + "a" + String.fromCharCode(0));
 
     var cnpj = formatCnpj(loja.cnpj);
     if (cnpj) pushOptionalLines(out, ctx, "CNPJ", cnpj, 0);
@@ -224,17 +231,21 @@
 
     var titulo = trimStr(opts.tituloPedido);
     if (titulo) {
-      out.push(ctx.ESC + "a" + String.fromCharCode(1));
-      out.push(
-        ctx.ESC +
-          "!" +
-          String.fromCharCode(0x30) +
-          titulo +
+      if (!simples) out.push(ctx.ESC + "a" + String.fromCharCode(1));
+      if (F.bigTitle) {
+        out.push(F.bigTitle(titulo, formato, ctx.W));
+      } else {
+        out.push(
           ctx.ESC +
-          "!" +
-          String.fromCharCode(0x00)
-      );
-      out.push(ctx.ESC + "a" + String.fromCharCode(0));
+            "!" +
+            String.fromCharCode(0x30) +
+            titulo +
+            ctx.ESC +
+            "!" +
+            String.fromCharCode(0x00)
+        );
+      }
+      if (!simples) out.push(ctx.ESC + "a" + String.fromCharCode(0));
     }
 
     var atendente = resolveAtendente(meta, global.LOJA_PRINT_CTX);

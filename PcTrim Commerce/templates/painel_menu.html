@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='ui_touch.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_touch.css') }}?v=2">
   {% include 'partials/topbar_meta_assets.html' %}
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -107,7 +107,7 @@
     .theme-top-btn:focus-visible {
       outline: none;
       border-color: var(--purple);
-      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);
     }
     html[data-theme="dark"] .theme-top-btn .icon-dark { display: none; }
     html[data-theme="light"] .theme-top-btn .icon-light { display: none; }
@@ -116,7 +116,7 @@
       font-weight: 800;
       color: var(--badge-fg);
       border: 0.5px solid var(--purple);
-      background: rgba(124, 58, 237, 0.18);
+      background: color-mix(in srgb, var(--purple) 18%, transparent);
       padding: 7px 12px;
       border-radius: 999px;
       white-space: nowrap;
@@ -223,7 +223,7 @@
     a.tile:focus-visible {
       outline: none;
       border-color: var(--purple);
-      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.22);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 22%, transparent);
       background: var(--surface);
     }
     a.tile .ico {
@@ -231,7 +231,7 @@
       width: 52px;
       height: 52px;
       border-radius: 14px;
-      background: rgba(124, 58, 237, 0.15);
+      background: color-mix(in srgb, var(--purple) 15%, transparent);
       color: var(--tile-ico-fg);
       display: flex;
       align-items: center;
@@ -318,7 +318,7 @@
     #baixa-modal .baixa-actions{position:sticky;bottom:0;display:flex;gap:10px;justify-content:flex-end;align-items:center;padding-top:10px;margin-top:10px;border-top:0.5px solid var(--line);background:color-mix(in srgb, var(--side) 85%, transparent);}
     #baixa-modal .baixa-actions .ui-mini-btn{min-width:160px;}
     #baixa-modal [data-baixa-item]{cursor:pointer;}
-    #baixa-modal [data-baixa-item].sel{outline:2px solid rgba(124,58,237,.55);border-color:rgba(124,58,237,.55);}
+    #baixa-modal [data-baixa-item].sel{outline:2px solid color-mix(in srgb, var(--purple) 55%, transparent);border-color:color-mix(in srgb, var(--purple) 55%, transparent);}
     @media (min-width: 901px){ #baixa-modal .baixa-pay-list{grid-template-columns:repeat(2,minmax(0,1fr));} }
     @media (max-width: 900px){
       #baixa-modal .baixa-layout{grid-template-columns:1fr; grid-template-rows:minmax(220px,45vh) 1fr;}
@@ -331,11 +331,11 @@
     #baixa-modal.has-selection #baixa-list{display:none;}
     #baixa-modal.has-selection #baixa-form{display:flex;}
     #fechamento-modal .ui-modal-panel {
-      max-width: 560px;
+      max-width: 740px;
       margin: 0 auto;
-      width: min(560px, calc(100% - 28px));
+      width: min(740px, calc(100% - 28px));
       position: relative;
-      max-height: min(86vh, 620px);
+      max-height: min(92vh, 820px);
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -343,9 +343,9 @@
     #fechamento-modal .ui-modal-panel > section.ui-dash {
       flex: 1 1 auto;
       min-height: 0;
-      overflow-y: auto;
-      overflow-x: hidden;
-      -webkit-overflow-scrolling: touch;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     #fechamento-modal .ui-modal-head { flex-shrink: 0; padding-right: 48px; justify-content: flex-start; }
     #fechamento-modal #fechamento-close.fechamento-close-x {
@@ -385,12 +385,39 @@
       color: var(--muted); background: color-mix(in srgb, var(--side) 70%, transparent);
     }
     #fechamento-modal .fech-step.on {
-      border-color: rgba(124, 58, 237, 0.45);
+      border-color: color-mix(in srgb, var(--purple) 45%, transparent);
       background: color-mix(in srgb, var(--purple) 14%, transparent);
       color: var(--text);
     }
     #fechamento-modal .fech-step-pane { display: none; }
-    #fechamento-modal .fech-step-pane.on { display: block; }
+    #fechamento-modal .fech-step-pane.on {
+      display: block;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    #fechamento-modal .fech-step-pane-2.on {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #fechamento-modal .fech-step2-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+    }
+    #fechamento-modal .fech-step2-sticky {
+      flex-shrink: 0;
+      border-top: 0.5px solid var(--line);
+      margin-top: 8px;
+      padding-top: 10px;
+      background: color-mix(in srgb, var(--side) 88%, transparent);
+    }
     #fechamento-modal .fechamento-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
     #fechamento-modal .fechamento-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 800; color: var(--muted); }
     #fechamento-modal .fechamento-fields input[type="date"] {
@@ -401,27 +428,42 @@
       margin: 0; max-height: none; overflow: visible; white-space: pre-wrap; background: var(--bg); border: 0.5px solid var(--line);
       border-radius: 14px; padding: 10px; font-size: 12px; line-height: 1.4; font-family: Consolas, 'Courier New', monospace; color: var(--text); text-align: left;
     }
-    #fechamento-modal #fechamento-resumo-box {
-      margin: 0 0 8px; max-height: none; overflow: visible; background: var(--bg); border: 0.5px solid var(--line);
-      border-radius: 14px; padding: 10px; font-size: 12px; line-height: 1.4; color: var(--text); text-align: left;
+    #fechamento-modal .fech-kpi-row {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px;
     }
+    #fechamento-modal .fech-kpi {
+      border: 0.5px solid var(--line); border-radius: 12px; padding: 10px 12px;
+      background: color-mix(in srgb, var(--side) 55%, transparent); min-width: 0;
+    }
+    #fechamento-modal .fech-kpi b { display: block; font-size: 11px; color: var(--muted); font-weight: 800; margin-bottom: 4px; }
+    #fechamento-modal .fech-kpi span { display: block; font-size: 15px; font-weight: 900; line-height: 1.25; word-break: break-word; }
+    #fechamento-modal #fechamento-resumo-box,
     #fechamento-modal #fechamento-gerencial-executivo {
-      margin: 0 0 8px; max-height: none; overflow: visible; background: var(--bg); border: 0.5px solid var(--line);
-      border-radius: 14px; padding: 10px; font-size: 12px; line-height: 1.4; color: var(--text); text-align: left;
+      margin: 0 0 10px; max-height: none; overflow: visible; background: var(--bg); border: 0.5px solid var(--line);
+      border-radius: 14px; padding: 12px; font-size: 13px; line-height: 1.45; color: var(--text); text-align: left;
     }
-    #fechamento-modal #fechamento-gerencial-executivo .fech-ger-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; margin-top: 6px;
+    #fechamento-modal .fech-list-title { font-weight: 800; margin: 10px 0 4px; font-size: 13px; }
+    #fechamento-modal .fech-list { margin: 0; padding-left: 18px; }
+    #fechamento-modal .fech-print-flags {
+      display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0 0 8px; align-items: center;
     }
-    #fechamento-modal #fechamento-gerencial-executivo .fech-ger-card {
-      border: 0.5px solid var(--line); border-radius: 10px; padding: 6px 8px; background: color-mix(in srgb, var(--side) 60%, transparent);
+    #fechamento-modal .fech-print-flags label {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text);
+      cursor: pointer; user-select: none;
     }
-    #fechamento-modal #fechamento-gerencial-executivo .fech-ger-card b { display: block; font-size: 11px; color: var(--muted); font-weight: 800; margin-bottom: 4px; }
-    #fechamento-modal #fechamento-gerencial-executivo .fech-ger-card span { font-size: 14px; font-weight: 900; }
+    #fechamento-modal .fech-print-flags input { width: 16px; height: 16px; accent-color: var(--purple); }
     #fechamento-modal #fechamento-sel-impressora {
       width: 100%; min-height: var(--ui-touch-sm, 44px); padding: 10px 12px; border-radius: 12px; border: 0.5px solid var(--line);
-      background: var(--bg); color: var(--text); font-family: inherit; font-weight: 700; margin-bottom: 10px;
+      background: var(--bg); color: var(--text); font-family: inherit; font-weight: 700; margin-bottom: 8px;
     }
-    #fechamento-modal .fechamento-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+    #fechamento-modal .fechamento-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+    #fechamento-modal .fechamento-actions .ui-mini-btn.fech-btn-outline {
+      background: transparent;
+      border-color: color-mix(in srgb, var(--purple) 40%, transparent);
+    }
+    @media (max-width: 640px) {
+      #fechamento-modal .fech-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
 
     @media (max-width: 1024px) {
       .content-wrap {
@@ -737,6 +779,7 @@
       filter: grayscale(0.25);
     }
   </style>
+  {% include 'partials/tenant_primary_color.html' %}
 </head>
 <body>
   <div class="page">
@@ -974,18 +1017,25 @@
             <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-ir-passo2">Próximo: resumo</button>
           </div>
         </div>
-        <div id="fechamento-pane-2" class="fech-step-pane">
-          <div class="ui-dash-muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">Resumo financeiro (fechamento)</div>
-          <div id="fechamento-resumo-box" aria-live="polite"></div>
-          <div class="ui-dash-muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">Relatório gerencial (prestação de contas)</div>
-          <div id="fechamento-gerencial-executivo" aria-live="polite"></div>
-          <label for="fechamento-sel-impressora" class="ui-dash-muted" style="display:block;font-size:12px;font-weight:800;margin-bottom:6px;">Impressora cadastrada</label>
-          <select id="fechamento-sel-impressora" aria-label="Impressora para resumo"></select>
-          <div class="fechamento-actions">
-            <button type="button" class="ui-mini-btn" id="fechamento-btn-voltar-1">Voltar</button>
-            <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-imprimir">Imprimir resumo</button>
-            <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-imprimir-gerencial">Imprimir relatório gerencial</button>
-            <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-ir-passo3">Próximo: arquivar</button>
+        <div id="fechamento-pane-2" class="fech-step-pane fech-step-pane-2">
+          <div class="fech-step2-body">
+            <div id="fechamento-kpi-row" class="fech-kpi-row" aria-live="polite"></div>
+            <div class="ui-dash-muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">Resumo financeiro</div>
+            <div id="fechamento-resumo-box" aria-live="polite"></div>
+            <div class="ui-dash-muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">Detalhe gerencial</div>
+            <div id="fechamento-gerencial-executivo" aria-live="polite"></div>
+          </div>
+          <div class="fech-step2-sticky">
+            <div class="ui-dash-muted" style="font-size:11px;font-weight:800;margin-bottom:6px;">Blocos na impressão gerencial (salva ao marcar)</div>
+            <div id="fechamento-print-flags" class="fech-print-flags" role="group" aria-label="Blocos de impressão"></div>
+            <label for="fechamento-sel-impressora" class="ui-dash-muted" style="display:block;font-size:12px;font-weight:800;margin-bottom:6px;">Impressora cadastrada</label>
+            <select id="fechamento-sel-impressora" aria-label="Impressora para resumo"></select>
+            <div class="fechamento-actions">
+              <button type="button" class="ui-mini-btn" id="fechamento-btn-voltar-1">Voltar</button>
+              <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-imprimir">Imprimir resumo</button>
+              <button type="button" class="ui-mini-btn fech-btn-outline" id="fechamento-btn-imprimir-gerencial">Imprimir gerencial</button>
+              <button type="button" class="ui-mini-btn ui-focus" id="fechamento-btn-ir-passo3">Próximo: arquivar</button>
+            </div>
           </div>
         </div>
         <div id="fechamento-pane-3" class="fech-step-pane">
@@ -1049,8 +1099,8 @@
       </section>
     </div>
   </div>
-  <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
-  <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=9"></script>
+  <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
+  <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=14"></script>
   <script src="{{ url_for('static', filename='receber-hotkeys.js') }}?v=1"></script>
   {% include 'partials/retail_mode.html' %}
   <script>
@@ -1229,6 +1279,20 @@
     var _fechamentoPreviewData = null;
     var _fechamentoResumoData = null;
     var _fechamentoGerencialData = null;
+    var _fechamentoPrintFlags = null;
+    var _fechamentoFlagsSaving = false;
+    var FECHAMENTO_FLAG_LABELS = [
+      { key: 'fat_recebido', label: 'Faturamento' },
+      { key: 'por_canal', label: 'Canal' },
+      { key: 'pagamentos', label: 'Pagamentos' },
+      { key: 'por_classe', label: 'Classificação' },
+      { key: 'remocoes', label: 'Remoções' },
+      { key: 'modificadas', label: 'Modificadas' },
+      { key: 'canceladas', label: 'Canceladas' },
+      { key: 'aguarde', label: 'AGUARDE' },
+      { key: 'novos_clientes', label: 'Novos clientes' },
+      { key: 'top_produtos', label: 'Top produtos' },
+    ];
 
     function fechamentoMoney(v) {
       var n = Number(v);
@@ -1283,6 +1347,103 @@
         be.title = motivo;
       }
     }
+    function fechamentoRenderPrintFlags(flags) {
+      var box = document.getElementById('fechamento-print-flags');
+      if (!box) return;
+      _fechamentoPrintFlags = flags || {};
+      var h = [];
+      FECHAMENTO_FLAG_LABELS.forEach(function (item) {
+        var on = String((_fechamentoPrintFlags && _fechamentoPrintFlags[item.key]) || 'N').toUpperCase() === 'S';
+        h.push(
+          '<label><input type="checkbox" data-fech-flag="' +
+            item.key +
+            '"' +
+            (on ? ' checked' : '') +
+            '> ' +
+            fechamentoEscHtml(item.label) +
+            '</label>'
+        );
+      });
+      box.innerHTML = h.join('');
+      box.querySelectorAll('input[data-fech-flag]').forEach(function (inp) {
+        inp.addEventListener('change', fechamentoOnPrintFlagChange);
+      });
+    }
+    function fechamentoCollectPrintFlagsFromUi() {
+      var out = {};
+      FECHAMENTO_FLAG_LABELS.forEach(function (item) {
+        out[item.key] = 'N';
+      });
+      var box = document.getElementById('fechamento-print-flags');
+      if (!box) return out;
+      box.querySelectorAll('input[data-fech-flag]').forEach(function (inp) {
+        var k = inp.getAttribute('data-fech-flag');
+        if (k) out[k] = inp.checked ? 'S' : 'N';
+      });
+      return out;
+    }
+    function fechamentoOnPrintFlagChange() {
+      if (_fechamentoFlagsSaving) return;
+      var flags = fechamentoCollectPrintFlagsFromUi();
+      _fechamentoFlagsSaving = true;
+      var box = document.getElementById('fechamento-print-flags');
+      if (box) {
+        box.querySelectorAll('input').forEach(function (inp) { inp.disabled = true; });
+      }
+      fetch('/api/fechamento/print-blocos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ print_blocos: flags }),
+      })
+        .then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (d) {
+          if (!d || !d.sucesso) {
+            alert((d && d.erro) || 'Não foi possível salvar as preferências de impressão.');
+            if (_fechamentoPrintFlags) fechamentoRenderPrintFlags(_fechamentoPrintFlags);
+            return;
+          }
+          _fechamentoPrintFlags = d.print_blocos || flags;
+          fechamentoRenderPrintFlags(_fechamentoPrintFlags);
+          return fechamentoRecarregarGerencialTexto();
+        })
+        .catch(function () {
+          alert('Falha de rede ao salvar preferências de impressão.');
+          if (_fechamentoPrintFlags) fechamentoRenderPrintFlags(_fechamentoPrintFlags);
+        })
+        .finally(function () {
+          _fechamentoFlagsSaving = false;
+          if (box) {
+            box.querySelectorAll('input').forEach(function (inp) { inp.disabled = false; });
+          }
+        });
+    }
+    function fechamentoRecarregarGerencialTexto() {
+      var di = document.getElementById('fechamento-di');
+      var df = document.getElementById('fechamento-df');
+      if (!di || !df) return Promise.resolve();
+      var a = (di.value || '').trim();
+      var b = (df.value || '').trim();
+      if (!a || !b) return Promise.resolve();
+      return fetch('/api/fechamento/relatorio-gerencial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data_inicio: a, data_fim: b }),
+      })
+        .then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (g) {
+          if (!g || !g.sucesso) {
+            alert((g && g.erro) || 'Não foi possível atualizar o texto de impressão gerencial.');
+            return;
+          }
+          _fechamentoGerencialData = g;
+          var gb = document.getElementById('fechamento-gerencial-executivo');
+          if (gb) gb.innerHTML = fechamentoHtmlGerencialExecutivo(g);
+          if (g.print_blocos) {
+            _fechamentoPrintFlags = g.print_blocos;
+            fechamentoRenderPrintFlags(_fechamentoPrintFlags);
+          }
+        });
+    }
     function abrirFechamentoModal() {
       var m = document.getElementById('fechamento-modal');
       if (!m) return;
@@ -1297,12 +1458,17 @@
       _fechamentoPreviewData = null;
       _fechamentoResumoData = null;
       _fechamentoGerencialData = null;
+      _fechamentoPrintFlags = null;
       fechamentoSetStep(1);
       fechamentoSyncActionState();
+      var kpi = document.getElementById('fechamento-kpi-row');
+      if (kpi) kpi.innerHTML = '';
       var rb = document.getElementById('fechamento-resumo-box');
       if (rb) rb.textContent = '';
       var gb = document.getElementById('fechamento-gerencial-executivo');
       if (gb) gb.textContent = '';
+      var flagsBox = document.getElementById('fechamento-print-flags');
+      if (flagsBox) flagsBox.innerHTML = '';
       var sel = document.getElementById('fechamento-sel-impressora');
       if (sel) {
         sel.innerHTML = '';
@@ -1382,43 +1548,105 @@
           fechamentoSyncActionState();
         });
     }
+    function fechamentoRenderKpis(d, g) {
+      var row = document.getElementById('fechamento-kpi-row');
+      if (!row) return;
+      var fat = (d && d.total_recebido != null) ? d.total_recebido : (g && g.faturamento_recebido_total);
+      var ped = (d && d.pedidos_recebidos_distintos != null) ? d.pedidos_recebidos_distintos : (g && g.pedidos_recebidos_distintos);
+      var rem = (g && g.item_removido_valor != null) ? g.item_removido_valor : 0;
+      var formas = (d && d.por_forma_pagamento) || [];
+      var formasTxt = formas.length ? (formas.length + ' forma' + (formas.length === 1 ? '' : 's')) : '—';
+      if (formas.length === 1) {
+        formasTxt = String(formas[0].forma || '—');
+      } else if (formas.length > 1) {
+        formasTxt = String(formas[0].forma || '—') + ' · +' + String(formas.length - 1);
+      }
+      row.innerHTML = [
+        '<div class="fech-kpi"><b>Faturamento RECEBIDO</b><span>' + fechamentoMoney(fat) + '</span></div>',
+        '<div class="fech-kpi"><b>Pedidos</b><span>' + String(ped != null ? ped : '—') + '</span></div>',
+        '<div class="fech-kpi"><b>Removidos</b><span>' + fechamentoMoney(rem) + '</span></div>',
+        '<div class="fech-kpi"><b>Formas</b><span>' + fechamentoEscHtml(formasTxt) + '</span></div>',
+      ].join('');
+    }
+    function fechamentoHtmlListaPedidoUsuario(lista) {
+      if (!lista || !lista.length) return '<div class="ui-dash-muted">Nenhum registro.</div>';
+      var h = ['<ul class="fech-list">'];
+      lista.forEach(function (it) {
+        h.push(
+          '<li>#' +
+            String(it.nropedido || '—') +
+            ' · ' +
+            fechamentoEscHtml(it.origem || '-') +
+            ' · ' +
+            fechamentoEscHtml(it.usuario || '—') +
+            '</li>'
+        );
+      });
+      h.push('</ul>');
+      return h.join('');
+    }
     function fechamentoHtmlGerencialExecutivo(g) {
       if (!g || !g.sucesso) return '<div class="ui-dash-muted">Relatório gerencial indisponível.</div>';
       var h = [];
-      h.push('<div style="font-weight:900;font-size:14px;margin-bottom:6px;">Prestação de contas</div>');
-      h.push('<div class="fech-ger-grid">');
-      h.push('<div class="fech-ger-card"><b>Faturamento RECEBIDO</b><span>' + fechamentoMoney(g.faturamento_recebido_total) + '</span></div>');
-      h.push('<div class="fech-ger-card"><b>Pedidos recebidos</b><span>' + String(g.pedidos_recebidos_distintos != null ? g.pedidos_recebidos_distintos : '—') + '</span></div>');
-      h.push('<div class="fech-ger-card"><b>Itens removidos (linhas)</b><span>' + String(g.item_removido_linhas != null ? g.item_removido_linhas : '—') + '</span></div>');
-      h.push('<div class="fech-ger-card"><b>Valor removido</b><span>' + fechamentoMoney(g.item_removido_valor) + '</span></div>');
-      h.push('<div class="fech-ger-card"><b>Comandas modificadas</b><span>' + String(g.comandas_modificadas_pedidos != null ? g.comandas_modificadas_pedidos : '—') + '</span></div>');
-      h.push('<div class="fech-ger-card"><b>Modif. não recebido</b><span>' + String(g.comandas_modificadas_nao_recebido_pedidos != null ? g.comandas_modificadas_nao_recebido_pedidos : '—') + '</span></div>');
-      h.push('<div class="fech-ger-card"><b>AGUARDE (pedidos)</b><span>' + String(g.pedidos_aguarde_distintos_periodo != null ? g.pedidos_aguarde_distintos_periodo : '—') + '</span></div>');
-      h.push('<div class="fech-ger-card"><b>Novos clientes</b><span>' + (g.novos_clientes_cadastro != null ? String(g.novos_clientes_cadastro) : '—') + '</span></div>');
-      h.push('</div>');
-      h.push('<div style="font-weight:800;margin:12px 0 4px;">Por canal</div><ul style="margin:0;padding-left:18px;">');
+      h.push('<div class="fech-list-title">Por canal</div><ul class="fech-list">');
       (g.por_canal || []).forEach(function (c) {
         h.push('<li>' + fechamentoEscHtml(c.origem) + ': ' + fechamentoMoney(c.faturamento) + ' · ' + String(c.pedidos) + ' ped.</li>');
       });
       h.push('</ul>');
-      h.push('<div style="font-weight:800;margin:8px 0 4px;">Pagamentos (categorias)</div><ul style="margin:0;padding-left:18px;">');
-      (g.pagamentos_por_categoria || []).slice(0, 12).forEach(function (p) {
+      h.push('<div class="fech-list-title">Pagamentos</div><ul class="fech-list">');
+      (g.pagamentos_por_categoria || []).forEach(function (p) {
         h.push('<li>' + fechamentoEscHtml(p.categoria) + ': <strong>' + fechamentoMoney(p.total) + '</strong></li>');
       });
       h.push('</ul>');
-      h.push('<div style="font-weight:800;margin:8px 0 4px;">Top produtos</div><ol style="margin:0;padding-left:22px;">');
-      (g.top_produtos || []).slice(0, 8).forEach(function (t) {
-        h.push('<li>' + fechamentoEscHtml((t.produto || t.ref || '').slice(0, 48)) + ' — ' + fechamentoMoney(t.total) + '</li>');
+      h.push('<div class="fech-list-title">Por classificação</div><ul class="fech-list">');
+      (g.por_classe || []).forEach(function (c) {
+        h.push('<li>' + fechamentoEscHtml(c.classe || 'Sem classificação') + ': <strong>' + fechamentoMoney(c.total) + '</strong></li>');
       });
-      h.push('</ol>');
+      if (!(g.por_classe || []).length) {
+        h.push('<li class="ui-dash-muted">Sem dados de classificação no período.</li>');
+      }
+      h.push('</ul>');
+      h.push('<div class="fech-list-title">Comandas modificadas (' + String(g.comandas_modificadas_pedidos != null ? g.comandas_modificadas_pedidos : 0) + ')</div>');
+      h.push(fechamentoHtmlListaPedidoUsuario(g.comandas_modificadas_lista));
+      h.push('<div class="fech-list-title">Comandas canceladas (' + String(g.comandas_canceladas_pedidos != null ? g.comandas_canceladas_pedidos : 0) + ')</div>');
+      h.push(fechamentoHtmlListaPedidoUsuario(g.comandas_canceladas_lista));
+      if (g.pedidos_aguarde_distintos_periodo != null || g.novos_clientes_cadastro != null) {
+        h.push('<div class="fech-list-title">Outros</div><ul class="fech-list">');
+        if (g.pedidos_aguarde_distintos_periodo != null) {
+          h.push('<li>AGUARDE (pedidos): ' + String(g.pedidos_aguarde_distintos_periodo) + '</li>');
+        }
+        if (g.novos_clientes_cadastro != null) {
+          h.push('<li>Novos clientes: ' + String(g.novos_clientes_cadastro) + '</li>');
+        }
+        h.push('</ul>');
+      }
       return h.join('');
+    }
+    function fechamentoHtmlResumo(d) {
+      var html = [];
+      html.push('<div style="font-weight:900;font-size:15px;margin-bottom:4px;">Total RECEBIDO: ' + fechamentoMoney(d.total_recebido != null ? d.total_recebido : d.total_geral) + '</div>');
+      html.push('<div class="ui-dash-muted" style="margin-bottom:8px;">Período: ' + fechamentoEscHtml(d.data_inicio) + ' a ' + fechamentoEscHtml(d.data_fim) +
+        ' · Pedidos: ' + String(d.pedidos_recebidos_distintos != null ? d.pedidos_recebidos_distintos : '—') + '</div>');
+      html.push('<div class="fech-list-title">Por status</div><ul class="fech-list">');
+      (d.por_status || []).forEach(function (x) {
+        html.push('<li>' + fechamentoEscHtml(x.status) + ': <strong>' + fechamentoMoney(x.total) + '</strong></li>');
+      });
+      html.push('</ul>');
+      html.push('<div class="fech-list-title">Por forma de pagamento</div><ul class="fech-list">');
+      (d.por_forma_pagamento || []).forEach(function (x) {
+        html.push('<li>' + fechamentoEscHtml(x.forma) + ': <strong>' + fechamentoMoney(x.total) + '</strong></li>');
+      });
+      html.push('</ul>');
+      return html.join('');
     }
     function fechamentoCarregarPasso2(di, df) {
       var rb = document.getElementById('fechamento-resumo-box');
       var gb = document.getElementById('fechamento-gerencial-executivo');
+      var kpi = document.getElementById('fechamento-kpi-row');
       var sel = document.getElementById('fechamento-sel-impressora');
       if (rb) rb.textContent = 'Carregando resumo financeiro...';
       if (gb) gb.textContent = 'Carregando relatório gerencial...';
+      if (kpi) kpi.innerHTML = '';
       _fechamentoResumoData = null;
       _fechamentoGerencialData = null;
       Promise.all([
@@ -1433,27 +1661,16 @@
           body: JSON.stringify({ data_inicio: di, data_fim: df }),
         }).then(function (r) { return r.json().catch(function () { return {}; }); }),
         fetch('/api/impressoras-cadastro').then(function (r) { return r.json().catch(function () { return {}; }); }),
+        fetch('/api/fechamento/print-blocos').then(function (r) { return r.json().catch(function () { return {}; }); }),
       ])
         .then(function (arr) {
           var d = arr[0];
           var g = arr[1];
           var imp = arr[2];
+          var flagsResp = arr[3];
           if (d && d.sucesso) {
             _fechamentoResumoData = d;
-            var html = [];
-            html.push('<div style="font-weight:900;font-size:15px;margin-bottom:8px;">Total geral: ' + fechamentoMoney(d.total_geral) + '</div>');
-            html.push('<div class="ui-dash-muted" style="margin-bottom:10px;">Período: ' + fechamentoEscHtml(d.data_inicio) + ' a ' + fechamentoEscHtml(d.data_fim) + '</div>');
-            html.push('<div style="font-weight:800;margin:8px 0 4px;">Por status</div><ul style="margin:0;padding-left:18px;">');
-            (d.por_status || []).forEach(function (x) {
-              html.push('<li>' + fechamentoEscHtml(x.status) + ': <strong>' + fechamentoMoney(x.total) + '</strong></li>');
-            });
-            html.push('</ul>');
-            html.push('<div style="font-weight:800;margin:8px 0 4px;">Por forma de pagamento</div><ul style="margin:0;padding-left:18px;">');
-            (d.por_forma_pagamento || []).forEach(function (x) {
-              html.push('<li>' + fechamentoEscHtml(x.forma) + ': <strong>' + fechamentoMoney(x.total) + '</strong></li>');
-            });
-            html.push('</ul>');
-            if (rb) rb.innerHTML = html.join('');
+            if (rb) rb.innerHTML = fechamentoHtmlResumo(d);
           } else {
             _fechamentoResumoData = null;
             if (rb) rb.innerHTML = '<div class="ui-dash-muted">Resumo financeiro: ' + fechamentoEscHtml((d && d.erro) || 'indisponível') + '</div>';
@@ -1466,6 +1683,17 @@
             if (gb) {
               gb.innerHTML = '<div class="ui-dash-muted">Relatório gerencial: ' + fechamentoEscHtml((g && g.erro) || 'indisponível') + '</div>';
             }
+          }
+          fechamentoRenderKpis(d && d.sucesso ? d : null, g && g.sucesso ? g : null);
+          var flags =
+            (flagsResp && flagsResp.sucesso && flagsResp.print_blocos) ||
+            (g && g.print_blocos) ||
+            (d && d.print_blocos) ||
+            null;
+          if (flags) {
+            fechamentoRenderPrintFlags(flags);
+          } else if (flagsResp && !flagsResp.sucesso) {
+            alert((flagsResp && flagsResp.erro) || 'Não foi possível carregar as preferências de impressão.');
           }
           if (sel) {
             sel.innerHTML = '';
@@ -1516,22 +1744,28 @@
       }
       fechamentoSetStep(3);
     }
-    function fechamentoImprimirResumo() {
+    function fechamentoValidarImpressoraSelecionada() {
       var sel = document.getElementById('fechamento-sel-impressora');
-      if (!_fechamentoResumoData || !_fechamentoResumoData.texto_impressao) {
-        alert('Aguarde o resumo carregar ou verifique o período.');
-        return;
-      }
       var iid = sel && sel.value ? parseInt(sel.value, 10) : 0;
-      if (!iid) {
+      if (!iid || !isFinite(iid)) {
         alert('Selecione uma impressora cadastrada.');
+        return null;
+      }
+      return iid;
+    }
+    function fechamentoEnviarImpressao(conteudo, tipoDoc) {
+      var iid = fechamentoValidarImpressoraSelecionada();
+      if (!iid) return;
+      if (!conteudo) {
+        alert('Texto de impressão indisponível. Recarregue o passo 2.');
         return;
       }
       var bodyF = {
-        conteudo: _fechamentoResumoData.texto_impressao,
+        conteudo: conteudo,
         impressora_id: iid,
         copias: 1,
         origem: 'fechamento_caixa',
+        tipo_documento: tipoDoc || 'fechamento',
         produtos: [],
       };
       (window.lojaImprimir ? window.lojaImprimir(bodyF) : fetch(lojaUrl('/imprimir'), {
@@ -1551,40 +1785,19 @@
           alert('Erro de rede na impressão.');
         });
     }
+    function fechamentoImprimirResumo() {
+      if (!_fechamentoResumoData || !_fechamentoResumoData.texto_impressao) {
+        alert('Aguarde o resumo carregar ou verifique o período.');
+        return;
+      }
+      fechamentoEnviarImpressao(_fechamentoResumoData.texto_impressao, 'fechamento_resumo');
+    }
     function fechamentoImprimirGerencial() {
-      var sel = document.getElementById('fechamento-sel-impressora');
       if (!_fechamentoGerencialData || !_fechamentoGerencialData.texto_impressao) {
         alert('Aguarde o relatório gerencial carregar ou verifique o período.');
         return;
       }
-      var iid = sel && sel.value ? parseInt(sel.value, 10) : 0;
-      if (!iid) {
-        alert('Selecione uma impressora cadastrada.');
-        return;
-      }
-      var bodyG = {
-        conteudo: _fechamentoGerencialData.texto_impressao,
-        impressora_id: iid,
-        copias: 1,
-        origem: 'fechamento_caixa',
-        produtos: [],
-      };
-      (window.lojaImprimir ? window.lojaImprimir(bodyG) : fetch(lojaUrl('/imprimir'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        body: JSON.stringify(bodyG),
-      }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (d) { return { ok: d.sucesso !== false, data: d }; }))
-        .then(function (imp) {
-          var d = imp.data || {};
-          if (!imp.ok) {
-            alert((d && d.erro) || 'Falha na impressão.');
-            return;
-          }
-          alert('Relatório gerencial enviado à impressão: ' + (d.printer || '') + (d.via ? ' (' + d.via + ')' : '') + '.');
-        })
-        .catch(function () {
-          alert('Erro de rede na impressão.');
-        });
+      fechamentoEnviarImpressao(_fechamentoGerencialData.texto_impressao, 'fechamento_gerencial');
     }
     function fechamentoExecutar() {
       var di = document.getElementById('fechamento-di');
@@ -1603,14 +1816,14 @@
       }
       var msg =
         'Confirme que entende:\n\n' +
-        '• No período ' +
+        '¢ No período ' +
         a +
         ' a ' +
         b +
         ': serão arquivadas linhas com ITEM_REMOVIDO e linhas recebidas (origem MESA: status_mesa = RECEBIDO; demais origens: status_pedido = RECEBIDO).\n' +
-        '• Esses dados passam para o HISTÓRICO (tabela pedido_periodos) e um arquivo .txt na pasta de relatórios (ex.: C:\\Geral\\Relatorios\\...).\n' +
-        '• Pedidos em AGUARDE ou outros status NÃO são eliminados e continuam no diário.\n' +
-        '• O contador de pedidos NÃO é alterado por este fechamento.\n\n' +
+        '¢ Esses dados passam para o HISTÃ“RICO (tabela pedido_periodos) e um arquivo .txt na pasta de relatórios (ex.: C:\\Geral\\Relatorios\\...).\n' +
+        '¢ Pedidos em AGUARDE ou outros status NÃƒO são eliminados e continuam no diário.\n' +
+        '¢ O contador de pedidos NÃƒO é alterado por este fechamento.\n\n' +
         'Deseja continuar?';
       if (!window.confirm(msg)) return;
       fetch('/api/fechamento/executar', {
@@ -1742,7 +1955,7 @@
           }
           if (j.tipo === "pizza" && j.sabores && Array.isArray(j.sabores) && j.sabores.length) {
             var nomes = j.sabores.map(function (s) { return toStr((s || {}).nome || "").trim(); }).filter(Boolean);
-            if (nomes.length) parts.push("Sabores: " + nomes.join(" • "));
+            if (nomes.length) parts.push("Sabores: " + nomes.join(" ¢ "));
           }
           return parts.join("\n").trim();
         } catch (_) {
@@ -1958,7 +2171,7 @@
             el("dash-pedido-pill-total").textContent = "Total: " + money(p.total || 0);
             var cli = toStr(p.nome || "Cliente");
             var tel = toStr(p.telefone || "").trim();
-            el("dash-pedido-cliente").textContent = cli + (tel ? (" • " + tel) : "");
+            el("dash-pedido-cliente").textContent = cli + (tel ? (" ¢ " + tel) : "");
             var end = [toStr(p.endereco || "").trim(), toStr(p.nrocasa || "").trim()].filter(Boolean).join(", ");
             var comp = toStr(p.complemento || "").trim();
             if (comp) end = (end ? (end + " - " + comp) : comp);
@@ -2317,7 +2530,7 @@
               '<div class="ui-dash-strong">' + esc(lblPedidoHash(r.nropedido)) + "</div>" +
               '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">' + pill + pillStatus + pillEnt + "</div>" +
               "</div>" +
-              '<div class="ui-dash-muted">' + esc(r.nome || "Cliente") + (r.telefone ? " • " + esc(r.telefone) : "") + "</div>" +
+              '<div class="ui-dash-muted">' + esc(r.nome || "Cliente") + (r.telefone ? " ¢ " + esc(r.telefone) : "") + "</div>" +
               '<div class="ui-dash-muted">' + esc(r.endereco || "—") + "</div>" +
               trocoLin +
               (r.data_criacao ? ('<div class="ui-dash-muted">Criado: ' + esc(String(r.data_criacao)) + "</div>") : "") +
@@ -2405,7 +2618,7 @@
         });
         var out = Object.keys(map).map(function (k) {
           var nms = Object.keys(map[k].nomes);
-          var prev = nms.slice(0, 2).join(" • ");
+          var prev = nms.slice(0, 2).join(" ¢ ");
           if (nms.length > 2) prev = prev + " +" + (nms.length - 2);
           return {
             mesa: map[k].mesa,
@@ -2602,7 +2815,7 @@
         var pode = !!p.pode_cancelar_comanda;
         cancelarPreviewState = { origem: orig, nropedido: nro, pode: pode };
         tit.textContent = lblPedidoHash(nro) + " · " + orig;
-        sub.textContent = toStr(p.nome || "Cliente") + (p.telefone ? (" • " + toStr(p.telefone)) : "") + " — Total: " + money(p.total || 0);
+        sub.textContent = toStr(p.nome || "Cliente") + (p.telefone ? (" ¢ " + toStr(p.telefone)) : "") + " — Total: " + money(p.total || 0);
         var stPed = toStr(p.status_pedido || "-").toUpperCase();
         var stCom = toStr(p.status_comanda || "NORMAL").toUpperCase();
         pills.innerHTML =
@@ -3158,7 +3371,7 @@
           stP.className = "ui-pill " + (stv === "ROTA" ? "warn" : "neutral");
         }
         if (tt) tt.textContent = money(Number(st.sel.total) || 0);
-        if (cli) cli.textContent = (st.sel.cliente || "Cliente") + (st.sel.telefone ? " • " + st.sel.telefone : "");
+        if (cli) cli.textContent = (st.sel.cliente || "Cliente") + (st.sel.telefone ? " ¢ " + st.sel.telefone : "");
         if (end) end.textContent = st.sel.endereco || "—";
         if (bent) {
           var nm = toStr(st.sel.entregador_nome).trim();
@@ -3233,7 +3446,7 @@
             return;
           }
           host.innerHTML =
-            '<div class="ui-dash-card"><div class="ui-dash-strong">Nenhum pedido para baixa</div><div class="ui-dash-muted">Aparecem pedidos em ABERTO ou em ROTA (origens DELIVERY e BALCÃO). Ficam de fora: só RECEBIDO, linhas em AGUARDE, removidos (ITEM_REMOVIDO) e outras origens (ex.: mesa).</div></div>';
+            '<div class="ui-dash-card"><div class="ui-dash-strong">Nenhum pedido para baixa</div><div class="ui-dash-muted">Aparecem pedidos em ABERTO ou em ROTA (origens DELIVERY e BALCÃƒO). Ficam de fora: só RECEBIDO, linhas em AGUARDE, removidos (ITEM_REMOVIDO) e outras origens (ex.: mesa).</div></div>';
           return;
         }
         host.innerHTML = rows.map(function (r) {
@@ -3257,7 +3470,7 @@
                 tag +
                 stTag +
               "</div>" +
-              '<div class="ui-dash-muted">' + esc(r.cliente || "Cliente") + (r.telefone ? " • " + esc(r.telefone) : "") + "</div>" +
+              '<div class="ui-dash-muted">' + esc(r.cliente || "Cliente") + (r.telefone ? " ¢ " + esc(r.telefone) : "") + "</div>" +
               '<div class="ui-dash-muted">' + esc(r.endereco || "—") + "</div>" +
               entLine +
             "</div>"

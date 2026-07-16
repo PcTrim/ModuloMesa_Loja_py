@@ -12,18 +12,17 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-from dotenv import load_dotenv
+from tests.test_env import aplicar_env_teste, conectar_teste  # noqa: E402
 
-load_dotenv(os.path.join(_ROOT, ".env"))
+aplicar_env_teste()
 
 from app import app  # noqa: E402
-from database import conectar  # noqa: E402
 from services.estoque import calcular_saldo, ensure_estoque_schema, listar_historico, registrar_movimento  # noqa: E402
 from services.retail_catalog_schema import ensure_retail_catalog_schema  # noqa: E402
 
 
 def _find_retail_cliente() -> int | None:
-    conn = conectar()
+    conn = conectar_teste()
     cur = conn.cursor(dictionary=True)
     try:
         cur.execute(
@@ -44,6 +43,11 @@ def _find_retail_cliente() -> int | None:
 class EstoqueTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        try:
+            c = conectar_teste()
+            c.close()
+        except Exception:
+            raise unittest.SkipTest("Dependência de ambiente externo (MySQL/E2E)")
         ensure_retail_catalog_schema()
         ensure_estoque_schema()
         cls.retail_id = _find_retail_cliente()
@@ -87,7 +91,7 @@ class EstoqueTests(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200, resp.get_data(as_text=True))
 
-        conn = conectar()
+        conn = conectar_teste()
         cur = conn.cursor(dictionary=True)
         try:
             cur.execute(
@@ -101,7 +105,7 @@ class EstoqueTests(unittest.TestCase):
             conn.close()
 
     def tearDown(self):
-        conn = conectar()
+        conn = conectar_teste()
         cur = conn.cursor()
         try:
             cur.execute(
@@ -155,7 +159,7 @@ class EstoqueTests(unittest.TestCase):
         self.assertFalse(primeiro["duplicado"])
         self.assertTrue(segundo["duplicado"])
 
-        conn = conectar()
+        conn = conectar_teste()
         cur = conn.cursor(dictionary=True)
         try:
             cur.execute(

@@ -74,6 +74,21 @@ def ssh_exec(client: paramiko.SSHClient, cmd: str, check: bool = True, timeout: 
 
 
 def main() -> int:
+    if os.environ.get("SKIP_TEST_GATE", "").strip() not in ("1", "true", "yes"):
+        print("==> Rodando test gate antes do deploy...")
+        import runpy
+
+        gate_path = DEPLOY_DIR.parent / "tests" / "run_gate.py"
+        # Executa como __main__ para respeitar exit code
+        ns = runpy.run_path(str(gate_path), run_name="__not_main__")
+        code = int(ns["run_gate"]())
+        if code != 0:
+            print(f"ERRO: test gate falhou (exit {code}). Abortando deploy.")
+            print("      Use SKIP_TEST_GATE=1 apenas se precisar pular conscientemente.")
+            return code
+    else:
+        print("==> SKIP_TEST_GATE=1 — gate local ignorado")
+
     version = read_local_version()
     zip_path = latest_zip()
     host, port, user, password = filezilla_vps8()
@@ -120,17 +135,39 @@ fi
 set -e
 cd '{REMOTE_APP}'
 ENV_BAK=~/lojaonline_vps8_backups/.env.backup-{ts}
-# unzip pode nao existir nesta VPS — usa Python
+# unzip pode nao existir nesta VPS — usa Python (overwrite explicito)
 python3 - <<'PY'
 import zipfile
 from pathlib import Path
+
 zip_path = Path('{remote_zip}')
 dest = Path('{REMOTE_APP}')
+written = 0
+skipped = 0
 with zipfile.ZipFile(zip_path, 'r') as zf:
-    zf.extractall(dest)
-print('EXTRACTED', len(zf.namelist()), 'files')
+    for info in zf.infolist():
+        name = info.filename.replace('\\\\', '/')
+        if not name or name.endswith('/'):
+            continue
+        # nunca extrair venvs empacotados por engano
+        parts = name.split('/')
+        if '.venv' in parts or '__pycache__' in parts:
+            skipped += 1
+            continue
+        target = dest / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with zf.open(info) as src, open(target, 'wb') as out:
+            out.write(src.read())
+        written += 1
+print('EXTRACTED', written, 'files skipped', skipped)
 zip_path.unlink(missing_ok=True)
 print('ZIP_REMOVED')
+
+idx = dest / 'templates' / 'index.html'
+text = idx.read_text(encoding='utf-8')
+if 'flex-wrap:nowrap' not in text or 'max-height:54px' not in text:
+    raise SystemExit('POST_EXTRACT_CSS_FAIL: templates/index.html sem class-tabs compacto')
+print('POST_EXTRACT_CSS_OK')
 PY
 if [ -f "$ENV_BAK" ]; then
   cp -a "$ENV_BAK" '{REMOTE_APP}/.env'
@@ -146,6 +183,29 @@ sed -i 's/\\r$//' '{REMOTE_APP}/deploy'/*.sh 2>/dev/null || true
 grep -E '^APP_VERSION' '{REMOTE_APP}/version.py' || true
 grep -E '^(LOJA_URL_PREFIX|MYSQL_HOST|MYSQL_PORT|MYSQL_DATABASE)=' '{REMOTE_APP}/.env' | sed -E 's/(PASSWORD)=.*/\\1=***/'
 echo EXTRACT_OK
+""",
+        )
+
+        # Garante templates PDV mesmo se extract falhar em overwrite
+        print("\n==> Force put templates/index.html + mesa.html")
+        sftp = client.open_sftp()
+        try:
+            for rel in ("templates/index.html", "templates/mesa.html"):
+                local = DEPLOY_DIR.parent / rel
+                remote = f"{REMOTE_APP}/{rel}"
+                print(f"    {rel}")
+                sftp.put(str(local), remote)
+        finally:
+            sftp.close()
+        ssh_exec(
+            client,
+            f"""
+python3 - <<'PY'
+from pathlib import Path
+t = Path('{REMOTE_APP}/templates/index.html').read_text(encoding='utf-8')
+assert 'flex-wrap:nowrap' in t and 'max-height:54px' in t, 'FORCE_PUT_CSS_FAIL'
+print('FORCE_PUT_CSS_OK')
+PY
 """,
         )
 

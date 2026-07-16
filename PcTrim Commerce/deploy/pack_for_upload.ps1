@@ -32,6 +32,19 @@ Get-ChildItem -Path $Root -Force | ForEach-Object {
             Get-ChildItem -Path $_.FullName -Force | ForEach-Object {
                 if ($_.Name -eq "dist" -or $_.Name -eq "deploy.local.env") { return }
                 if ($_.PSIsContainer) {
+                    if ($_.Name -eq "print_bridge") {
+                        $pbDest = Join-Path $deployDest "print_bridge"
+                        New-Item -ItemType Directory -Force -Path $pbDest | Out-Null
+                        Get-ChildItem -Path $_.FullName -Force | ForEach-Object {
+                            if ($_.Name -eq ".venv" -or $_.Name -eq "__pycache__") { return }
+                            if ($_.PSIsContainer) {
+                                Copy-Item -Path $_.FullName -Destination (Join-Path $pbDest $_.Name) -Recurse -Force
+                            } else {
+                                Copy-Item -Path $_.FullName -Destination (Join-Path $pbDest $_.Name) -Force
+                            }
+                        }
+                        return
+                    }
                     Copy-Item -Path $_.FullName -Destination (Join-Path $deployDest $_.Name) -Recurse -Force
                 } else {
                     Copy-Item -Path $_.FullName -Destination (Join-Path $deployDest $_.Name) -Force
@@ -46,8 +59,10 @@ Get-ChildItem -Path $Root -Force | ForEach-Object {
     }
 }
 
-# Remover __pycache__ e .pyc recursivamente
+# Remover __pycache__, .pyc e qualquer .venv residual (ex. print_bridge)
 Get-ChildItem -Path $Temp -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue |
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path $Temp -Recurse -Directory -Filter ".venv" -ErrorAction SilentlyContinue |
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 Get-ChildItem -Path $Temp -Recurse -Filter "*.pyc" -ErrorAction SilentlyContinue |
     Remove-Item -Force -ErrorAction SilentlyContinue

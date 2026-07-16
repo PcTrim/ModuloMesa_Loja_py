@@ -339,7 +339,9 @@ def mesa():
         conn = conectar()
         cur = conn.cursor(dictionary=True)
         cur.execute(
-            "SELECT * FROM classificacao WHERE id_cliente = %s ORDER BY nomeclassificacao",
+            "SELECT * FROM classificacao WHERE id_cliente = %s"
+            " AND (quantidadepartes IS NULL OR quantidadepartes <> 0)"
+            " ORDER BY nomeclassificacao",
             (id_cliente,),
         )
         classificacoes = cur.fetchall()

@@ -6,9 +6,9 @@ body.cfg-body {
   --cfg-ui-muted: #6b7280;
   --cfg-ui-line: #e5e7eb;
   --cfg-ui-input-border: #d1d5db;
-  --cfg-ui-primary: #4f46e5;
-  --cfg-ui-primary-hover: #4338ca;
-  --cfg-ui-focus: rgba(99, 102, 241, 0.15);
+  --cfg-ui-primary: var(--purple);
+  --cfg-ui-primary-hover: color-mix(in srgb, var(--purple) 85%, #000);
+  --cfg-ui-focus: color-mix(in srgb, var(--purple) 22%, transparent);
   --cfg-ui-danger: #ef4444;
   --cfg-ui-ok-bg: #d1fae5;
   --cfg-ui-ok-text: #065f46;
@@ -26,7 +26,7 @@ html[data-theme="dark"] body.cfg-body {
   --cfg-ui-input-border: var(--line);
   --cfg-ui-primary: var(--purple);
   --cfg-ui-primary-hover: color-mix(in srgb, var(--purple) 85%, #000);
-  --cfg-ui-focus: rgba(124, 58, 237, 0.22);
+  --cfg-ui-focus: color-mix(in srgb, var(--purple) 22%, transparent);
   --cfg-ui-ok-bg: rgba(16, 185, 129, 0.18);
   --cfg-ui-ok-text: color-mix(in srgb, var(--text) 70%, var(--green));
   --cfg-ui-err-bg: rgba(248, 113, 113, 0.16);

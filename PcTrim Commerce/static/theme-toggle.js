@@ -49,14 +49,48 @@
     }
   };
 
+  function readTenantPrimary() {
+    try {
+      var v = (getComputedStyle(document.documentElement).getPropertyValue('--cor-primaria') || '').trim();
+      if (/^#[0-9A-Fa-f]{6}$/.test(v)) return v;
+    } catch (_) {}
+    return '';
+  }
+
+  function applyTenantPrimary(theme, primary) {
+    if (!primary) return;
+    var root = document.documentElement;
+    var t = theme === 'light' ? 'light' : 'dark';
+    try {
+      root.style.setProperty('--cor-primaria', primary);
+      root.style.setProperty('--purple', primary);
+      root.style.setProperty('--on-primary', '#ffffff');
+      root.style.setProperty('--cor-primaria-hover', 'color-mix(in srgb, ' + primary + ' 85%, #000)');
+      root.style.setProperty('--cor-primaria-texto', '#ffffff');
+      if (t === 'light') {
+        root.style.setProperty('--accent-soft', primary);
+        root.style.setProperty('--tab-active', primary);
+        root.style.setProperty('--outline-fg', primary);
+        root.style.setProperty('--sum-open', primary);
+      } else {
+        root.style.setProperty('--accent-soft', 'color-mix(in srgb, ' + primary + ' 40%, #fff)');
+        root.style.setProperty('--tab-active', 'color-mix(in srgb, ' + primary + ' 50%, #fff)');
+        root.style.setProperty('--outline-fg', 'color-mix(in srgb, ' + primary + ' 40%, #fff)');
+        root.style.setProperty('--sum-open', 'color-mix(in srgb, ' + primary + ' 55%, #fff)');
+      }
+    } catch (_) {}
+  }
+
   function applyVars(theme) {
     var t = theme === 'light' ? 'light' : 'dark';
     var vars = THEME_VARS[t];
+    var primary = readTenantPrimary();
     try {
       Object.keys(vars).forEach(function (k) {
         document.documentElement.style.setProperty(k, vars[k]);
       });
     } catch (_) {}
+    applyTenantPrimary(t, primary);
   }
 
   function getStoredTheme() {

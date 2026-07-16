@@ -14,8 +14,55 @@ CADA PC COM IMPRESSORA = bridge neste PC (nao no Hostinger)
 
 5) Navegador neste PC: http://127.0.0.1:9123/health  -> "ok": true
 
-6) Site: https://pedidofacil.online/LojaOnline/  Ctrl+F5
+6) Site Homologacao: http://85.31.231.84:2001/LojaOnline/  Ctrl+F5
+   (producao: https://pedidofacil.online/LojaOnline/)
    Configuracoes - Impressoras - mapear terminal deste PC
+
+=== MULTIESTACAO (cada caixa / terminal) ===
+
+Cada estacao DEVE ter:
+- Print Bridge ativo (bat aberto)
+- Filas Windows instaladas (USB local + rede, se usar)
+- Mapeamento COMPLETO em Configuracoes > Impressao deste terminal
+  (todas as impressoras logicas com caminho Windows preenchido)
+
+Impressoras de rede (cozinha/bar): a mesma fila deve existir / ficar
+visivel no Windows de TODA estacao que distribui preparo.
+
+Regra: comanda/conta = caminho local da estacao;
+       preparo = caminho da fila de setor (geralmente rede).
+
+Botao "Testar" na linha do terminal envia 1 pagina de prova via Bridge.
+
+=== FORMATO ESC/POS (por impressora no cadastro) ===
+
+- Bematech / Elgin: formato "completa" (default)
+- Generica / POS80 / Generic Text Only: formato "simples"
+  (ou "completa" so se testado OK nesse hardware)
+
+Se "completa" sair com texto expandido ate o fim do papel,
+troque para "simples".
+
+=== CHECKLIST GO-LIVE POR ESTACAO ===
+
+[ ] Bridge ativo (/health ok)
+[ ] Terminal_id correto (hostname-usuario)
+[ ] Todas as logicas com caminho_local
+[ ] Teste comanda/conta OK
+[ ] Teste preparo (cozinha/bar) OK
+[ ] Duas estacoes simultaneas OK (se houver)
+[ ] Rollback rapido: perfil -> simples se layout quebrar
+
+Cenarios de validacao controlada:
+- Comanda em cada estacao
+- Preparo distribuido
+- Impressao simultanea em 2 PCs
+- Impressora desligada / caminho errado (deve falhar com mensagem clara)
+
+=== LOGS DO BRIDGE ===
+
+Na janela do bat: linhas [BRIDGE PRINT] / OK / ERRO com
+terminal_id, printer e status.
 
 Se .venv ja criado: rodar-bridge.cmd (reinicio rapido)
 

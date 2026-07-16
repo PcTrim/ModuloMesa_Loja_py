@@ -1,45 +1,39 @@
 """Consultas de integridade pós-teste E2E."""
+from __future__ import annotations
+
 import os
 import sys
+from pathlib import Path
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, _ROOT)
-from dotenv import load_dotenv
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-load_dotenv(os.path.join(_ROOT, ".env"))
-from database import conectar
+from tests.test_env import aplicar_env_teste, conectar_teste  # noqa: E402
+
+aplicar_env_teste()
 
 id_cliente = int(os.getenv("E2E_ID_CLIENTE", "1") or "1")
-conn = conectar()
+conn = conectar_teste()
 cur = conn.cursor(dictionary=True)
 cur.execute("SELECT contador FROM contadorpedido WHERE id_cliente=%s", (id_cliente,))
-c = cur.fetchone()
+print("contador", cur.fetchone())
 cur.execute(
     """
-    SELECT MAX(nropedido) AS mx
-    FROM pedido_diarios
+    SELECT MAX(nropedido) AS max_nro FROM pedido_diarios
     WHERE id_cliente=%s AND origem IN ('BALCAO','DELIVERY')
     """,
     (id_cliente,),
 )
-m = cur.fetchone()
+print("max_nro", cur.fetchone())
 cur.execute(
     """
-    SELECT DISTINCT nropedido, origem
-    FROM pedido_diarios
+    SELECT COUNT(*) AS n FROM pedido_diarios
     WHERE id_cliente=%s AND origem IN ('BALCAO','DELIVERY')
-    ORDER BY nropedido DESC
-    LIMIT 10
     """,
     (id_cliente,),
 )
-rows = cur.fetchall()
-contador = int(c["contador"]) if c else 0
-max_nro = int(m["mx"] or 0) if m else 0
+print("linhas", cur.fetchone())
 print("=== INTEGRIDADE DB id_cliente=%s ===" % id_cliente)
-print("contador:", contador)
-print("max_nropedido BALCAO/DELIVERY:", max_nro)
-print("contador >= max:", contador >= max_nro)
-print("ultimos pedidos (distinct):", rows)
 cur.close()
 conn.close()

@@ -51,7 +51,7 @@ body.cfg-body .topbar {
 }
 body.cfg-body .home:hover { background: rgba(255, 255, 255, 0.05) !important; border: none !important; }
 body.cfg-body .brand { font-weight: 600 !important; }
-body.cfg-body .badge { background: rgba(124, 58, 237, 0.2) !important; color: var(--accent-soft) !important; font-weight: 600 !important; }
+body.cfg-body .badge { background: color-mix(in srgb, var(--purple) 20%, transparent) !important; color: var(--accent-soft) !important; font-weight: 600 !important; }
 body.cfg-body .theme-top-btn { border: 0.5px solid var(--line) !important; background: var(--surface) !important; color: var(--muted) !important; }
 .home {
   color: var(--muted);
@@ -67,8 +67,8 @@ body.cfg-body .theme-top-btn { border: 0.5px solid var(--line) !important; backg
 }
 .home:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
-  background: rgba(124, 58, 237, 0.12);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);
+  background: color-mix(in srgb, var(--purple) 12%, transparent);
   color: var(--text);
 }
 .top-logo {
@@ -91,7 +91,7 @@ body.cfg-body .theme-top-btn { border: 0.5px solid var(--line) !important; backg
   text-overflow: ellipsis;
 }
 .badge {
-  background: rgba(124, 58, 237, 0.2);
+  background: color-mix(in srgb, var(--purple) 20%, transparent);
   color: var(--accent-soft);
   border: 0.5px solid var(--purple);
   border-radius: 999px;
@@ -121,7 +121,7 @@ body.cfg-body .theme-top-btn { border: 0.5px solid var(--line) !important; backg
 .theme-top-btn:focus-visible {
   outline: none;
   border-color: var(--purple);
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);
   color: var(--text);
 }
 html[data-theme="dark"] .theme-top-btn .icon-dark { display: none; }
@@ -290,7 +290,7 @@ html[data-theme="light"] .theme-top-btn .icon-light { display: none; }
 .cfg-back:focus-visible {
   outline: none;
   border-color: var(--purple);
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);
 }
 .cfg-badge {
   align-self: center;
@@ -298,7 +298,7 @@ html[data-theme="light"] .theme-top-btn .icon-light { display: none; }
   font-weight: 800;
   padding: 7px 12px;
   border-radius: 999px;
-  background: rgba(124, 58, 237, 0.18);
+  background: color-mix(in srgb, var(--purple) 18%, transparent);
   border: 0.5px solid var(--purple);
   color: color-mix(in srgb, var(--text) 78%, var(--purple));
   white-space: nowrap;
@@ -331,7 +331,7 @@ html[data-theme="light"] .theme-top-btn .icon-light { display: none; }
 .cfg-theme-btn:focus-visible {
   outline: none;
   border-color: var(--purple);
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);
 }
 html[data-theme="dark"] .cfg-theme-btn .icon-dark { display: none; }
 html[data-theme="light"] .cfg-theme-btn .icon-light { display: none; }
@@ -395,7 +395,7 @@ a.cfg-card {
 }
 a.cfg-card:hover {
   border-color: var(--purple);
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.18);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 18%, transparent);
 }
 .cfg-card .sigla {
   width: 44px;
@@ -541,7 +541,7 @@ body.cfg-body .btn-local:focus-visible,
 body.cfg-body .btn:focus-visible {
   outline: none !important;
   border-color: var(--purple) !important;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--purple) 22%, transparent) !important;
 }
 body.cfg-body .btn-salvar,
 body.cfg-body .btn-salvar *,
@@ -587,7 +587,7 @@ body.cfg-body select:focus-visible,
 body.cfg-body textarea:focus-visible {
   outline: none !important;
   border-color: var(--purple) !important;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--purple) 22%, transparent) !important;
   background: var(--surface) !important;
 }
 
@@ -659,7 +659,7 @@ body.cfg-body .mensagem.erro {
 .cfg-input:focus-visible, .cfg-select:focus-visible, .cfg-textarea:focus-visible {
   outline: none;
   border-color: var(--purple);
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);
   background: var(--surface);
 }
 
@@ -689,7 +689,7 @@ body.cfg-body .mensagem.erro {
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .cfg-btn:hover { border-color: var(--purple); }
-.cfg-btn:focus-visible { outline: none; border-color: var(--purple); box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.22); }
+.cfg-btn:focus-visible { outline: none; border-color: var(--purple); box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 22%, transparent); }
 .cfg-btn-primary { background: var(--purple); border-color: var(--purple); color: var(--on-primary); }
 .cfg-btn-success { background: #059669; border-color: #059669; color: var(--on-primary); }
 .cfg-btn-danger { background: transparent; border-color: var(--line); color: var(--danger); }

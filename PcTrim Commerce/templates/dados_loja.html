@@ -8,13 +8,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
-    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=24">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=2">
     {% include 'partials/topbar_meta_assets.html' %}
     {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4" defer></script>
     <style>
         .loading {
             display: inline-block;
@@ -59,6 +59,16 @@
                 <div class="cfg-field">
                     <label class="cfg-label" for="cnpj">CNPJ/CPF</label>
                     <input class="cfg-input" type="text" id="cnpj" name="cnpj" placeholder="CNPJ ou CPF" data-hint="CNPJ ou CPF da loja, se tiver.">
+                </div>
+                <div class="cfg-field" style="grid-column: 1 / -1;">
+                    <label class="cfg-label" for="cor_primaria">Cor primária da loja</label>
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+                        <input class="cfg-input" type="color" id="cor_primaria" name="cor_primaria" value="#7c3aed" style="width:52px;height:36px;padding:2px;cursor:pointer;" data-hint="Cor de botões e destaques do PDV.">
+                        <input class="cfg-input" type="text" id="cor_primaria_hex" placeholder="#7c3aed" maxlength="7" style="max-width:120px;" data-hint="Hexadecimal #RRGGBB.">
+                        <span class="btn-purple" id="cor_primaria_preview" aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:6px;font-weight:600;opacity:1;cursor:default;pointer-events:none;user-select:none;">Prévia</span>
+                        <button type="button" class="cfg-btn cfg-btn-ghost" id="cor_primaria_reset" data-hint="Volta à cor padrão do sistema (roxo).">Usar cor padrão</button>
+                    </div>
+                    <p class="cfg-help">A prévia e os botões desta tela mudam ao escolher a cor. Clique em Salvar para gravar.</p>
                 </div>
             </div>
         </section>
@@ -136,6 +146,91 @@
     </div>
 
     <script>
+        const COR_PRIMARIA_DEFAULT = '#7c3aed';
+        let corPrimariaPadrao = true;
+        function isValidCorHex(v) {
+            return /^#[0-9A-Fa-f]{6}$/.test(String(v || '').trim());
+        }
+        function normalizeCorHex(v) {
+            const s = String(v || '').trim();
+            if (!isValidCorHex(s)) return null;
+            return '#' + s.slice(1).toUpperCase();
+        }
+        function applyLiveThemePrimary(hex) {
+            const root = document.documentElement;
+            const theme = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+            try {
+                root.style.setProperty('--cor-primaria', hex);
+                root.style.setProperty('--purple', hex);
+                root.style.setProperty('--on-primary', '#ffffff');
+                root.style.setProperty('--cor-primaria-hover', 'color-mix(in srgb, ' + hex + ' 85%, #000)');
+                root.style.setProperty('--cor-primaria-texto', '#ffffff');
+                if (theme === 'light') {
+                    root.style.setProperty('--accent-soft', hex);
+                    root.style.setProperty('--tab-active', hex);
+                    root.style.setProperty('--outline-fg', hex);
+                    root.style.setProperty('--sum-open', hex);
+                } else {
+                    root.style.setProperty('--accent-soft', 'color-mix(in srgb, ' + hex + ' 40%, #fff)');
+                    root.style.setProperty('--tab-active', 'color-mix(in srgb, ' + hex + ' 50%, #fff)');
+                    root.style.setProperty('--outline-fg', 'color-mix(in srgb, ' + hex + ' 40%, #fff)');
+                    root.style.setProperty('--sum-open', 'color-mix(in srgb, ' + hex + ' 55%, #fff)');
+                }
+            } catch (_) {}
+        }
+        function applyCorPrimaria(val, opts) {
+            const options = opts || {};
+            const hex = normalizeCorHex(val) || COR_PRIMARIA_DEFAULT;
+            if (options.asPadrao === true) {
+                corPrimariaPadrao = true;
+            } else if (options.asPadrao === false) {
+                corPrimariaPadrao = false;
+            } else {
+                corPrimariaPadrao = hex.toUpperCase() === COR_PRIMARIA_DEFAULT.toUpperCase();
+            }
+            const colorEl = document.getElementById('cor_primaria');
+            const hexEl = document.getElementById('cor_primaria_hex');
+            const preview = document.getElementById('cor_primaria_preview');
+            if (colorEl) colorEl.value = hex.toLowerCase();
+            if (hexEl) hexEl.value = hex;
+            if (preview) {
+                preview.style.background = hex;
+                preview.style.color = '#ffffff';
+                preview.style.borderColor = hex;
+            }
+            applyLiveThemePrimary(hex);
+        }
+        function bindCorPrimariaInputs() {
+            const colorEl = document.getElementById('cor_primaria');
+            const hexEl = document.getElementById('cor_primaria_hex');
+            const resetBtn = document.getElementById('cor_primaria_reset');
+            if (colorEl) {
+                colorEl.addEventListener('input', function () {
+                    applyCorPrimaria(colorEl.value, { asPadrao: false });
+                });
+            }
+            if (hexEl) {
+                hexEl.addEventListener('input', function () {
+                    let v = hexEl.value.trim();
+                    if (v && v[0] !== '#') v = '#' + v;
+                    hexEl.value = v.slice(0, 7);
+                    if (isValidCorHex(hexEl.value)) applyCorPrimaria(hexEl.value, { asPadrao: false });
+                });
+                hexEl.addEventListener('blur', function () {
+                    if (!isValidCorHex(hexEl.value.trim())) {
+                        applyCorPrimaria(colorEl ? colorEl.value : COR_PRIMARIA_DEFAULT, { asPadrao: corPrimariaPadrao });
+                    } else {
+                        applyCorPrimaria(hexEl.value, { asPadrao: false });
+                    }
+                });
+            }
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function () {
+                    applyCorPrimaria(COR_PRIMARIA_DEFAULT, { asPadrao: true });
+                });
+            }
+        }
+
                 // Impede submit do formulário ao pressionar Enter em qualquer campo
                 document.getElementById('formDadosLoja').addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {
@@ -147,7 +242,11 @@
                     }
                 });
         // Carrega os dados existentes ao abrir a página
-        window.addEventListener('DOMContentLoaded', carregarDados);
+        window.addEventListener('DOMContentLoaded', function () {
+            bindCorPrimariaInputs();
+            applyCorPrimaria(COR_PRIMARIA_DEFAULT);
+            carregarDados();
+        });
 
         // Buscar dados por CEP
         async function buscarPorCep(cep) {
@@ -305,9 +404,17 @@
                     if (chkObrig) {
                         chkObrig.checked = !!(dados.cliente_obrigatorio_balcao == 1 || dados.cliente_obrigatorio_balcao === true);
                     }
+                    if (dados.cor_primaria) {
+                        applyCorPrimaria(dados.cor_primaria, { asPadrao: false });
+                    } else {
+                        applyCorPrimaria(COR_PRIMARIA_DEFAULT, { asPadrao: true });
+                    }
+                } else {
+                    applyCorPrimaria('#7c3aed');
                 }
             } catch (erro) {
                 console.error('Erro ao carregar dados:', erro);
+                applyCorPrimaria('#7c3aed');
             }
         }
 
@@ -356,7 +463,10 @@
                 latitude: document.getElementById('latitude').value,
                 longitude: document.getElementById('longitude').value,
                 ddd: document.getElementById('ddd').value,
-                cliente_obrigatorio_balcao: document.getElementById('cliente_obrigatorio_balcao').checked
+                cliente_obrigatorio_balcao: document.getElementById('cliente_obrigatorio_balcao').checked,
+                cor_primaria: corPrimariaPadrao
+                    ? null
+                    : ((document.getElementById('cor_primaria_hex').value || '').trim() || null)
             };
 
             try {

@@ -18,32 +18,32 @@
     .pdv{height:100vh;display:flex;flex-direction:column;overflow:hidden;}
     .topbar{height:44px;min-height:44px;background:var(--surface);border-bottom:.5px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 12px;gap:10px;}
     .home{color:var(--muted);display:flex;align-items:center;text-decoration:none;padding:4px;border-radius:6px;} .home:hover{color:var(--text);background:rgba(255,255,255,.05);}
-    .home:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(124,58,237,.28);background:rgba(124,58,237,.12);color:var(--text);}
+    .home:focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);background:color-mix(in srgb, var(--purple) 12%, transparent);color:var(--text);}
     .top-logo{display:flex;align-items:center;pointer-events:none;}
     .top-logo img{height:24px;width:auto;opacity:.9;}
     .brand{flex:1;text-align:center;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .badge{background:rgba(124,58,237,.2);color:var(--accent-soft);border:.5px solid var(--purple);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap;}
+    .badge{background:color-mix(in srgb, var(--purple) 20%, transparent);color:var(--accent-soft);border:.5px solid var(--purple);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap;}
     .theme-top-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:32px;padding:0;border-radius:8px;border:.5px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;}
     .theme-top-btn:hover{color:var(--text);border-color:var(--purple);}
-    .theme-top-btn:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.28);color:var(--text);}
+    .theme-top-btn:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);color:var(--text);}
     html[data-theme="dark"] .theme-top-btn .icon-dark{display:none;}
     html[data-theme="light"] .theme-top-btn .icon-light{display:none;}
     .toggle{display:inline-flex;border:.5px solid var(--line);border-radius:999px;overflow:hidden;background:var(--bg);}
     .toggle button{border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer;} .toggle button.active{background:var(--purple);color:var(--on-primary);}
-    .toggle button:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(124,58,237,.28);}
+    .toggle button:focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);}
 
-    .shell{flex:1;display:grid;grid-template-columns:260px 1fr 300px;min-height:0;}
+    .shell{flex:1;display:grid;grid-template-columns:320px minmax(0, 1fr) 360px;min-height:0;}
     .left,.right{background:var(--side);min-height:0;padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0;}
     .left{overflow-y:auto;}
     .left{border-right:.5px solid var(--line);} .right{border-left:.5px solid var(--line);} 
-    .center{padding:8px;display:flex;flex-direction:column;gap:8px;min-height:0;}
+    .center{padding:8px;display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0;}
 
     .title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 2px;}
     .form{display:grid;gap:6px;}
     .row{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;}
     .row-split{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
     .form input,.form textarea{width:100%;padding:8px 10px;border-radius:6px;border:.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;transition:border-color .12s ease,box-shadow .12s ease,background-color .12s ease;}
-    .form input:focus,.form textarea:focus,.form input:focus-visible,.form textarea:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.28);background:var(--surface);}
+    .form input:focus,.form textarea:focus,.form input:focus-visible,.form textarea:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);background:var(--surface);}
     .form input:disabled,.form textarea:disabled{background:var(--input-bg);color:var(--muted);cursor:not-allowed;}
     .form input:-webkit-autofill,.form input:-webkit-autofill:hover,.form input:-webkit-autofill:focus{-webkit-text-fill-color:var(--text);-webkit-box-shadow:0 0 0 1000px var(--bg) inset;transition:background-color 9999s ease-in-out 0s;}
     #cli-fone::-webkit-contacts-auto-fill-button{visibility:hidden;display:none !important;pointer-events:none;position:absolute;right:0;}
@@ -51,21 +51,21 @@
     .field-group{display:grid;gap:6px;padding:6px;border:.5px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02);}
     .field-group .title{margin:0;}
     .btn-mini{border:.5px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;}
-    .btn-mini:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.22);}
+    .btn-mini:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 22%, transparent);}
     .btn-mini:disabled{opacity:.55;cursor:not-allowed;}
     #btn-localizar{padding:6px 9px;font-size:11px;line-height:1.1;height:30px;white-space:nowrap;}
     .row-thirds{display:grid;grid-template-columns:1fr 1fr 72px;gap:6px;}
     .readonly{opacity:.9;background:var(--input-bg);}
 
-    #class-tabs{display:flex;gap:4px;overflow-x:auto;min-height:34px;}
-    #class-tabs button{border:.5px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
-    #class-tabs button.active{background:rgba(124,58,237,.2);color:var(--tab-active);border-color:var(--purple);}
-    #subcat-tabs{display:flex;gap:4px;overflow-x:auto;min-height:28px;margin-top:4px;}
+    #class-tabs{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;overflow-x:auto;overflow-y:hidden;height:54px;max-height:54px;width:100%;max-width:100%;min-width:0;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}
+    #class-tabs button{border:.5px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex:0 0 auto;line-height:1.2;}
+    #class-tabs button.active{background:color-mix(in srgb, var(--purple) 20%, transparent);color:var(--tab-active);border-color:var(--purple);}
+    #subcat-tabs{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;overflow-x:auto;overflow-y:hidden;height:36px;max-height:36px;margin-top:4px;width:100%;max-width:100%;min-width:0;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}
     #subcat-tabs:empty{display:none;}
     .retail-pdv #class-tabs button{border-color:var(--purple);}
-    .retail-pdv #class-tabs button.active{background:var(--purple);color:var(--on-primary);box-shadow:0 2px 8px rgba(124,58,237,.35);border-color:var(--purple);}
-    .retail-pdv #subcat-tabs button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
-    .retail-pdv #subcat-tabs button.active{background:rgba(124,58,237,.15);color:var(--tab-active);border-color:var(--purple);box-shadow:0 1px 4px rgba(124,58,237,.25);}
+    .retail-pdv #class-tabs button.active{background:var(--purple);color:var(--on-primary);box-shadow:0 2px 8px color-mix(in srgb, var(--purple) 35%, transparent);border-color:var(--purple);}
+    .retail-pdv #subcat-tabs button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex:0 0 auto;}
+    .retail-pdv #subcat-tabs button.active{background:color-mix(in srgb, var(--purple) 15%, transparent);color:var(--tab-active);border-color:var(--purple);box-shadow:0 1px 4px color-mix(in srgb, var(--purple) 25%, transparent);}
     .retail-pdv #frac-inline{display:none!important;}
     .retail-pdv .prod-card{cursor:pointer;padding:10px;transition:border-color .15s,box-shadow .15s;}
     .retail-pdv .prod-card:hover{border-color:var(--purple);box-shadow:0 2px 8px rgba(0,0,0,.12);}
@@ -73,28 +73,27 @@
     .retail-pdv .prod-card .price{font-size:14px;}
     .retail-pdv .prod-card .stock{font-size:10px;color:var(--muted);font-weight:600;}
     .retail-pdv .prod-card .stock.stock-low{color:var(--accent-soft,#fbbf24);}
-    .retail-pdv .item-desc{-webkit-line-clamp:1;}
     .search{display:flex;align-items:center;gap:8px;background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--muted);} 
     #busca-produto{flex:1;border:none;outline:none;background:transparent;font-family:inherit;font-size:13px;color:var(--text);} 
     .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;align-content:start;overflow-y:auto;min-height:0;}
     .prod-empty{grid-column:1/-1;border:.5px dashed var(--line);border-radius:10px;padding:16px;background:var(--surface);color:var(--muted);font-size:12px;line-height:1.5;text-align:center;}
     .prod-card{background:var(--surface);border:.5px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;}
-    .prod-card.sel-frac{border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.2);}
+    .prod-card.sel-frac{border-color:var(--purple);box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 20%, transparent);}
     .prod-card.sel-frac .code{color:var(--accent-soft);}
     .prod-card .name{font-size:12px;font-weight:700;line-height:1.25;} .prod-card .code{font-size:10px;color:var(--muted);font-weight:600;} .prod-card .price{font-size:12px;color:var(--green);font-weight:700;}
     .prod-card .stock{font-size:10px;color:var(--muted);font-weight:600;}
     .prod-card .stock.stock-low{color:var(--accent-soft,#fbbf24);}
     .btn-plus{width:100%;margin-top:auto;border:none;border-radius:6px;background:var(--purple);color:var(--on-primary);font-weight:600;font-size:15px;padding:8px;cursor:pointer;font-family:inherit;}
 
-    #itens-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;min-width:0;}
-    .item{background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:8px;font-size:12px;display:grid;gap:6px;min-width:0;max-width:100%;overflow:hidden;}
-    .item.ajuste-tecnico{border-color:var(--purple);background:rgba(124,58,237,.08);}
+    #itens-list{flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;min-width:0;}
+    .item{background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;display:grid;gap:6px;min-width:0;max-width:100%;}
+    .item.ajuste-tecnico{border-color:var(--purple);background:color-mix(in srgb, var(--purple) 8%, transparent);}
     .item-top{display:flex;flex-direction:column;gap:4px;min-width:0;}
     .item-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-width:0;}
     .item-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
     .item-mid,.item-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}
-    .item-name{font-weight:700;font-size:12px;flex:1;min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.25;word-break:break-word;}
-    .item-desc{font-size:11px;color:var(--muted);min-width:0;max-width:100%;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.3;word-break:break-word;}
+    .item-name{font-weight:700;font-size:12px;flex:1;min-width:0;line-height:1.25;white-space:normal;word-break:break-word;}
+    .item-desc{font-size:11px;color:var(--muted);min-width:0;max-width:100%;line-height:1.3;white-space:normal;word-break:break-word;}
     .item-mid{color:var(--muted);flex-wrap:wrap;}
     .item-qty{display:flex;align-items:center;gap:4px;flex-shrink:0;}
     .qty-btn{min-width:24px;height:24px;border:.5px solid var(--line);border-radius:6px;background:var(--control-bg);color:var(--text);cursor:pointer;font-size:13px;line-height:1;padding:0 6px;}
@@ -110,7 +109,7 @@
     .del:hover,.btn-remove:hover{color:var(--danger);}
     .item.fracionado .item-obs{grid-template-columns:1fr;gap:4px;}
 
-    .tot{background:var(--surface);border:.5px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;}
+    .tot{flex-shrink:0;background:var(--surface);border:.5px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;}
     .sum{display:flex;justify-content:space-between;font-size:12px;} .sum.total{font-size:14px;font-weight:800;padding-top:4px;border-top:.5px solid var(--line);}    
     .btn-green,.btn-purple,.btn-outline{width:100%;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:inherit;}
     .btn-green{background:#059669;color:var(--on-primary);} .btn-purple{background:var(--purple);color:var(--on-primary);} .btn-outline{background:transparent;color:var(--outline-fg);border:1px solid var(--purple);} 
@@ -136,7 +135,7 @@
     .tot-collapse[open] summary{margin-bottom:8px;color:var(--sum-open);}
     .func-list{display:grid;gap:6px;}
     .hotkey-btn{width:100%;border:.5px solid var(--line);border-radius:6px;background:var(--btn-secondary);color:var(--text);padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;text-align:left;}
-    .hotkey-btn kbd{font-family:inherit;background:rgba(124,58,237,.15);border:.5px solid var(--purple);border-radius:999px;padding:2px 8px;margin-right:6px;font-size:10px;}
+    .hotkey-btn kbd{font-family:inherit;background:color-mix(in srgb, var(--purple) 15%, transparent);border:.5px solid var(--purple);border-radius:999px;padding:2px 8px;margin-right:6px;font-size:10px;}
     .btn-icon-mini{width:100%;border:.5px solid var(--line);border-radius:6px;background:var(--btn-secondary);color:var(--text);padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;}
 
     .modal{display:none;position:fixed;inset:0;z-index:2000;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.6);} .modal.open{display:flex;}
@@ -174,13 +173,13 @@
     .frac-inline-actions .btn-modal{padding:6px 8px;font-size:11px;border-radius:7px;}
     .frac-etiqueta{font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--purple);margin:-4px 0 10px;text-transform:uppercase;}
     .frac-search{width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;border:.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;transition:border-color .15s,box-shadow .15s,background .15s;}
-    .frac-search:focus,.frac-search:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.28);background:var(--surface);}
+    .frac-search:focus,.frac-search:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);background:var(--surface);}
     .frac-busca-lbl{display:block;margin-bottom:4px;font-size:11px;color:var(--muted);}
     .frac-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0;}
     .frac-col-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;}
     .frac-prod-list{display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto;}
     .frac-prod-btn{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;width:100%;padding:7px 10px;border:.5px solid var(--line);border-radius:7px;background:var(--btn-secondary);color:var(--text);cursor:pointer;font-family:inherit;font-size:12px;text-align:left;transition:border-color .15s,box-shadow .15s;}
-    .frac-prod-btn:focus,.frac-prod-btn:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.22);}
+    .frac-prod-btn:focus,.frac-prod-btn:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 22%, transparent);}
     .frac-prod-btn:hover:not(:disabled){border-color:var(--purple);}
     .frac-prod-btn:disabled{opacity:.4;cursor:not-allowed;}
     .frac-prod-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
@@ -194,7 +193,7 @@
     .frac-remove-frac:focus,.frac-remove-frac:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(239,68,68,.35);}
     .frac-sabor-code{font-size:10px;font-weight:600;color:var(--muted);margin-top:4px;}
     .frac-count-badge{font-size:11px;font-weight:600;color:var(--purple);}
-    .modal-card.fracionado .btn-modal:focus,.modal-card.fracionado .btn-modal:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.22);}
+    .modal-card.fracionado .btn-modal:focus,.modal-card.fracionado .btn-modal:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 22%, transparent);}
     .muted{font-size:12px;color:var(--muted);margin-bottom:8px;}
     .pay-list{display:grid;gap:8px;margin:10px 0 12px;}
     .pay-opt{width:100%;text-align:left;border:.5px solid var(--line);border-radius:10px;background:var(--btn-secondary);color:var(--text);padding:10px 12px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
@@ -216,7 +215,7 @@
     .opt-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;}
     .opt-choices{display:flex;flex-wrap:wrap;gap:6px;}
     .opt-btn{border:.5px solid var(--line);background:var(--btn-secondary);color:var(--text);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
-    .opt-btn:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(124,58,237,.22);}
+    .opt-btn:focus-visible{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px color-mix(in srgb, var(--purple) 22%, transparent);}
     .opt-btn.sel{border-color:var(--green);background:rgba(16,185,129,.14);}
     .opt-price{font-size:11px;color:var(--muted);font-weight:700;}
     .opt-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;}
@@ -234,7 +233,7 @@
     .obs-box{width:100%;padding:8px 10px;border-radius:6px;border:.5px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;min-height:56px;resize:vertical;}
 
     @media (max-width: 1200px){
-      .shell{grid-template-columns:220px 1fr 260px;}
+      .shell{grid-template-columns:280px minmax(0, 1fr) 300px;}
     }
     @media (max-width: 900px){
       .shell{grid-template-columns:1fr;}
@@ -246,6 +245,7 @@
       .casa-conf-actions-row{grid-template-columns:1fr;}
     }
   </style>
+  {% include 'partials/tenant_primary_color.html' %}
 </head>
 <body{% if IS_RETAIL %} class="retail-pdv"{% endif %}>
 <div class="pdv">
@@ -390,9 +390,9 @@
 
 <div class="modal" id="modal-pag"><div class="modal-card"><h3>Forma de pagamento</h3><p class="muted">Escolha uma opção para {% if IS_RETAIL %}esta venda{% else %}este pedido{% endif %}</p><div id="formas-pagamento-troco-panel" style="display:none;"><p class="muted" id="formas-pagamento-troco-hint"></p><input id="formas-pagamento-troco-input" class="form" type="text" inputmode="decimal" placeholder="Cliente paga com (R$)" autocomplete="off" /><p class="muted" id="formas-pagamento-troco-preview"></p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" class="btn-purple" id="formas-pagamento-troco-confirm">Confirmar</button><button type="button" class="btn-outline" id="formas-pagamento-troco-back">Outras formas</button></div></div><div id="formas-pagamento-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 <div class="modal" id="modal-conferencia"><div class="modal-card print casa-conf-card"><header class="casa-conf-head"><h3>{% if IS_RETAIL %}Conferir venda{% else %}Conferir pedido{% endif %}</h3><p class="muted">Revise os dados antes de salvar/imprimir</p></header><div class="casa-conf-body"><pre id="conferencia-conteudo" class="conferencia-pre"></pre></div><footer class="casa-conf-foot"><div class="casa-conf-printer-row"><span class="casa-conf-printer-lbl">Impressora</span><input id="imp-compartilhada" class="imp-ro" readonly placeholder="(cadastro MySQL)"></div><div class="casa-conf-actions"><button type="button" class="btn-modal btn-modal-primary" id="btn-salvar-imprimir">Salvar e imprimir</button><div class="casa-conf-actions-row"><button type="button" class="btn-modal" id="btn-salvar-txt">Salvar {% if IS_RETAIL %}venda{% else %}pedido{% endif %} (.txt)</button><button type="button" class="btn-modal" id="btn-enviar-whatsapp" style="display:none;">Enviar no WhatsApp</button><button type="button" class="btn-modal" data-close-modal>Fechar</button></div></div></footer></div></div>
-<div class="modal" id="modal-baixa-balcao"><div class="modal-card zoom"><h3>Baixa do balcão</h3><p class="muted">Feche o pagamento agora ou deixe para a retirada</p><div class="zoom-resumo" style="margin-top:10px;"><div><strong id="bb-titulo">{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %}</strong></div><div class="muted" id="bb-sub">BALCÃO</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"><span class="badge" id="bb-total">Total: R$ 0,00</span><span class="badge" id="bb-somado">Somado: R$ 0,00</span><span class="badge" id="bb-restante">Restante: R$ 0,00</span><span class="badge" id="bb-troco" style="display:none;">Troco: R$ 0,00</span></div></div><div id="bb-formas" class="pay-list" style="margin-top:12px;"></div><div class="modal-actions"><button class="btn-modal" id="btn-bb-receber">Marcar RECEBIDO <kbd>End</kbd></button><button class="btn-modal" id="btn-bb-depois">Depois</button></div></div></div>
+<div class="modal" id="modal-baixa-balcao"><div class="modal-card zoom"><h3>Baixa do balcão</h3><p class="muted">Feche o pagamento agora ou deixe para a retirada</p><div class="zoom-resumo" style="margin-top:10px;"><div><strong id="bb-titulo">{% if IS_RETAIL %}Venda{% else %}Pedido{% endif %}</strong></div><div class="muted" id="bb-sub">BALCÃƒO</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"><span class="badge" id="bb-total">Total: R$ 0,00</span><span class="badge" id="bb-somado">Somado: R$ 0,00</span><span class="badge" id="bb-restante">Restante: R$ 0,00</span><span class="badge" id="bb-troco" style="display:none;">Troco: R$ 0,00</span></div></div><div id="bb-formas" class="pay-list" style="margin-top:12px;"></div><div class="modal-actions"><button class="btn-modal" id="btn-bb-receber">Marcar RECEBIDO <kbd>End</kbd></button><button class="btn-modal" id="btn-bb-depois">Depois</button></div></div></div>
 <div class="modal" id="modal-conferencia-zoom"><div class="modal-card zoom"><h3>Conferência ampliada</h3><p class="muted">Visualização completa {% if IS_RETAIL %}da venda{% else %}do pedido{% endif %} para revisão</p><div id="conferencia-zoom-resumo" class="zoom-resumo"></div><div id="conferencia-zoom-editor-list" class="zoom-editor-list"></div><div class="modal-actions"><button class="btn-modal" id="btn-zoom-aplicar">Aplicar alterações</button><button class="btn-modal" data-close-modal>Fechar</button></div></div></div>
-<div class="modal" id="modal-historico-cliente"><div class="modal-card zoom"><h3>Histórico do cliente</h3><p class="muted">Últimos 3 pedidos recebidos</p><div id="historico-cliente-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
+<div class="modal" id="modal-historico-cliente"><div class="modal-card zoom"><h3>Histórico do cliente</h3><p class="muted">Ãšltimos 3 pedidos recebidos</p><div id="historico-cliente-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 <div class="modal" id="modal-aguarde-pendentes" data-retail-hide><div class="modal-card zoom"><h3>Pedidos em AGUARDE</h3><p class="muted">Pedidos aguardando conclusão ou impressão. Abra para retomar o atendimento.</p><div id="aguarde-pendentes-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 
 <div class="modal" id="modal-opcoes-item"><div class="modal-card zoom"><h3>Montagem do item</h3><p class="muted" id="opcoes-sub">Selecione as opções e confirme</p><div id="opcoes-body" class="opt-grid"></div><div class="opt-footer"><div class="opt-total" id="opcoes-total">+ R$ 0,00</div><div class="modal-actions" style="margin-top:0;"><button class="btn-modal" id="btn-opcoes-confirmar">Confirmar</button><button class="btn-modal" id="btn-opcoes-cancelar" data-close-modal>Cancelar</button></div></div></div></div>
@@ -400,11 +400,11 @@
 <div class="modal" id="modal-campanhas"><div class="modal-card zoom"><h3>Campanhas elegíveis</h3><p class="muted">Selecione uma campanha para aplicar</p><div id="campanhas-elegiveis-list" class="pay-list"></div><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 <div class="modal" id="modal-dados-item"><div class="modal-card zoom"><h3>Detalhes do item</h3><pre id="dados-item-body" class="conferencia-pre" style="white-space:pre-wrap;"></pre><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 
-<script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3"></script>
-<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=10"></script>
+<script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=14"></script>
 {% include 'partials/print_context.html' %}
-<script src="{{ url_for('static', filename='print-format.js') }}?v=1"></script>
-<script src="{{ url_for('static', filename='print-header.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='print-format.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='print-header.js') }}?v=2"></script>
 <script src="{{ url_for('static', filename='receber-hotkeys.js') }}?v=1"></script>
 {% include 'partials/retail_mode.html' %}
 <script>
@@ -437,7 +437,8 @@
   }
   let impressoraCasaLabel="(carregando impressora…)";
   let impressoraCasaFeed=6;
-  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], retailCategoriaId:null, retailSubcategoriaId:null, retailCategoriaNome:null, pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0,taxaEntregaZeradaCampanha:false,campanhaAplicadaId:null, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, clienteObrigatorioBalcao:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
+  let impressoraCasaFormato="completa";
+  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], retailCategoriaId:null, retailSubcategoriaId:null, retailCategoriaNome:null, pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0,taxaEntregaZeradaCampanha:false,campanhaAplicadaId:null, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, clienteObrigatorioBalcao:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, distanciaManual:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
   function msgCasaPedidoBloqueado(){ return IS_RETAIL ? "Comanda cancelada ou venda em ROTA/RECEBIDA não pode ser alterada na tela /casa." : "Comanda cancelada ou pedido em ROTA/RECEBIDO não pode ser alterado na tela /casa."; }
   function aplicarBloqueioCasaUi(host){
     const bloq = !!state.pedidoBloqueadoCasa && (Number(state.pedidoId)||0) > 0;
@@ -909,16 +910,23 @@
     const m=f&&Number(f.mult);
     return Number.isFinite(m)&&m>0 ? m : 1;
   }
-  function tamanhoOverridePrice(sel){
+  /** Preço absoluto do tamanho (não % nem +/-) — usado como acréscimo, igual borda. */
+  function tamanhoPrecoAcrescimo(sel){
     const meta=sel._meta||{};
     const arr=Array.isArray(meta.tamanhos)?meta.tamanhos:[];
     const f=arr.find((x)=>x.label===sel.tamanho);
     const hasMult = f && Number.isFinite(Number(f.mult)) && Number(f.mult) > 0;
-    if(hasMult) return null;
+    if(hasMult) return 0;
     const hasDelta = f && Number.isFinite(Number(f.delta)) && Number(f.delta) !== 0;
-    if(hasDelta) return null;
-    const p = f ? numOrZero(f.price) : 0;
+    if(hasDelta) return 0;
+    return f ? numOrZero(f.price) : 0;
+  }
+  function tamanhoOverridePrice(sel){
+    const p=tamanhoPrecoAcrescimo(sel);
     return p>0 ? p : null;
+  }
+  function precoBaseItem(precoProduto, mult, delta){
+    return ((Number(precoProduto)||0)*(Number(mult)||1))+(Number(delta)||0);
   }
   function tamanhoDelta(sel){
     const meta=sel._meta||{};
@@ -951,11 +959,12 @@
     const cEff = scope.cobertura==="uma_parte" && p>1 ? (c0/p) : c0;
     const aEff = scope.adicionais==="uma_parte" && p>1 ? (a0/p) : a0;
     const mult=tamanhoMultiplier(sel);
+    const tamanho = tamanhoPrecoAcrescimo(sel);
     const massa = m0*mult;
     const borda = b0*mult;
     const cobertura = cEff*mult;
     const adicionais = aEff*mult;
-    return {partes:p,mult,massa,borda,cobertura,adicionais,total:(massa+borda+cobertura+adicionais)};
+    return {partes:p,mult,tamanho,massa,borda,cobertura,adicionais,total:(tamanho+massa+borda+cobertura+adicionais)};
   }
   function totalAcrescimo(sel, partes=1){
     const det=acrescimoDetalhado(sel, partes);
@@ -977,7 +986,7 @@
       cobertura: sel.cobertura || "",
       adicionais: Array.isArray(sel.adicionais)?sel.adicionais:[],
       scope: sel._scope || {cobertura:"todas",adicionais:"todas"},
-      pricing: {mult, delta, override},
+      pricing: {mult, delta, override, tamanho_acres: numOrZero(acrescimos.tamanho)},
       acrescimos
     });
   }
@@ -990,7 +999,7 @@
       const ac=j.acrescimos||{};
       const pr=j.pricing||{};
       const partesN=Math.max(1,Math.floor(Number(j.partes)||1));
-      const sizeRelevant = (pr && ((Number(pr.mult)||1)!==1 || numOrZero(pr.delta)!==0 || (pr.override!=null && numOrZero(pr.override)>0)));
+      const sizeRelevant = (pr && ((Number(pr.mult)||1)!==1 || numOrZero(pr.delta)!==0 || (pr.override!=null && numOrZero(pr.override)>0) || numOrZero(pr.tamanho_acres)>0 || numOrZero(ac.tamanho)>0));
       if(j.tamanho && sizeRelevant) parts.push(`Tamanho: ${j.tamanho}`);
       if(j.massa && numOrZero(ac.massa)>0) parts.push(`Massa: ${j.massa}`);
       if(j.borda && numOrZero(ac.borda)>0) parts.push(`Borda: ${j.borda}`);
@@ -1095,7 +1104,7 @@
             const delta = Number(o.delta);
             const multTag = Number.isFinite(mult) && mult>0 ? `<span class="opt-price">× ${(mult*100).toLocaleString("pt-BR",{maximumFractionDigits:0})}%</span>` : "";
             const deltaTag = (!multTag && key==="tamanho" && Number.isFinite(delta) && delta!==0) ? `<span class="opt-price">${delta>0?"+":"-"} ${money(Math.abs(delta))}</span>` : "";
-            const priceTag = (!multTag && !deltaTag && key==="tamanho" && p>0) ? `<span class="opt-price">${money(p)}</span>` : (!multTag && !deltaTag && p?`<span class="opt-price">+ ${money(p)}</span>`:"");
+            const priceTag = (!multTag && !deltaTag && p>0) ? `<span class="opt-price">+ ${money(p)}</span>` : "";
             const metaTag = multTag || deltaTag || priceTag;
             b.innerHTML=`<span>${escapeHtml(o.label)}</span>${metaTag}`;
             const isSel = multi ? state.opcoesDraft.sel[key].includes(o.label) : state.opcoesDraft.sel[key]===o.label;
@@ -1134,16 +1143,15 @@
         const partesEst = Math.max(1, Math.floor(Number(state.opcoesDraft.partes)||1));
         const acres=totalAcrescimo(sel, partesEst);
         const mult=tamanhoMultiplier(sel);
-        const override=tamanhoOverridePrice(sel);
         const delta=tamanhoDelta(sel);
-        const base=override!=null ? Number(override) : ((numOrZero(state.opcoesDraft.basePreco)*mult) + numOrZero(delta));
+        const base=precoBaseItem(numOrZero(state.opcoesDraft.basePreco), mult, delta);
         const total=base + acres;
         const tot=el("opcoes-total");
         if(tot){
-          if(state.opcoesDraft.basePreco>0 || override!=null || delta){
+          if(numOrZero(state.opcoesDraft.basePreco)>0 || acres>0 || delta){
             tot.textContent = `Total estimado: ${money(total)}`;
           }else{
-            tot.textContent = acres>0 ? (`+ ${money(acres)}`) : "+ R$ 0,00";
+            tot.textContent = "+ R$ 0,00";
           }
         }
       };
@@ -1378,7 +1386,7 @@
 
   async function loadClassTabs(){
     const wrap=el("class-tabs"); wrap.innerHTML="";
-    const res=await fetch("/api/listar-classificacoes"); const data=await res.json(); const list=Array.isArray(data)?data:[];
+    const res=await fetch("/api/listar-classificacoes?pdv=1"); const data=await res.json(); const list=Array.isArray(data)?data:[];
     state.classMeta={};
     list.forEach((c,idx)=>{ const nome=(c.nomeclassificacao!=null&&String(c.nomeclassificacao))||String(c.classificacao||`Classe ${idx+1}`); state.classMeta[nome]={ quantidadepartes:Number(c.quantidadepartes)||0, formadecobrar:String(c.formadecobrar||"").trim(), op_tamanhos:c.op_tamanhos||"", op_massas:c.op_massas||"", op_bordas:c.op_bordas||"", op_coberturas:c.op_coberturas||"", op_adicionais:c.op_adicionais||"" }; const b=document.createElement("button"); b.textContent=nome; b.onclick=()=>{ wrap.querySelectorAll("button").forEach((x)=>x.classList.remove("active")); b.classList.add("active"); loadProdutos(nome); }; wrap.appendChild(b); if(idx===0){ b.classList.add("active"); loadProdutos(nome); } });
   }
@@ -1500,9 +1508,9 @@
     if(qtd<=0) return "";
     const m=maxPartes|0;
     if(m===2) return qtd===1?"INTEIRA":"MEIO A MEIO";
-    if(m===3){ if(qtd===1)return "INTEIRA"; if(qtd===2)return "DOIS TERÇOS"; return "TRÊS TERÇOS"; }
-    if(m===4){ const map=["","INTEIRA","MEIO A MEIO","TRÊS TERÇOS","QUATRO QUARTOS"]; return map[qtd]||(qtd+" sabores"); }
-    const fallback={1:"INTEIRA",2:"MEIO A MEIO",3:"TRÊS TERÇOS",4:"QUATRO QUARTOS"};
+    if(m===3){ if(qtd===1)return "INTEIRA"; if(qtd===2)return "DOIS TERÃ‡OS"; return "TRÃŠS TERÃ‡OS"; }
+    if(m===4){ const map=["","INTEIRA","MEIO A MEIO","TRÃŠS TERÃ‡OS","QUATRO QUARTOS"]; return map[qtd]||(qtd+" sabores"); }
+    const fallback={1:"INTEIRA",2:"MEIO A MEIO",3:"TRÃŠS TERÃ‡OS",4:"QUATRO QUARTOS"};
     return qtd<=4?fallback[qtd]:(qtd+" sabores");
   }
   /** Gradiente do indicador circular: INTEIRA roxo cheio; meia vermelho/cinza; 3/4 amarelo; 4/4 verde; progresso proporcional nos demais. */
@@ -1644,7 +1652,7 @@
       if(draft.partes.length>=draft.maxPartes){ return; }
       const nomeSabor=String(p.nome||p.produto||"-");
       const partesEst=Math.max(1, Math.floor(Number(draft.partes.length+1)||1));
-      const optSabor=await escolherOpcoesParaItem(`Sabor: ${nomeSabor}`, 0, partesEst, ["cobertura","adicionais"]);
+      const optSabor=await escolherOpcoesParaItem(`Sabor: ${nomeSabor}`, Number(p.preco)||0, partesEst, ["cobertura","adicionais"]);
       if(optSabor && optSabor.cancelado) return;
       draft.partes.push({nome:nomeSabor,preco:Number(p.preco)||0,codigoproduto:codAtual,obs_item:String(draft.obsPadrao||""),selExtras:(optSabor&&optSabor.sel)?optSabor.sel:null});
       renderProdutos();
@@ -1665,7 +1673,6 @@
       if(optGlobal && optGlobal.cancelado) return;
       const selG=optGlobal&&optGlobal.sel?optGlobal.sel:null;
       const mult=selG?tamanhoMultiplier(selG):1;
-      const override=selG?tamanhoOverridePrice(selG):null;
       const delta=selG?tamanhoDelta(selG):0;
       const acresGlobal=selG?totalAcrescimo(selG, partesCount):0;
       let acresSabores=0;
@@ -1673,7 +1680,7 @@
         const ex=pt.selExtras||null;
         const selCalc=ex?Object.assign({}, ex, {tamanho:(selG?selG.tamanho:"")}) : null;
         const det = selCalc ? acrescimoDetalhado(selCalc, partesCount) : null;
-        if(det) acresSabores += numOrZero(det.total);
+        if(det) acresSabores += Math.max(0, numOrZero(det.total) - numOrZero(det.tamanho));
         return {nome:String(pt.nome||"-"),cobertura:ex?(ex.cobertura||""):"",adicionais:ex&&Array.isArray(ex.adicionais)?ex.adicionais:[],scope:ex&&ex._scope?ex._scope:null,acrescimos:det};
       });
       const acresTotal = numOrZero(acresGlobal) + numOrZero(acresSabores);
@@ -1685,8 +1692,9 @@
         const pt=(fr.partes||[])[0]||{};
         const ex=pt.selExtras||null;
         const selCalc=ex?Object.assign({}, ex, {tamanho:(selG?selG.tamanho:"")}) : null;
-        const acresSabor1 = selCalc ? numOrZero(acrescimoDetalhado(selCalc,1).total) : 0;
-        const baseSolo = override!=null ? Number(override) : (((Number(pt.preco)||Number(p.preco)||0)*mult) + (Number(delta)||0));
+        const detS1 = selCalc ? acrescimoDetalhado(selCalc,1) : null;
+        const acresSabor1 = detS1 ? Math.max(0, numOrZero(detS1.total) - numOrZero(detS1.tamanho)) : 0;
+        const baseSolo = precoBaseItem(Number(pt.preco)||Number(p.preco)||0, mult, delta);
         const pay={ ...clienteCasaPayload(), obs_geral:(el("obs-geral").value||"").trim(), item:{ nome:String(pt.nome||nome), preco:baseSolo+numOrZero(acresGlobal)+numOrZero(acresSabor1), qtd:1, codigoproduto:String(pt.codigoproduto||cod), classe:state.classificacao, obs_item:String(pt.obs_item||"").trim(), dados_item:dadosFinal } };
         await enviarItemCasa(pay, btn);
         return;
@@ -1694,7 +1702,7 @@
       const obsFrac = "";
       const partes=Array.isArray(fr.partes)?fr.partes.map((x)=>({
         nome:String(x.nome||"-"),
-        preco: override!=null ? Number(override) : (((Number(x.preco)||0)*mult) + (Number(delta)||0)),
+        preco: precoBaseItem(Number(x.preco)||0, mult, delta),
         codigoproduto:String(x.codigoproduto||""),
         obs_item:obsFrac||String(x.obs_item||""),
         dados_item:dadosFinal
@@ -1712,12 +1720,11 @@
       if(opt && opt.cancelado) return;
       const sel=opt&&opt.sel?opt.sel:null;
       const mult=sel?tamanhoMultiplier(sel):1;
-      const override=sel?tamanhoOverridePrice(sel):null;
       const delta=sel?tamanhoDelta(sel):0;
       const obs1="";
       const dados1=sel?buildDadosItem(sel,1):"";
       const acres1=sel?totalAcrescimo(sel,1):0;
-      const basePreco = override!=null ? Number(override) : ((Number(p.preco)*mult) + (Number(delta)||0));
+      const basePreco = precoBaseItem(Number(p.preco)||0, mult, delta);
       const basePayload={ ...clienteCasaPayload(), obs_geral:(el("obs-geral").value||"").trim(), item:{ nome:nome, preco:basePreco+acres1, qtd:1, codigoproduto:cod, classe:state.classificacao, obs_item:obs1, dados_item:dados1 } };
       await enviarItemCasa(basePayload, btn);
     }
@@ -1793,7 +1800,7 @@
       if(el("balcao-bairro")) el("balcao-bairro").value=d.bairro||"";
       if(el("balcao-cidade")) el("balcao-cidade").value=d.localidade||"";
       if(el("balcao-uf")) el("balcao-uf").value=(d.uf||"").toString().toUpperCase();
-      if(statusEl) statusEl.textContent="✓";
+      if(statusEl) statusEl.textContent="âœ“";
       const nr=el("balcao-nrocasa"); if(nr) nr.focus();
     }catch(e){
       console.error(e);
@@ -1814,7 +1821,7 @@
       if(d.bairro) el("cli-bairro").value=d.bairro;
       if(d.cidade) el("cli-cidade").value=d.cidade;
       if(d.estado) el("cli-uf").value=d.estado;
-      if(statusEl) statusEl.textContent="✓";
+      if(statusEl) statusEl.textContent="âœ“";
       updateSaveClienteState();
       const nr=el("cli-nrocasa"); if(nr) nr.focus();
     }catch(e){ console.error(e); if(statusEl) statusEl.textContent="Erro"; }
@@ -1906,6 +1913,7 @@
         limparDadosClienteAnterior();
         state.clienteLocalizado = false;
         state.editandoCliente = false;
+        state.distanciaManual = false;
         state.historicoCliente = [];
         state.historicoClienteTotal = 0;
         renderHistoricoClienteResumo();
@@ -1919,6 +1927,7 @@
         limparDadosClienteAnterior();
         state.clienteLocalizado = false;
         state.editandoCliente = false;
+        state.distanciaManual = false;
         state.historicoCliente = [];
         state.historicoClienteTotal = 0;
         renderHistoricoClienteResumo();
@@ -1945,6 +1954,7 @@
       state.clienteLocalizado = true;
       state.emRecuperacao = false;
       state.editandoCliente = false;
+      state.distanciaManual = false;
       captureClienteSnapshot();
       applyClienteFieldsLock();
       updateSaveClienteState();
@@ -1990,7 +2000,7 @@
       cidade: (el("cli-cidade").value || "").trim(),
       estado: (el("cli-uf").value || "").trim().toUpperCase(),
       cep: (el("cli-cep").value || "").trim(),
-      distancia: parseKm(el("cli-distancia").value || ""),
+      distancia: state.distanciaManual ? parseKm(el("cli-distancia").value || "") : 0,
     };
     const btn = el("btn-salvar-cliente");
     const prevLabel = btn ? btn.textContent : "";
@@ -2024,9 +2034,13 @@
       state.taxaEntrega = numOrZero(d.taxa_calculada);
       if (d.distancia_calculada != null) el("cli-distancia").value = fmtKm(d.distancia_calculada);
       el("cli-taxa").value = money(state.taxaEntrega);
+      if (numOrZero(d.distancia_calculada) === 0) {
+        alert("Não foi possível calcular a distância (0 km). Verifique o endereço completo e as coordenadas da loja.");
+      }
       state.clienteLocalizado = true;
       state.emRecuperacao = false;
       state.editandoCliente = false;
+      state.distanciaManual = false;
       captureClienteSnapshot();
       applyClienteFieldsLock();
       updateSaveClienteState();
@@ -2163,27 +2177,29 @@
   function textoImpressao(){
     const F=window.lojaPrintFmt;
     const W=(F&&F.width)?F.width(48):48;
+    const formato=(F&&F.normFormato)?F.normFormato(impressoraCasaFormato):"completa";
     const out=[];
     const ESC="\x1b";
-    const B_ON=ESC+"E"+String.fromCharCode(1);
-    const B_OFF=ESC+"E"+String.fromCharCode(0);
-    const bold=(s)=>B_ON+String(s==null?"":s)+B_OFF;
+    const bold=(s)=> (F&&F.boldText)?F.boldText(s,formato):(ESC+"E"+String.fromCharCode(1)+String(s==null?"":s)+ESC+"E"+String.fromCharCode(0));
     const hr=(ch)=> (F&&F.hr)?F.hr(ch,W):String(ch||"-").slice(0,1).repeat(W);
     const center=(s)=> (F&&F.center)?F.center(s,W):String(s||"");
     const cols=(l,r)=> (F&&F.cols)?F.cols(l,r,W,1):(`${String(l||"")} ${String(r||"")}`).trim();
     const wrap=(s,indent)=> (F&&F.wrap)?F.wrap(s,W,indent||0):[String(s||"")];
     const kv=(l,v)=> (F&&F.kv)?F.kv(l,v,W):(`${String(l||"")}: ${String(v||"")}`);
+    const alignOn=(F&&F.alignCenterCmd)?F.alignCenterCmd(true,formato):(ESC+"a"+String.fromCharCode(1));
+    const alignOff=(F&&F.alignCenterCmd)?F.alignCenterCmd(false,formato):(ESC+"a"+String.fromCharCode(0));
 
-    out.push(ESC+"a"+String.fromCharCode(1));
+    if(alignOn) out.push(alignOn);
     const H=window.lojaPrintHeader;
     if(H && H.buildPrintHeaderFull){
       H.buildPrintHeaderFull({
         tituloPedido: `PEDIDO #${state.pedidoId||"-"}`,
-        meta: getPrintMetaSyncCasa()
+        meta: getPrintMetaSyncCasa(),
+        formato: formato
       }).forEach((ln)=>{ out.push(ln); });
     }else{
-      out.push((ESC+"!"+String.fromCharCode(0x30))+`PEDIDO #${state.pedidoId}`+(ESC+"!"+String.fromCharCode(0x00)));
-      out.push(ESC+"a"+String.fromCharCode(0));
+      out.push((F&&F.bigTitle)?F.bigTitle(`PEDIDO #${state.pedidoId}`,formato,W):(ESC+"!"+String.fromCharCode(0x30))+`PEDIDO #${state.pedidoId}`+(ESC+"!"+String.fromCharCode(0x00)));
+      if(alignOff) out.push(alignOff);
       out.push(hr("-"));
     }
     const st=String(state.statusComanda||"NORMAL").toUpperCase();
@@ -2217,9 +2233,9 @@
     }
 
     out.push(hr("-"));
-    out.push(ESC+"a"+String.fromCharCode(1));
-    out.push(B_ON+(ESC+"!"+String.fromCharCode(0x10))+"ITENS"+(ESC+"!"+String.fromCharCode(0x00))+B_OFF);
-    out.push(ESC+"a"+String.fromCharCode(0));
+    if(alignOn) out.push(alignOn);
+    out.push(bold((F&&F.midTitle)?F.midTitle("ITENS",formato,W):(ESC+"!"+String.fromCharCode(0x10))+"ITENS"+(ESC+"!"+String.fromCharCode(0x00))));
+    if(alignOff) out.push(alignOff);
     out.push(hr("-"));
     el("itens-list").querySelectorAll(".item").forEach((row)=>{
       const nm=row.querySelector(".item-name");
@@ -2304,6 +2320,7 @@
   }
   function limparCamposCliente(){
     ["cli-fone","cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-ref","cli-bairro","cli-cidade","cli-uf","cli-cep","cli-distancia","cli-taxa","balcao-nome","balcao-fone"].forEach((id)=>{ const node=el(id); if(node) node.value=""; });
+    state.distanciaManual=false;
     limparBalcaoClienteExtra();
   }
   function focoOperacional(){
@@ -2329,6 +2346,7 @@
     if(acoes) acoes.open=false;
     if(el("obs-geral")) el("obs-geral").value="";
     state.editandoCliente=false;
+    state.distanciaManual=false;
     state.emRecuperacao=false;
     state.statusComanda="NORMAL";
     updateComandaStatusBadge();
@@ -2634,9 +2652,15 @@
     if(!Number.isFinite(n)) return 6;
     return Math.max(0, Math.min(20, Math.floor(n)));
   }
+  function _formatoFromImpRow(row){
+    const F=window.lojaPrintFmt;
+    const raw=row && row.formato_escpos;
+    return (F&&F.normFormato)?F.normFormato(raw):((String(raw||"").toLowerCase()==="simples")?"simples":"completa");
+  }
   async function refreshImpressoraCasaLabel(){
     let label="";
     let feed=6;
+    let formato="completa";
     let rows=[];
     try{
       const rRows=await fetch("/api/impressoras-cadastro",{credentials:"same-origin"});
@@ -2651,18 +2675,19 @@
         if(target){
           for(const row of rows){
             const p=_printerFromImpRow(row).trim().toLowerCase();
-            if(p && p===target){ feed=_feedFromImpRow(row); break; }
+            if(p && p===target){ feed=_feedFromImpRow(row); formato=_formatoFromImpRow(row); break; }
           }
         }
       }else{
         for(const row of rows){
-          if(_flagSimImp(row.comanda_delivery)){ label=_printerFromImpRow(row); feed=_feedFromImpRow(row); break; }
+          if(_flagSimImp(row.comanda_delivery)){ label=_printerFromImpRow(row); feed=_feedFromImpRow(row); formato=_formatoFromImpRow(row); break; }
         }
         if(!label) label=d.erro||"(sem impressora com comanda_delivery=S)";
       }
     }catch(_){ label="(erro ao ler cadastro)"; }
     impressoraCasaLabel=label;
     impressoraCasaFeed=feed;
+    impressoraCasaFormato=formato;
     const ip=el("imp-compartilhada"); if(ip) ip.value=impressoraCasaLabel;
   }
   async function preencherConferencias(){ await ensurePrintMetaCasa(); const conteudo=textoImpressao(); state.conferenciaConteudo=conteudo; const pre=el("conferencia-conteudo"); if(pre) pre.textContent=conteudo; const preZoom=el("conferencia-zoom-conteudo"); if(preZoom) preZoom.textContent=conteudo; refreshImpressoraCasaLabel(); }
@@ -2707,13 +2732,13 @@
     const loja=waRecursos.loja||{};
     const linhas=[];
     const nomeLoja=(loja.nome||"").trim();
-    if(nomeLoja) linhas.push(`🧾 *${nomeLoja}*`);
+    if(nomeLoja) linhas.push(`ðŸ§¾ *${nomeLoja}*`);
     const cliente=(nomeClienteAtual()||"").trim();
-    linhas.push(cliente ? `Olá, ${cliente}! Recebemos seu pedido 😊` : `Recebemos seu pedido 😊`);
+    linhas.push(cliente ? `Olá, ${cliente}! Recebemos seu pedido ðŸ˜Š` : `Recebemos seu pedido ðŸ˜Š`);
     linhas.push("");
     linhas.push(`*Pedido #${state.pedidoId}*`);
     linhas.push("");
-    linhas.push("🛍️ *Itens*");
+    linhas.push("ðŸ›ï¸ *Itens*");
     el("itens-list").querySelectorAll(".item").forEach((row)=>{
       const nm=row.querySelector(".item-name");
       const q=row.querySelector("[data-qtd-input]");
@@ -2722,27 +2747,27 @@
       const qtd=(q&&q.value)?Number(q.value)||1:((qg&&qg.value)?Number(qg.value)||1:1);
       const nome=(nm?nm.textContent:"").trim();
       const linha=(lv?lv.textContent:"").trim();
-      if(nome) linhas.push(`• ${qtd}x ${nome}${linha?` — ${linha}`:""}`);
+      if(nome) linhas.push(`¢ ${qtd}x ${nome}${linha?` — ${linha}`:""}`);
     });
     linhas.push("");
     if(state.modo==="delivery"){
       const end=(`${(el("cli-end").value||"").trim()} ${(el("cli-nrocasa").value||"").trim()}`).trim();
       const bairro=(el("cli-bairro").value||"").trim();
       const endFull=[end,bairro].filter(Boolean).join(" - ");
-      if(endFull) linhas.push(`🏍️ *Entrega:* ${endFull}`);
+      if(endFull) linhas.push(`ðŸï¸ *Entrega:* ${endFull}`);
     }
     const forma=String(state.formaPagamento||"").trim();
-    if(forma) linhas.push(`💳 *Pagamento:* ${forma}`);
-    linhas.push(`💰 *Total: ${el("total").textContent}*`);
+    if(forma) linhas.push(`ðŸ’³ *Pagamento:* ${forma}`);
+    linhas.push(`ðŸ’° *Total: ${el("total").textContent}*`);
     const tel=formatarTelefoneLoja(loja);
     const endLoja=[ (loja.endereco||"").trim(), (loja.cidade||"").trim() ].filter(Boolean).join(", ");
     if(tel||endLoja){
       linhas.push("");
-      if(tel) linhas.push(`📞 *Fale com a loja:* ${tel}`);
-      if(endLoja) linhas.push(`📍 ${endLoja}`);
+      if(tel) linhas.push(`ðŸ“ž *Fale com a loja:* ${tel}`);
+      if(endLoja) linhas.push(`ðŸ“ ${endLoja}`);
     }
     linhas.push("");
-    linhas.push("Obrigado pela preferência! 🙏");
+    linhas.push("Obrigado pela preferência! ðŸ™");
     return linhas.join("\n");
   }
   function atualizarBotaoWhatsapp(){
@@ -2888,20 +2913,26 @@
       btn.style.display="none";
     }
   }
-  function _preparoItemLine(txt){
+  function _preparoItemLine(txt, formato){
+    const F=window.lojaPrintFmt;
+    const t=String(txt||"");
+    if(F&&F.boldText&&F.midTitle) return F.boldText(F.midTitle(t,formato),formato);
     const ESC="\x1b";
-    return ESC+"E"+String.fromCharCode(1)+ESC+"!"+String.fromCharCode(0x10)+String(txt||"")+ESC+"!"+String.fromCharCode(0x00)+ESC+"E"+String.fromCharCode(0);
+    return ESC+"E"+String.fromCharCode(1)+ESC+"!"+String.fromCharCode(0x10)+t+ESC+"!"+String.fromCharCode(0x00)+ESC+"E"+String.fromCharCode(0);
   }
-  function _montarTextoPreparoCasa(titulo, itens, feedLines){
+  function _montarTextoPreparoCasa(titulo, itens, feedLines, formato){
     const F=window.lojaPrintFmt;
     const W=(F&&F.width)?F.width(48):48;
+    const fmt=(F&&F.normFormato)?F.normFormato(formato):"completa";
     const out=[];
     const ESC="\x1b";
     const hr=(ch)=> (F&&F.hr)?F.hr(ch,W):String(ch||"-").slice(0,1).repeat(W);
     const wrap=(s,indent)=> (F&&F.wrap)?F.wrap(s,W,indent||0):[String(s||"")];
-    out.push(ESC+"a"+String.fromCharCode(1));
-    out.push((ESC+"!"+String.fromCharCode(0x30))+String(titulo||"")+(ESC+"!"+String.fromCharCode(0x00)));
-    out.push(ESC+"a"+String.fromCharCode(0));
+    const alignOn=(F&&F.alignCenterCmd)?F.alignCenterCmd(true,fmt):(ESC+"a"+String.fromCharCode(1));
+    const alignOff=(F&&F.alignCenterCmd)?F.alignCenterCmd(false,fmt):(ESC+"a"+String.fromCharCode(0));
+    if(alignOn) out.push(alignOn);
+    out.push((F&&F.bigTitle)?F.bigTitle(String(titulo||""),fmt,W):(ESC+"!"+String.fromCharCode(0x30))+String(titulo||"")+(ESC+"!"+String.fromCharCode(0x00)));
+    if(alignOff) out.push(alignOff);
     const H=window.lojaPrintHeader;
     if(H && H.buildPrintHeaderPreparo){
       H.buildPrintHeaderPreparo({ meta: getPrintMetaSyncCasa() }).forEach((ln)=>{ out.push(ln); });
@@ -2911,7 +2942,7 @@
     (itens||[]).forEach((it)=>{
       const qtd=Math.max(1,Math.floor(Number(it.qtd)||1));
       const nome=String(it.nome||"-").trim();
-      out.push(_preparoItemLine(`${qtd}x ${nome}`));
+      out.push(_preparoItemLine(`${qtd}x ${nome}`, fmt));
       const detRaw=it.dados?formatDadosItem(it.dados):"";
       const det=_stripMoneyText(detRaw);
       if(det){
@@ -3043,7 +3074,7 @@
         const row=p.row;
         if(!row || row.id==null){ return fail("Impressora inválida no cadastro para distribuição."); }
         const titulo=`PEDIDO #${Number(state.pedidoId)||0}`;
-        const conteudo=_montarTextoPreparoCasa(titulo, grupos[p.key]||[], _feedFromImpRow(row));
+        const conteudo=_montarTextoPreparoCasa(titulo, grupos[p.key]||[], _feedFromImpRow(row), _formatoFromImpRow(row));
         const imp=await (window.lojaImprimir?window.lojaImprimir({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0,skip_confirm:true}):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0})}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j}))));
         if(!imp.ok){
           const d=imp.data||{};
@@ -3213,7 +3244,7 @@
     const bbTotal=el("bb-total"), bbSomado=el("bb-somado"), bbRest=el("bb-restante"), bbTroco=el("bb-troco");
     const bbTit=el("bb-titulo"), bbSub=el("bb-sub"), bbFormas=el("bb-formas");
     if(bbTit) bbTit.textContent = `${LABEL_PEDIDO} #${Number(nropedido)||0}`;
-    if(bbSub) bbSub.textContent = `BALCÃO • Impressora: ${String(printerName||impressoraCasaLabel)}`;
+    if(bbSub) bbSub.textContent = `BALCÃƒO ¢ Impressora: ${String(printerName||impressoraCasaLabel)}`;
     if(bbFormas) bbFormas.innerHTML = "";
     if(bbTroco){ bbTroco.style.display="none"; bbTroco.textContent="Troco: "+money(0); }
     if(bbTotal) bbTotal.textContent = "Total: "+money(total);
@@ -3380,7 +3411,7 @@
       preparoRes = {ok:false,message:String(e && e.message ? e.message : e)};
     }
     const preparoMsg = (preparoRes && preparoRes.ok===false)
-      ? `\n\nAtenção: preparo NÃO foi distribuído.\n${String(preparoRes.message||"")}`
+      ? `\n\nAtenção: preparo NÃƒO foi distribuído.\n${String(preparoRes.message||"")}`
       : ((preparoRes && preparoRes.ok===true && !preparoRes.skipped) ? `\n\nPreparo distribuído.` : "");
     if(state.modo==="balcao" && String(state.balcaoPagamentoMomento||"agora")==="agora"){
       const pedidoNro = Number(state.pedidoId)||0;
@@ -3422,10 +3453,16 @@
   document.addEventListener("click",(e)=>{ const tgt=e.target; const open=tgt.closest?tgt.closest("[data-open-modal]"):null; if(open){ e.preventDefault(); const id=open.getAttribute("data-open-modal"); if(id==="modal-pag") loadFormasPagamento(); openModal(id); return; } const close=tgt.closest?tgt.closest("[data-close-modal]"):null; if(close){ e.preventDefault(); _resolverOpcoesSeAberto(); _resolverFracionadoSeAberto(); closeModals(); return; } if(tgt.classList&&tgt.classList.contains("modal")){ _resolverOpcoesSeAberto(); _resolverFracionadoSeAberto(); closeModals(); } });
   document.querySelectorAll(".toggle [data-modo]").forEach((b)=>{ b.onclick=()=>setModo(b.dataset.modo); });
   el("btn-localizar").onclick=()=>localizarCliente(true);
-  el("cli-fone").addEventListener("input",()=>{ state.ultimoTelefoneLocalizado = ""; state.clienteLocalizado=false; state.editandoCliente=false; applyClienteFieldsLock(); renderHistoricoClienteResumo(); updateClienteLocalizadoBadge(); updatePrintState(); updateSaveClienteState(); loadItens("normal"); });
+  el("cli-fone").addEventListener("input",()=>{ state.ultimoTelefoneLocalizado = ""; state.clienteLocalizado=false; state.editandoCliente=false; state.distanciaManual=false; applyClienteFieldsLock(); renderHistoricoClienteResumo(); updateClienteLocalizadoBadge(); updatePrintState(); updateSaveClienteState(); loadItens("normal"); });
   el("cli-fone").addEventListener("keydown",async(e)=>{ if(e.key==="Enter"){ e.preventDefault(); const localizado=await localizarCliente(); if(!localizado){ const c=el("cli-cep"); if(c) c.focus(); } } });
   el("cli-fone").addEventListener("blur",(e)=>{ if(e.relatedTarget && e.relatedTarget.id==="btn-localizar") return; if(state.modo==="delivery" && (el("cli-fone").value||"").trim()) localizarCliente(); });
   el("btn-salvar-cliente").onclick=salvarClienteEntrega;
+  const cliDistancia=el("cli-distancia");
+  if(cliDistancia){
+    cliDistancia.addEventListener("input",()=>{
+      if(state.editandoCliente) state.distanciaManual=true;
+    });
+  }
   const btnBalcLoc=el("btn-balcao-localizar");
   if(btnBalcLoc) btnBalcLoc.onclick=()=>localizarClienteBalcao(true);
   const btnBalcSalvar=el("btn-balcao-salvar-cliente");

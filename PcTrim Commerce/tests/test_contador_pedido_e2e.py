@@ -6,6 +6,7 @@ Modo opcional LIVE: E2E_LIVE=1 + servidor :2001 + E2E_LOGIN_USER/PASS.
 
 Uso:
     cd "PcTrim Commerce"
+    set E2E=1
     python -m tests.test_contador_pedido_e2e
 """
 from __future__ import annotations
@@ -28,9 +29,10 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 load_dotenv(os.path.join(_ROOT, ".env"))
-os.environ.setdefault("FLASK_SECRET_KEY", os.getenv("FLASK_SECRET_KEY") or "e2e-test-secret")
+from tests.test_env import aplicar_env_teste, conectar_teste  # noqa: E402
 
-from database import conectar  # noqa: E402
+aplicar_env_teste()
+os.environ.setdefault("FLASK_SECRET_KEY", os.getenv("FLASK_SECRET_KEY") or "e2e-test-secret")
 
 BASE_URL = os.getenv("E2E_BASE_URL", "http://127.0.0.1:2001").rstrip("/")
 E2E_USER = os.getenv("E2E_LOGIN_USER", "admin")
@@ -40,6 +42,7 @@ PRODUTO_PREFIX = "Item Teste E2E"
 CONCURRENT_WORKERS = int(os.getenv("E2E_CONCURRENT_WORKERS", "10"))
 CLEANUP = os.getenv("E2E_CLEANUP", "1") != "0"
 ID_CLIENTE_OVERRIDE = int(os.getenv("E2E_ID_CLIENTE", "0") or "0")
+E2E_ENABLED = os.getenv("E2E", "0") == "1"
 
 
 @dataclass
@@ -68,7 +71,7 @@ class TestReport:
 
 
 def _db_query_one(sql: str, params=()) -> Any:
-    conn = conectar()
+    conn = conectar_teste()
     cur = conn.cursor(dictionary=True)
     try:
         cur.execute(sql, params)
@@ -79,7 +82,7 @@ def _db_query_one(sql: str, params=()) -> Any:
 
 
 def _db_execute(sql: str, params=()) -> int:
-    conn = conectar()
+    conn = conectar_teste()
     cur = conn.cursor()
     try:
         cur.execute(sql, params)
@@ -135,7 +138,7 @@ def resolve_id_cliente() -> int:
 
 
 def ensure_contador_row(id_cliente: int) -> None:
-    conn = conectar()
+    conn = conectar_teste()
     cur = conn.cursor()
     try:
         cur.execute(
@@ -515,6 +518,12 @@ def print_verdict(report: TestReport) -> int:
 
 
 def main() -> int:
+    if not E2E_ENABLED and not LIVE_MODE:
+        print(
+            "E2E desativado no discover/gate. "
+            "Rode com E2E=1 (test_client+MySQL) ou E2E_LIVE=1 (servidor :2001)."
+        )
+        return 0
     mode = "LIVE (HTTP :2001)" if LIVE_MODE else "in-process (Flask test_client + MySQL)"
     print(f"E2E nropedido — {mode}")
     print(f"Workers concorrência: {CONCURRENT_WORKERS}\n")

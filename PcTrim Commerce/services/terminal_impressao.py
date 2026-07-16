@@ -97,8 +97,37 @@ def _impressoras_ids_validas(cur, id_cliente, impressora_ids):
     return all(i in found for i in ids)
 
 
+def _list_logical_printers(cur, id_cliente):
+    """Lista (id, nome) das impressoras lógicas da loja."""
+    cur.execute("SHOW COLUMNS FROM impressoras LIKE 'id_cliente'")
+    has_id_cli = cur.fetchone() is not None
+    where_cli = ""
+    params = ()
+    if has_id_cli:
+        where_cli = " WHERE (id_cliente = %s OR id_cliente IS NULL)"
+        params = (int(id_cliente),)
+    cur.execute(
+        f"""
+        SELECT id, TRIM(COALESCE(nomedaimpressora, '')) AS nome
+        FROM impressoras{where_cli}
+        ORDER BY COALESCE(imprenro,0) DESC, nomedaimpressora
+        """,
+        params,
+    )
+    out = []
+    for row in cur.fetchall() or []:
+        try:
+            iid = int(row[0] or 0)
+        except (TypeError, ValueError):
+            continue
+        if iid <= 0:
+            continue
+        out.append((iid, str(row[1] or "").strip() or ("#" + str(iid))))
+    return out
+
+
 def save_terminal_config(id_cliente, terminal_id, itens):
-    """Salva caminhos do terminal sem duplicar (UNIQUE + ON DUPLICATE KEY UPDATE)."""
+    """Salva caminhos do terminal; exige caminho_local para TODAS as impressoras lógicas."""
     tid = normalize_terminal_id(terminal_id)
     if not tid:
         return False, "terminal_id inválido."
@@ -122,10 +151,26 @@ def save_terminal_config(id_cliente, terminal_id, itens):
     try:
         conn = conectar()
         cur = conn.cursor()
-        if merged and not _impressoras_ids_validas(cur, id_cliente, merged.keys()):
+        logical = _list_logical_printers(cur, id_cliente)
+        if not logical:
+            return False, "Cadastre ao menos uma impressora lógica antes de mapear o terminal."
+
+        faltando = []
+        for iid, nome in logical:
+            cam = merged.get(iid, "")
+            if not cam:
+                faltando.append(nome)
+        if faltando:
+            return False, (
+                "Informe o caminho Windows para todas as impressoras neste terminal. Faltando: "
+                + ", ".join(faltando)
+            )
+
+        if not _impressoras_ids_validas(cur, id_cliente, [iid for iid, _n in logical]):
             return False, "Impressora inválida para esta loja."
 
-        for iid, caminho in merged.items():
+        for iid, _nome in logical:
+            caminho = merged[iid]
             cur.execute(
                 """
                 INSERT INTO terminal_impressora

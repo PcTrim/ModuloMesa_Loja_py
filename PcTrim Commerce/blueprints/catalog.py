@@ -1,4 +1,6 @@
 """Product catalog pages and JSON API."""
+import unicodedata
+
 import mysql.connector
 from flask import Blueprint, jsonify, render_template, request, session
 
@@ -46,6 +48,21 @@ def _parse_bool_flag(value, default: int = 0) -> int:
     if isinstance(value, (int, float)):
         return 1 if int(value) != 0 else 0
     return 1 if str(value).strip().lower() in ("1", "true", "sim", "s", "yes", "y") else 0
+
+
+def _norm_sim_nao(value, default: str = "Nao") -> str:
+    """Canonicaliza flag de produto para 'Sim' ou 'Nao' (options do select HTML)."""
+    fallback = "Sim" if str(default).strip().lower() in ("sim", "s", "1", "true", "yes", "y") else "Nao"
+    if value is None or value == "":
+        return fallback
+
+    raw = str(value).strip().upper()
+    raw = "".join(c for c in unicodedata.normalize("NFD", raw) if unicodedata.category(c) != "Mn")
+    if raw in ("S", "SIM", "1", "TRUE", "Y", "YES", "T"):
+        return "Sim"
+    if raw in ("N", "NAO", "0", "FALSE", "NO"):
+        return "Nao"
+    return fallback
 
 
 def _resolver_classe_retail(cursor, id_cliente: int, dados: dict) -> str:
@@ -111,12 +128,12 @@ def salvar_produto():
         produto = dados.get("produto", "").strip()
         preco = dados.get("preco", 0)
         classe = dados.get("classe", "").strip().upper()
-        porkilo = dados.get("porkilo", "Nao")
+        porkilo = _norm_sim_nao(dados.get("porkilo", "Nao"), default="Nao")
         impressora = dados.get("impressora", 1)
         cfop = dados.get("cfop", "5102")
         ncm = dados.get("ncm", "")
         display = dados.get("display", 0)
-        vendaliberada = dados.get("vendaliberada", "Sim")
+        vendaliberada = _norm_sim_nao(dados.get("vendaliberada", "Sim"), default="Sim")
         descricao = dados.get("descricao", "")
         barcode = (dados.get("barcode") or "").strip() or None
         chave_informada = dados.get("chave")
@@ -391,12 +408,12 @@ def editar_produto(chave):
         produto = dados.get("produto", "").strip()
         preco = dados.get("preco", 0)
         classe = dados.get("classe", "").strip().upper()
-        porkilo = dados.get("porkilo", "Nao")
+        porkilo = _norm_sim_nao(dados.get("porkilo", "Nao"), default="Nao")
         impressora = dados.get("impressora", 1)
         cfop = dados.get("cfop", "5102")
         ncm = dados.get("ncm", "")
         display = dados.get("display", 0)
-        vendaliberada = dados.get("vendaliberada", "Sim")
+        vendaliberada = _norm_sim_nao(dados.get("vendaliberada", "Sim"), default="Sim")
         descricao = dados.get("descricao", "")
         barcode = (dados.get("barcode") or "").strip() or None
         controla_estoque_raw = dados.get("controla_estoque")

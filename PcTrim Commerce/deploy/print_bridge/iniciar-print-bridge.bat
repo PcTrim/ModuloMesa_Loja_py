@@ -58,7 +58,8 @@ echo   (MySQL: impressoras / comanda_delivery)
 echo ========================================
 echo   NAO FECHE ESTA JANELA
 echo   Teste: http://127.0.0.1:9123/health
-echo   Site:  https://pedidofacil.online/LojaOnline/
+echo   Site:  http://85.31.231.84:2001/LojaOnline/  (Homologacao)
+echo   Site:  https://pedidofacil.online/LojaOnline/  (producao, se ativo)
 echo ========================================
 echo.
 

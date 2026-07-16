@@ -255,7 +255,7 @@
 
 .cfg-dados-modal-close:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.28);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 28%, transparent);
   border-radius: 4px;
 }
 

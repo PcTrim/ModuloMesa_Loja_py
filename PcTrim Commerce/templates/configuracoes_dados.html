@@ -8,14 +8,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
-    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=24">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=2">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_dados.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
     {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4" defer></script>
 </head>
 <body class="cfg-body">
 {% set papel = (session.get('funcao') or 'gerente')|lower %}
@@ -91,13 +91,14 @@
                                 <th>Caminho (Windows)</th>
                                 <th style="width:80px; text-align:center;">Nro</th>
                                 <th style="width:70px; text-align:center;">Feed</th>
+                                <th style="width:100px; text-align:center;">Formato</th>
                                 <th id="thContaMesa" style="width:120px; text-align:center;">Conta mesa</th>
                                 <th style="width:180px; text-align:center;">Comanda delivery/balcão</th>
                                 <th style="width:220px; text-align:center;">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyImpressoras">
-                            <tr><td colspan="8" class="empty">Carregando...</td></tr>
+                            <tr><td colspan="9" class="empty">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -109,7 +110,7 @@
             <details class="cfg-dados-accordion cfg-section-card" id="terminalImpressaoPanel">
                 <summary class="cfg-dados-accordion-summary">Impressão deste terminal</summary>
                 <div class="cfg-dados-accordion-body">
-                <div class="help">Cada PC tem caminhos Windows próprios. O identificador vem do Print Bridge (hostname + usuário).</div>
+                <div class="help">Cada PC tem caminhos Windows próprios. O identificador vem do Print Bridge (hostname + usuário). Mapeie <strong>todas</strong> as impressoras lógicas (comanda local + setores de rede). Na VPS 85.31 use Detectar (popup local).</div>
                 <p class="help" id="termImpStatus">Detectando terminal...</p>
                 <p class="help"><strong id="termImpId">—</strong></p>
                 <div class="cfg-dados-table-wrap">
@@ -119,14 +120,16 @@
                                 <th style="width:70px;">ID</th>
                                 <th>Impressora lógica</th>
                                 <th>Caminho local (Windows)</th>
+                                <th style="width:100px; text-align:center;">Teste</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyTerminalImpressoras">
-                            <tr><td colspan="3" class="empty">Carregando...</td></tr>
+                            <tr><td colspan="4" class="empty">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
                 <div class="cfg-dados-actions">
+                    <button type="button" class="btn-mini" id="btnDetectTerminalImp">Detectar Print Bridge</button>
                     <button type="button" class="btn-green" id="btnSalvarTerminalImp">Salvar deste terminal</button>
                 </div>
                 </div>
@@ -224,8 +227,12 @@
                         <option value="N">Comanda delivery/balcão: Não</option>
                         <option value="S">Comanda delivery/balcão: Sim</option>
                     </select>
+                    <select id="printerFormatoEscpos" data-hint="completa = ESC/POS com destaque (Bematech). simples = texto puro (genérica/POS80).">
+                        <option value="completa">Formato ESC/POS: Completa (Bematech)</option>
+                        <option value="simples">Formato ESC/POS: Simples (genérica)</option>
+                    </select>
                     <input type="number" id="printerFeedFinal" min="0" max="20" step="1" placeholder="Avanço final (ESC d) — 0 a 20" data-hint="Linhas em branco após imprimir — ajuda a cortar o papel.">
-                    <div class="help">Conta mesa: imprime a conta da mesa. Comanda delivery/balcão: imprime a comanda completa do pedido.</div>
+                    <div class="help">Conta mesa: imprime a conta da mesa. Comanda delivery/balcão: imprime a comanda completa do pedido. Genérica/POS80: use formato Simples.</div>
                     <div class="help" id="printerDefaultHint" style="display:none;"></div>
                     <div class="cfg-dados-actions">
                         <button type="button" class="btn-modal" id="btnAtualizarPrinters">Atualizar lista do Windows</button>
@@ -238,7 +245,7 @@
     </div>
     </div>
 
-    <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=10"></script>
+    <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=14"></script>
     <script>
         const IS_RETAIL = {{ 'true' if is_retail else 'false' }};
         let sistemaCampos = [];
@@ -247,7 +254,7 @@
         let hasMesaCtx = !IS_RETAIL;
 
         function impressorasColCount() {
-            return hasMesaCtx ? 8 : 7;
+            return hasMesaCtx ? 9 : 8;
         }
 
         function setCtxVisible(el, visible) {
@@ -378,21 +385,37 @@
 
         async function carregarPrintersDisponiveis() {
             const hint = document.getElementById('printerDefaultHint');
-            hint.style.display = 'none';
+            if (hint) hint.style.display = 'none';
             try {
-                const data = await fetchJsonSafe('/api/impressoras-disponiveis');
-                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao listar impressoras.');
-                printersDisponiveis = Array.isArray(data.impressoras) ? data.impressoras : [];
-                if (data.padrao) {
-                    hint.textContent = `Impressora padrão do Windows: ${data.padrao}`;
-                    hint.style.display = '';
+                let fromBridge = [];
+                if (typeof window.lojaGetBridgeHealth === 'function') {
+                    const health = await window.lojaGetBridgeHealth(true);
+                    if (health && Array.isArray(health.impressoras_windows)) {
+                        fromBridge = health.impressoras_windows.map(n => String(n || '').trim()).filter(Boolean);
+                    }
+                }
+                if (fromBridge.length) {
+                    printersDisponiveis = fromBridge;
+                    if (hint) {
+                        hint.textContent = `Impressoras do Print Bridge (${fromBridge.length}): use o nome exato no caminho local.`;
+                        hint.style.display = '';
+                    }
+                } else {
+                    const data = await fetchJsonSafe('/api/impressoras-disponiveis');
+                    if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao listar impressoras.');
+                    printersDisponiveis = Array.isArray(data.impressoras) ? data.impressoras : [];
+                    if (hint && data.padrao) {
+                        hint.textContent = `Impressora padrão do Windows: ${data.padrao}`;
+                        hint.style.display = '';
+                    }
                 }
 
                 const dl = document.getElementById('printersDatalist');
-                dl.innerHTML = printersDisponiveis.map(n => `<option value="${String(n).replace(/"/g, '&quot;')}"></option>`).join('');
+                if (dl) {
+                    dl.innerHTML = printersDisponiveis.map(n => `<option value="${String(n).replace(/"/g, '&quot;')}"></option>`).join('');
+                }
             } catch (e) {
                 console.error(e);
-                showMsg(e.message || 'Erro ao listar impressoras.', 'erro');
                 printersDisponiveis = [];
             }
         }
@@ -408,6 +431,7 @@
                 const mesa = String(r.conta_mesa || '').toUpperCase() === 'S' ? '<span class="pill ok">Sim</span>' : '<span class="pill bad">Não</span>';
                 const del = String(r.comanda_delivery || '').toUpperCase() === 'S' ? '<span class="pill ok">Sim</span>' : '<span class="pill bad">Não</span>';
                 const feed = (r.feed_final_linhas ?? '');
+                const fmt = String(r.formato_escpos || 'completa').toLowerCase() === 'simples' ? 'simples' : 'completa';
                 const mesaCol = hasMesaCtx ? `<td style="text-align:center;">${mesa}</td>` : '';
                 return `
                     <tr>
@@ -416,6 +440,7 @@
                         <td>${String(r.caminho || '')}</td>
                         <td style="text-align:center;">${(r.imprenro ?? '')}</td>
                         <td style="text-align:center;">${feed}</td>
+                        <td style="text-align:center;">${fmt}</td>
                         ${mesaCol}
                         <td style="text-align:center;">${del}</td>
                         <td style="text-align:center;">
@@ -465,6 +490,7 @@
             document.getElementById('printerNro').value = '0';
             document.getElementById('printerContaMesa').value = 'N';
             document.getElementById('printerComandaDelivery').value = 'N';
+            document.getElementById('printerFormatoEscpos').value = 'completa';
             document.getElementById('printerFeedFinal').value = '6';
             document.getElementById('btnSalvarImpressora').textContent = 'Salvar';
             const title = document.getElementById('impressoraModalTitle');
@@ -483,20 +509,68 @@
             const tbody = document.getElementById('tbodyTerminalImpressoras');
             if (!tbody) return;
             if (!Array.isArray(terminalImpRows) || terminalImpRows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhuma impressora lógica cadastrada.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="empty">Nenhuma impressora lógica cadastrada.</td></tr>';
                 return;
             }
             tbody.innerHTML = terminalImpRows.map(r => {
                 const iid = Number(r.impressora_id || 0);
                 const cam = String(r.caminho_local || '');
+                const nome = String(r.nomedaimpressora || '').replace(/'/g, "\\'");
                 return `
                     <tr>
                         <td class="kcell">#${iid}</td>
                         <td>${String(r.nomedaimpressora || '')}</td>
                         <td><input type="text" class="term-imp-caminho" data-iid="${iid}" list="printersDatalist" value="${cam.replace(/"/g, '&quot;')}" placeholder="Nome exato no Windows" autocomplete="off"></td>
+                        <td style="text-align:center;">
+                            <button type="button" class="btn-mini" onclick="testarImpressaoTerminal(${iid}, '${nome}')">Testar</button>
+                        </td>
                     </tr>
                 `;
             }).join('');
+        }
+
+        async function testarImpressaoTerminal(impressoraId, nome) {
+            const iid = Number(impressoraId) || 0;
+            if (!iid) return;
+            const inp = document.querySelector(`.term-imp-caminho[data-iid="${iid}"]`);
+            const caminho = inp ? String(inp.value || '').trim() : '';
+            if (!caminho) {
+                showMsg('Informe o caminho Windows antes de testar.', 'erro');
+                return;
+            }
+            if (typeof window.lojaImprimir !== 'function') {
+                showMsg('Print Bridge JS não carregado.', 'erro');
+                return;
+            }
+            showMsg('Enviando teste para ' + (nome || ('#' + iid)) + '…', 'sucesso');
+            try {
+                const conteudo = [
+                    '',
+                    '=== TESTE PRINT BRIDGE ===',
+                    'Terminal: ' + (terminalImpId || '-'),
+                    'Impressora: ' + (nome || ('#' + iid)),
+                    'Caminho: ' + caminho,
+                    new Date().toLocaleString('pt-BR'),
+                    '',
+                    ''
+                ].join('\n');
+                const r = await window.lojaImprimir({
+                    conteudo,
+                    copias: 1,
+                    origem: 'casa',
+                    impressora_id: iid,
+                    printer: caminho,
+                    skip_confirm: true
+                });
+                if (!r || !r.ok) {
+                    const err = (r && r.data && r.data.erro) || (r && r.erro) || 'Falha no teste.';
+                    showMsg(err, 'erro');
+                    return;
+                }
+                showMsg('Teste OK em ' + ((r.data && (r.data.printer_windows || r.data.printer)) || caminho), 'sucesso');
+            } catch (e) {
+                showMsg(e.message || 'Erro no teste de impressão.', 'erro');
+            }
         }
 
         async function carregarTerminalImpressao() {
@@ -506,29 +580,43 @@
             if (!tbody || !statusEl || !idEl) return;
             try {
                 let tid = null;
-                if (typeof window.lojaGetBridgeTerminalId === 'function') {
+                let health = null;
+                if (typeof window.lojaGetBridgeHealth === 'function') {
+                    health = await window.lojaGetBridgeHealth(false);
+                    if (!health) health = await window.lojaGetBridgeHealth(true);
+                    tid = health && health.terminal_id ? String(health.terminal_id).trim() : null;
+                } else if (typeof window.lojaGetBridgeTerminalId === 'function') {
                     tid = await window.lojaGetBridgeTerminalId(true);
                 }
                 if (!tid) {
-                    statusEl.textContent = 'Print Bridge OFF neste PC. Abra deploy\\print_bridge\\iniciar-print-bridge.bat e deixe a janela aberta.';
+                    const detail = (typeof window.lojaGetLastBridgeError === 'function' && window.lojaGetLastBridgeError())
+                        || 'Abra iniciar-print-bridge.bat e clique em Detectar Print Bridge.';
+                    statusEl.textContent = 'Print Bridge não detectado. ' + detail;
                     idEl.textContent = 'Terminal: —';
                     terminalImpId = '';
-                    tbody.innerHTML = '<tr><td colspan="3" class="empty">Bridge não detectado.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty">Clique em Detectar Print Bridge (permite o popup).</td></tr>';
                     return;
                 }
                 terminalImpId = tid;
                 idEl.textContent = 'Terminal: ' + tid;
+                if (health && Array.isArray(health.impressoras_windows) && health.impressoras_windows.length) {
+                    printersDisponiveis = health.impressoras_windows.map(n => String(n || '').trim()).filter(Boolean);
+                    const dl = document.getElementById('printersDatalist');
+                    if (dl) {
+                        dl.innerHTML = printersDisponiveis.map(n => `<option value="${String(n).replace(/"/g, '&quot;')}"></option>`).join('');
+                    }
+                }
                 const data = await fetchJsonSafe('/api/terminal-impressoras?terminal_id=' + encodeURIComponent(tid));
                 if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao carregar terminal.');
                 terminalImpRows = Array.isArray(data.impressoras) ? data.impressoras : [];
                 statusEl.textContent = data.configurado
-                    ? 'Terminal configurado. Ajuste os caminhos se necessário.'
-                    : 'Primeira configuração deste terminal — informe os caminhos e salve.';
+                    ? 'Terminal configurado. Mantenha TODOS os caminhos preenchidos (comanda + setores).'
+                    : 'Preencha o caminho Windows de TODAS as impressoras e salve.';
                 renderTerminalImpressorasTabela();
             } catch (e) {
                 console.error(e);
                 statusEl.textContent = e.message || 'Erro ao carregar configuração do terminal.';
-                tbody.innerHTML = '<tr><td colspan="3" class="empty">Erro ao carregar.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="empty">Erro ao carregar.</td></tr>';
             }
         }
 
@@ -543,11 +631,19 @@
             try {
                 const inputs = document.querySelectorAll('.term-imp-caminho');
                 const itens = [];
+                const faltandoUi = [];
                 inputs.forEach(inp => {
                     const iid = Number(inp.getAttribute('data-iid') || 0);
                     if (!iid) return;
-                    itens.push({ impressora_id: iid, caminho_local: String(inp.value || '').trim() });
+                    const cam = String(inp.value || '').trim();
+                    const row = (terminalImpRows || []).find(x => Number(x.impressora_id) === iid);
+                    const nome = row ? String(row.nomedaimpressora || ('#' + iid)) : ('#' + iid);
+                    if (!cam) faltandoUi.push(nome);
+                    itens.push({ impressora_id: iid, caminho_local: cam });
                 });
+                if (faltandoUi.length) {
+                    throw new Error('Informe o caminho Windows para todas as impressoras. Faltando: ' + faltandoUi.join(', '));
+                }
                 const data = await fetchJsonSafe('/api/terminal-impressoras', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -574,6 +670,7 @@
             const contaMesaEl = document.getElementById('printerContaMesa');
             if (contaMesaEl) contaMesaEl.value = String(r.conta_mesa || 'N').toUpperCase() === 'S' ? 'S' : 'N';
             document.getElementById('printerComandaDelivery').value = String(r.comanda_delivery || 'N').toUpperCase() === 'S' ? 'S' : 'N';
+            document.getElementById('printerFormatoEscpos').value = String(r.formato_escpos || 'completa').toLowerCase() === 'simples' ? 'simples' : 'completa';
             document.getElementById('printerFeedFinal').value = String(Number.isFinite(Number(r.feed_final_linhas)) ? Number(r.feed_final_linhas) : 6);
             document.getElementById('btnSalvarImpressora').textContent = 'Atualizar';
             const title = document.getElementById('impressoraModalTitle');
@@ -616,6 +713,7 @@
                     imprenro: document.getElementById('printerNro').value,
                     conta_mesa: document.getElementById('printerContaMesa')?.value || 'N',
                     comanda_delivery: document.getElementById('printerComandaDelivery').value,
+                    formato_escpos: document.getElementById('printerFormatoEscpos').value,
                     feed_final_linhas: document.getElementById('printerFeedFinal').value
                 };
                 const url = id ? `/api/impressoras-cadastro/${encodeURIComponent(id)}` : '/api/impressoras-cadastro';
@@ -870,6 +968,33 @@
             });
             const btnTermImp = document.getElementById('btnSalvarTerminalImp');
             if (btnTermImp) btnTermImp.addEventListener('click', salvarTerminalImpressao);
+            const btnDetectTerm = document.getElementById('btnDetectTerminalImp');
+            if (btnDetectTerm) {
+                btnDetectTerm.addEventListener('click', async () => {
+                    btnDetectTerm.disabled = true;
+                    const statusEl = document.getElementById('termImpStatus');
+                    try {
+                        if (statusEl) statusEl.textContent = 'Abrindo Print Bridge local (popup)…';
+                        let health = null;
+                        if (typeof window.lojaPairBridge === 'function') {
+                            health = await window.lojaPairBridge();
+                        } else if (typeof window.lojaGetBridgeHealthOrPair === 'function') {
+                            health = await window.lojaGetBridgeHealthOrPair(true);
+                        }
+                        if (!health || !health.terminal_id) {
+                            const detail = (typeof window.lojaGetLastBridgeError === 'function' && window.lojaGetLastBridgeError())
+                                || 'Pairing falhou.';
+                            if (statusEl) statusEl.textContent = 'Detectar falhou. ' + detail;
+                            showMsg(detail, 'erro');
+                            return;
+                        }
+                        await carregarTerminalImpressao();
+                        showMsg('Terminal detectado: ' + health.terminal_id, 'sucesso');
+                    } finally {
+                        btnDetectTerm.disabled = false;
+                    }
+                });
+            }
 
             await carregarSistema();
             await carregarPrintersDisponiveis();

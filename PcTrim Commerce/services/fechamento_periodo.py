@@ -180,8 +180,211 @@ def _money_br(v: float) -> str:
     return "R$ " + f"{n:.2f}".replace(".", ",")
 
 
+THERMAL_W = 40
+
+FECHAMENTO_PRINT_DEFAULTS: Dict[str, str] = {
+    "fat_recebido": "S",
+    "por_canal": "S",
+    "pagamentos": "S",
+    "por_classe": "S",
+    "remocoes": "S",
+    "modificadas": "S",
+    "canceladas": "S",
+    "aguarde": "N",
+    "novos_clientes": "N",
+    "top_produtos": "N",
+}
+
+
+def _sn_flag(v: Any, default: str = "N") -> str:
+    raw = str(v if v is not None else default).strip().upper()
+    if raw in ("S", "SIM", "1", "Y", "YES", "TRUE"):
+        return "S"
+    if raw in ("N", "NAO", "NÃO", "0", "NO", "FALSE"):
+        return "N"
+    return "S" if str(default).upper() == "S" else "N"
+
+
+def resolve_fechamento_print_blocos(raw: Any = None) -> Dict[str, str]:
+    out = dict(FECHAMENTO_PRINT_DEFAULTS)
+    data = raw
+    if isinstance(raw, str) and raw.strip():
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            data = None
+    if isinstance(data, dict):
+        for k, default in FECHAMENTO_PRINT_DEFAULTS.items():
+            if k in data:
+                out[k] = _sn_flag(data.get(k), default)
+    return out
+
+
+def flag_on(flags: Optional[Dict[str, str]], key: str) -> bool:
+    f = flags or FECHAMENTO_PRINT_DEFAULTS
+    return _sn_flag(f.get(key), FECHAMENTO_PRINT_DEFAULTS.get(key, "N")) == "S"
+
+
+def _thermal_hr(ch: str = "-") -> str:
+    c = (ch or "-")[:1]
+    return c * THERMAL_W
+
+
+def _thermal_center(text: str) -> str:
+    s = str(text or "").strip()
+    if not s:
+        return ""
+    if len(s) >= THERMAL_W:
+        return s[:THERMAL_W]
+    pad = THERMAL_W - len(s)
+    left = pad // 2
+    return (" " * left) + s + (" " * (pad - left))
+
+
+def _thermal_truncate(text: str, max_len: Optional[int] = None) -> str:
+    w = int(max_len) if max_len is not None else THERMAL_W
+    if w < 1:
+        w = 1
+    s = str(text or "").replace("\n", " ").strip()
+    if len(s) <= w:
+        return s
+    if w <= 3:
+        return s[:w]
+    return s[: w - 3] + "..."
+
+
+def _thermal_cols(left: str, right: str) -> str:
+    L = str(left or "")
+    R = str(right or "").strip()
+    if not R:
+        return _thermal_truncate(L, THERMAL_W)
+    if len(R) >= THERMAL_W:
+        return R[:THERMAL_W]
+    gap = 1
+    max_left = THERMAL_W - len(R) - gap
+    if max_left < 0:
+        max_left = 0
+    if len(L) > max_left:
+        L = _thermal_truncate(L, max_left) if max_left else ""
+    return L + (" " * (THERMAL_W - len(L) - len(R))) + R
+
+
+def _data_br(iso_ymd: str) -> str:
+    s = str(iso_ymd or "").strip()[:10]
+    if len(s) == 10 and s[4] == "-" and s[7] == "-":
+        return f"{s[8:10]}/{s[5:7]}/{s[0:4]}"
+    return s
+
+
+def ensure_fechamento_print_blocos_column(cur) -> None:
+    cur.execute("SHOW COLUMNS FROM configuracao LIKE 'fechamento_print_blocos'")
+    if not cur.fetchone():
+        cur.execute(
+            "ALTER TABLE configuracao ADD COLUMN fechamento_print_blocos TEXT NULL"
+        )
+
+
+def load_fechamento_print_blocos(id_cliente: int) -> Dict[str, str]:
+    conn = None
+    cur = None
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        ensure_fechamento_print_blocos_column(cur)
+        conn.commit()
+        cur.execute(
+            """
+            SELECT fechamento_print_blocos
+            FROM configuracao
+            WHERE id_cliente = %s
+            ORDER BY chave DESC
+            LIMIT 1
+            """,
+            (int(id_cliente),),
+        )
+        row = cur.fetchone()
+        raw = row[0] if row else None
+        return resolve_fechamento_print_blocos(raw)
+    except Exception as e:
+        print("[FECHAMENTO FLAGS LOAD ERRO]", e, flush=True)
+        return dict(FECHAMENTO_PRINT_DEFAULTS)
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def save_fechamento_print_blocos(id_cliente: int, flags_in: Any) -> Tuple[bool, Optional[str], Dict[str, str]]:
+    flags = resolve_fechamento_print_blocos(flags_in)
+    conn = None
+    cur = None
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        ensure_fechamento_print_blocos_column(cur)
+        cur.execute(
+            "SELECT chave FROM configuracao WHERE id_cliente = %s ORDER BY chave DESC LIMIT 1",
+            (int(id_cliente),),
+        )
+        row = cur.fetchone()
+        payload = json.dumps(flags, ensure_ascii=False)
+        if not row:
+            return False, "Configuração da loja não encontrada. Salve as configurações do sistema antes.", flags
+        cur.execute(
+            "UPDATE configuracao SET fechamento_print_blocos = %s WHERE chave = %s",
+            (payload, int(row[0])),
+        )
+        conn.commit()
+        return True, None, flags
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print("[FECHAMENTO FLAGS SAVE ERRO]", e, flush=True)
+        return False, str(e), flags
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def _map_nomes_usuarios(cur, id_cliente: int, codigos: List[int]) -> Dict[int, str]:
+    ids = sorted({int(c) for c in codigos if c})
+    if not ids:
+        return {}
+    ph = ", ".join(["%s"] * len(ids))
+    out: Dict[int, str] = {}
+    try:
+        cur.execute(
+            f"""
+            SELECT chave, TRIM(COALESCE(usuario, '')) AS login
+            FROM usuarios
+            WHERE chave IN ({ph})
+              AND (id_cliente = %s OR id_cliente IS NULL)
+            """,
+            tuple(ids) + (int(id_cliente),),
+        )
+        for r in cur.fetchall() or []:
+            if isinstance(r, dict):
+                k, login = r.get("chave"), r.get("login")
+            else:
+                k, login = r[0], r[1]
+            try:
+                kid = int(k)
+            except (TypeError, ValueError):
+                continue
+            name = str(login or "").strip()
+            if name:
+                out[kid] = name
+    except Exception as e:
+        print("[FECHAMENTO USUARIOS MAP ERRO]", e, flush=True)
+    return out
+
+
+
 def resumo_financeiro_fechamento(id_cliente: int, data_inicio: str, data_fim: str) -> dict:
-    """Agregados financeiros no período: recebido (MESA: status_mesa; outras: status_pedido) e ITEM_REMOVIDO."""
+    """Agregados financeiros no período: recebido e ITEM_REMOVIDO."""
     d0, d1 = intervalo_datetimes(data_inicio, data_fim)
     garantir_diretorio_relatorios(id_cliente)
     conn = None
@@ -190,6 +393,8 @@ def resumo_financeiro_fechamento(id_cliente: int, data_inicio: str, data_fim: st
         conn = conectar()
         cur = conn.cursor(dictionary=True)
         w, p = _where_fechamento(id_cliente, d0, d1)
+        wp, pp = _where_periodo_diario(id_cliente, d0, d1)
+        sr = _sql_faturamento_linha()
         cur.execute(
             f"""
             SELECT COALESCE(SUM(CAST(preco AS DECIMAL(14,4)) * CAST(quantidade AS DECIMAL(14,4))), 0) AS t
@@ -198,6 +403,19 @@ def resumo_financeiro_fechamento(id_cliente: int, data_inicio: str, data_fim: st
             p,
         )
         total_geral = float((cur.fetchone() or {}).get("t") or 0)
+        cur.execute(
+            f"""
+            SELECT COALESCE(SUM(CAST(preco AS DECIMAL(14,4)) * CAST(quantidade AS DECIMAL(14,4))), 0) AS t,
+                   COUNT(DISTINCT CONCAT(UPPER(TRIM(COALESCE(origem, ''))), ':', CAST(nropedido AS CHAR(20)))) AS pedidos
+            FROM pedido_diarios
+            WHERE {wp}
+              AND {sr}
+            """,
+            pp,
+        )
+        row_rec = cur.fetchone() or {}
+        total_recebido = float(row_rec.get("t") or 0)
+        pedidos_recebidos = int(row_rec.get("pedidos") or 0)
         cur.execute(
             f"""
             SELECT
@@ -237,16 +455,25 @@ def resumo_financeiro_fechamento(id_cliente: int, data_inicio: str, data_fim: st
             {"forma": (row.get("fp") or ""), "total": float(row.get("total") or 0)}
             for row in (cur.fetchall() or [])
         ]
+        flags = load_fechamento_print_blocos(id_cliente)
         texto = _formatar_resumo_texto_impressao(
-            id_cliente, data_inicio[:10], data_fim[:10], total_geral, por_status_val, por_forma
+            data_inicio[:10],
+            data_fim[:10],
+            total_recebido,
+            pedidos_recebidos,
+            por_status_val,
+            por_forma,
         )
         return {
             "sucesso": True,
             "data_inicio": data_inicio[:10],
             "data_fim": data_fim[:10],
             "total_geral": total_geral,
+            "total_recebido": total_recebido,
+            "pedidos_recebidos_distintos": pedidos_recebidos,
             "por_status": por_status_val,
             "por_forma_pagamento": por_forma,
+            "print_blocos": flags,
             "texto_impressao": texto,
         }
     finally:
@@ -257,32 +484,33 @@ def resumo_financeiro_fechamento(id_cliente: int, data_inicio: str, data_fim: st
 
 
 def _formatar_resumo_texto_impressao(
-    id_cliente: int,
     di: str,
     df: str,
-    total_geral: float,
+    total_recebido: float,
+    pedidos_recebidos: int,
     por_status: List[dict],
     por_forma: List[dict],
 ) -> str:
-    lines = [
-        "========== FECHAMENTO DE CAIXA ==========",
-        f"id_cliente: {id_cliente}",
-        f"Periodo: {di} a {df} (fim do dia incluso)",
-        f"TOTAL GERAL: {_money_br(total_geral)}",
-        "",
-        "--- Por status ---",
+    lines: List[str] = [
+        _thermal_center("FECHAMENTO DE CAIXA"),
+        _thermal_center(f"Periodo: {_data_br(di)} a {_data_br(df)}"),
+        _thermal_hr(),
+        _thermal_cols("TOTAL RECEBIDO", _money_br(total_recebido)),
+        _thermal_cols("Pedidos", str(int(pedidos_recebidos or 0))),
+        _thermal_hr(),
+        _thermal_center("POR STATUS"),
     ]
-    for x in por_status:
-        lines.append(f"  {x.get('status') or '-'} : {_money_br(float(x.get('total') or 0))}")
-    lines.append("")
-    lines.append("--- Por forma de pagamento (campo formapagamento) ---")
-    for x in por_forma:
-        lines.append(f"  {x.get('forma') or '-'} : {_money_br(float(x.get('total') or 0))}")
-    lines.append("")
-    lines.append(
-        "(Linhas elegiveis: ITEM_REMOVIDO; recebido: MESA com status_mesa=RECEBIDO, demais origens com status_pedido=RECEBIDO)"
-    )
-    lines.append("==========================================")
+    for x in por_status or []:
+        lines.append(
+            _thermal_cols(str(x.get("status") or "-"), _money_br(float(x.get("total") or 0)))
+        )
+    lines.append(_thermal_hr())
+    lines.append(_thermal_center("FORMAS DE PAGAMENTO"))
+    for x in por_forma or []:
+        lines.append(
+            _thermal_cols(str(x.get("forma") or "-"), _money_br(float(x.get("total") or 0)))
+        )
+    lines.append(_thermal_hr())
     return "\n".join(lines)
 
 
@@ -584,6 +812,70 @@ def relatorio_gerencial_periodo(
 
         taxa_remocao_valor = round(100.0 * rem_valor / (tot_recebido + rem_valor), 2) if (tot_recebido + rem_valor) > 0 else 0.0
 
+        cur.execute(
+            f"""
+            SELECT TRIM(COALESCE(NULLIF(TRIM(classe), ''), 'Sem classificação')) AS classe,
+                   COALESCE(SUM(CAST(preco AS DECIMAL(14, 4)) * CAST(quantidade AS DECIMAL(14, 4))), 0) AS total
+            FROM pedido_diarios
+            WHERE {wp}
+              AND {sr}
+            GROUP BY TRIM(COALESCE(NULLIF(TRIM(classe), ''), 'Sem classificação'))
+            ORDER BY total DESC
+            """,
+            pp,
+        )
+        por_classe = [
+            {"classe": str(r.get("classe") or "Sem classificação"), "total": float(r.get("total") or 0)}
+            for r in (cur.fetchall() or [])
+        ]
+
+        def _lista_status_comanda(status_val: str):
+            cur.execute(
+                f"""
+                SELECT UPPER(TRIM(COALESCE(origem, ''))) AS origem,
+                       nropedido,
+                       MAX(cod_usuario) AS cod_usuario
+                FROM pedido_diarios
+                WHERE {wp}
+                  AND UPPER(TRIM(COALESCE(status_comanda, ''))) = %s
+                GROUP BY UPPER(TRIM(COALESCE(origem, ''))), nropedido
+                ORDER BY nropedido DESC
+                LIMIT 15
+                """,
+                pp + (status_val,),
+            )
+            rows = list(cur.fetchall() or [])
+            codes = []
+            for r in rows:
+                try:
+                    codes.append(int(r.get("cod_usuario") or 0))
+                except (TypeError, ValueError):
+                    pass
+            nomes = _map_nomes_usuarios(cur, int(id_cliente), codes)
+            out_list = []
+            for r in rows:
+                try:
+                    nro = int(r.get("nropedido") or 0)
+                except (TypeError, ValueError):
+                    nro = 0
+                try:
+                    cuid = int(r.get("cod_usuario") or 0)
+                except (TypeError, ValueError):
+                    cuid = 0
+                out_list.append(
+                    {
+                        "origem": str(r.get("origem") or "-") or "-",
+                        "nropedido": nro,
+                        "cod_usuario": cuid or None,
+                        "usuario": nomes.get(cuid) if cuid else "—",
+                    }
+                )
+            return out_list
+
+        comandas_modificadas_lista = _lista_status_comanda("MODIFICADA")
+        comandas_canceladas_lista = _lista_status_comanda("CANCELADA")
+        print_blocos = load_fechamento_print_blocos(id_cliente)
+
         payload = {
             "sucesso": True,
             "data_inicio": di,
@@ -605,6 +897,10 @@ def relatorio_gerencial_periodo(
             "top_produtos": top_produtos,
             "por_hora_recebido": por_hora,
             "novos_clientes_cadastro": novos_clientes,
+            "por_classe": por_classe,
+            "comandas_modificadas_lista": comandas_modificadas_lista,
+            "comandas_canceladas_lista": comandas_canceladas_lista,
+            "print_blocos": print_blocos,
         }
         payload["texto_impressao"] = _formatar_relatorio_gerencial_texto(payload)
         return payload
@@ -616,67 +912,116 @@ def relatorio_gerencial_periodo(
 
 
 def _formatar_relatorio_gerencial_texto(d: dict) -> str:
-    lines = [
-        "========== RELATORIO GERENCIAL (PRESTACAO DE CONTAS) ==========",
-        f"id_cliente: {d.get('id_cliente')}",
-        f"Periodo: {d.get('data_inicio')} a {d.get('data_fim')} (fim do dia incluso)",
-        "(Recebido: origem MESA → status_mesa=RECEBIDO; demais origens → status_pedido=RECEBIDO)",
-        "",
-        "--- Faturamento RECEBIDO ---",
-        f"Total geral: {_money_br(float(d.get('faturamento_recebido_total') or 0))}",
-        f"Pedidos distintos (recebido): {d.get('pedidos_recebidos_distintos')}",
-        "",
-        "--- Por canal (origem) ---",
+    flags = resolve_fechamento_print_blocos(d.get("print_blocos"))
+    lines: List[str] = [
+        _thermal_center("RELATORIO GERENCIAL"),
+        _thermal_center(
+            f"Periodo: {_data_br(str(d.get('data_inicio') or ''))} a {_data_br(str(d.get('data_fim') or ''))}"
+        ),
+        _thermal_hr(),
     ]
-    for c in d.get("por_canal") or []:
+    if flag_on(flags, "fat_recebido"):
+        lines.append(_thermal_center("FATURAMENTO RECEBIDO"))
         lines.append(
-            f"  {c.get('origem')}: {_money_br(float(c.get('faturamento') or 0))} | "
-            f"pedidos={c.get('pedidos')} | ticket medio={_money_br(float(c.get('ticket_medio') or 0))}"
+            _thermal_cols("Total", _money_br(float(d.get("faturamento_recebido_total") or 0)))
         )
-    lines.append("")
-    lines.append("--- Mix % sobre faturamento recebido ---")
-    for m in d.get("mix_percentual_canal") or []:
-        lines.append(f"  {m.get('origem')}: {m.get('percentual_faturamento')}%")
-    lines.append("")
-    lines.append("--- Pagamentos (baixa_pagamento JSON ou formapagamento) ---")
-    lines.append("(Categorias normalizadas: Dinheiro, PIX, cartoes, Vale, Transferencia, Outros)")
-    for p in d.get("pagamentos_por_categoria") or []:
-        lines.append(f"  {p.get('categoria')}: {_money_br(float(p.get('total') or 0))}")
-    lines.append("")
-    lines.append("--- Cancelamentos / itens removidos ---")
-    lines.append(f"  Linhas ITEM_REMOVIDO: {d.get('item_removido_linhas')}")
-    lines.append(f"  Valor (itens removidos): {_money_br(float(d.get('item_removido_valor') or 0))}")
-    lines.append(f"  Taxa remocao sobre (recebido+removido) valor: {d.get('taxa_remocao_valor_pct')}%")
-    lines.append("")
-    lines.append("--- Comandas modificadas (status_comanda) ---")
-    lines.append(f"  Pedidos distintos com MODIFICADA: {d.get('comandas_modificadas_pedidos')}")
-    lines.append(f"  Destes, ainda nao RECEBIDO: {d.get('comandas_modificadas_nao_recebido_pedidos')}")
-    lines.append("")
-    lines.append("--- Comandas canceladas (status_comanda) ---")
-    lines.append(f"  Pedidos distintos com CANCELADA: {d.get('comandas_canceladas_pedidos')}")
-    lines.append(f"  Destes, ainda nao RECEBIDO: {d.get('comandas_canceladas_nao_recebido_pedidos')}")
-    lines.append("")
-    lines.append("--- Pedidos em AGUARDE no periodo (ainda no diario) ---")
-    lines.append(f"  Pedidos distintos: {d.get('pedidos_aguarde_distintos_periodo')}")
-    lines.append("")
-    nc = d.get("novos_clientes_cadastro")
-    lines.append("--- Novos clientes (cadastro) ---")
-    lines.append(f"  Quantidade: {nc if nc is not None else '(coluna data_criacao indisponivel)'}")
-    lines.append("")
-    lines.append("--- Top produtos (RECEBIDO, por valor) ---")
-    for i, t in enumerate(d.get("top_produtos") or [], 1):
         lines.append(
-            f"  {i}. {(t.get('produto') or t.get('ref') or '-')[:60]} | "
-            f"qtd={t.get('quantidade')} | {_money_br(float(t.get('total') or 0))}"
+            _thermal_cols("Pedidos", str(d.get("pedidos_recebidos_distintos") or 0))
         )
-    lines.append("")
-    lines.append("--- Movimento por hora (RECEBIDO, soma itens) ---")
-    for h in d.get("por_hora_recebido") or []:
+        lines.append(_thermal_hr())
+    if flag_on(flags, "por_canal"):
+        lines.append(_thermal_center("POR CANAL"))
+        for c in d.get("por_canal") or []:
+            lines.append(
+                _thermal_cols(
+                    str(c.get("origem") or "-"),
+                    _money_br(float(c.get("faturamento") or 0)),
+                )
+            )
+            lines.append(
+                _thermal_truncate(
+                    f"  ped={c.get('pedidos')} ticket={_money_br(float(c.get('ticket_medio') or 0))}"
+                )
+            )
+        lines.append(_thermal_hr())
+    if flag_on(flags, "pagamentos"):
+        lines.append(_thermal_center("PAGAMENTOS"))
+        for p in d.get("pagamentos_por_categoria") or []:
+            lines.append(
+                _thermal_cols(
+                    str(p.get("categoria") or "-"),
+                    _money_br(float(p.get("total") or 0)),
+                )
+            )
+        lines.append(_thermal_hr())
+    if flag_on(flags, "por_classe"):
+        lines.append(_thermal_center("POR CLASSIFICACAO"))
+        for x in d.get("por_classe") or []:
+            lines.append(
+                _thermal_cols(
+                    str(x.get("classe") or "Sem classificação"),
+                    _money_br(float(x.get("total") or 0)),
+                )
+            )
+        lines.append(_thermal_hr())
+    if flag_on(flags, "remocoes"):
+        lines.append(_thermal_center("REMOCOES"))
         lines.append(
-            f"  {int(h.get('hora') or 0):02d}h: itens={h.get('itens')} | {_money_br(float(h.get('total') or 0))}"
+            _thermal_cols("Itens removidos", str(d.get("item_removido_linhas") or 0))
         )
-    lines.append("")
-    lines.append("================================================================")
+        lines.append(
+            _thermal_cols("Valor removido", _money_br(float(d.get("item_removido_valor") or 0)))
+        )
+        lines.append(
+            _thermal_cols("Taxa remocao", f"{d.get('taxa_remocao_valor_pct') or 0}%")
+        )
+        lines.append(_thermal_hr())
+    if flag_on(flags, "modificadas"):
+        lines.append(_thermal_center("COMANDAS MODIFICADAS"))
+        lines.append(
+            _thermal_cols(
+                "Total pedidos",
+                f"{d.get('comandas_modificadas_pedidos') or 0} (ab:{d.get('comandas_modificadas_nao_recebido_pedidos') or 0})",
+            )
+        )
+        for it in (d.get("comandas_modificadas_lista") or [])[:15]:
+            line = f"#{it.get('nropedido')} {it.get('origem') or '-'}  {it.get('usuario') or '—'}"
+            lines.append(_thermal_truncate(line))
+        lines.append(_thermal_hr())
+    if flag_on(flags, "canceladas"):
+        lines.append(_thermal_center("COMANDAS CANCELADAS"))
+        lines.append(
+            _thermal_cols(
+                "Total pedidos",
+                f"{d.get('comandas_canceladas_pedidos') or 0} (ab:{d.get('comandas_canceladas_nao_recebido_pedidos') or 0})",
+            )
+        )
+        for it in (d.get("comandas_canceladas_lista") or [])[:15]:
+            line = f"#{it.get('nropedido')} {it.get('origem') or '-'}  {it.get('usuario') or '—'}"
+            lines.append(_thermal_truncate(line))
+        lines.append(_thermal_hr())
+    if flag_on(flags, "aguarde"):
+        lines.append(
+            _thermal_cols(
+                "Pedidos AGUARDE",
+                str(d.get("pedidos_aguarde_distintos_periodo") or 0),
+            )
+        )
+        lines.append(_thermal_hr())
+    if flag_on(flags, "novos_clientes"):
+        nc = d.get("novos_clientes_cadastro")
+        lines.append(
+            _thermal_cols("Novos clientes", str(nc if nc is not None else "—"))
+        )
+        lines.append(_thermal_hr())
+    if flag_on(flags, "top_produtos"):
+        lines.append(_thermal_center("TOP PRODUTOS"))
+        for i, t in enumerate((d.get("top_produtos") or [])[:10], 1):
+            nome = str(t.get("produto") or t.get("ref") or "-")
+            lines.append(
+                _thermal_cols(f"{i}.{_thermal_truncate(nome, 22)}", _money_br(float(t.get("total") or 0)))
+            )
+        lines.append(_thermal_hr())
     return "\n".join(lines)
 
 

@@ -59,13 +59,13 @@ class RateLimitTests(unittest.TestCase):
 
 
 class ValidarCodigoTests(unittest.TestCase):
-    @patch("services.login_otp.conectar")
-    def test_validar_codigo_ok(self, mock_conectar):
+    @patch("services.login_otp.locate_login_user", return_value=("production", {"usuario": "caixa1"}))
+    @patch("services.login_otp.conectar_admin")
+    def test_validar_codigo_ok(self, mock_conectar, _mock_locate):
         mock_conn = MagicMock()
         mock_cur = MagicMock()
         mock_conectar.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cur
-        mock_cur.fetchone.return_value = {"id": 7}
 
         codigo = "482931"
         usuario = "caixa1"

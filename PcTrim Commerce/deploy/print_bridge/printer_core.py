@@ -128,7 +128,10 @@ def send_to_printer(conteudo, printer_name=None, marca_impressora=None):
                     data = conteudo
 
                 else:
-                    data = str(conteudo).encode("cp1252", errors="replace")
+                    # Estado limpo no início (genéricas costumam ignorar só ESC ! 0)
+                    reset = b"\x1B\x40\x1B\x21\x00\x1D\x21\x00"
+                    data = reset + str(conteudo).encode("cp1252", errors="replace")
+                    data += reset
                     data += b"\x1B\x64\x03"
                     if marca_impressora:
                         marca = marca_impressora.strip().lower()

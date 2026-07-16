@@ -10,14 +10,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=22">
-    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='painel_configuracoes.css') }}?v=24">
+    <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_ui.css') }}?v=2">
     <link rel="stylesheet" href="{{ url_for('static', filename='configuracoes_cadastro.css') }}?v=3">
     {% include 'partials/topbar_meta_assets.html' %}
     {% include 'partials/context_hint_assets.html' %}
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=3" defer></script>
+    <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4" defer></script>
 </head>
 <body class="cfg-body">
     <div class="cfg-page">
@@ -196,6 +196,16 @@
         const LABEL_CLASSIF_PL = window.LABEL_CLASSIF_PL || {{ label_classif_pl|tojson }};
         const LABEL_CLASSIF_LOWER = IS_RETAIL ? 'categoria' : 'classificação';
         const COL_SPAN_PRODUTOS = IS_RETAIL ? 8 : 7;
+
+        /** Canonicaliza flags Sim/Nao (options do select e defaults do backend). */
+        function normSimNao(raw, defaultVal) {
+            const def = defaultVal === 'Sim' ? 'Sim' : 'Nao';
+            const u = String(raw == null ? '' : raw).trim().toUpperCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (['S', 'SIM', '1', 'TRUE', 'Y', 'YES', 'T'].indexOf(u) >= 0) return 'Sim';
+            if (['N', 'NAO', '0', 'FALSE', 'NO'].indexOf(u) >= 0) return 'Nao';
+            return def;
+        }
 
         function mostrarMensagem(texto, tipo) {
             const mensagemDiv = document.getElementById('mensagem');
@@ -607,11 +617,11 @@
                 if (result.sucesso && result.produtos.length > 0) {
                     result.produtos.forEach(produto => {
                         const tr = document.createElement('tr');
-                        const porkiloBadge = produto.porkilo === 'Sim' ? 
-                            '<span class="pill ok">Sim</span>' : 
+                        const porkiloBadge = normSimNao(produto.porkilo, 'Nao') === 'Sim' ?
+                            '<span class="pill ok">Sim</span>' :
                             '<span class="pill bad">Não</span>';
-                        const vendaBadge = produto.vendaliberada === 'Sim' ? 
-                            '<span class="pill ok">Sim</span>' : 
+                        const vendaBadge = normSimNao(produto.vendaliberada, 'Sim') === 'Sim' ?
+                            '<span class="pill ok">Sim</span>' :
                             '<span class="pill bad">Não</span>';
                         const retailCols = IS_RETAIL ? `
                             <td><span class="pill">${produto.categoria_nome || '—'}</span></td>
@@ -674,8 +684,8 @@
                             sincronizarClasseDoSelect();
                         }
                     }
-                    document.getElementById('porkilo').value = p.porkilo;
-                    document.getElementById('vendaliberada').value = p.vendaliberada;
+                    document.getElementById('porkilo').value = normSimNao(p.porkilo, 'Nao');
+                    document.getElementById('vendaliberada').value = normSimNao(p.vendaliberada, 'Sim');
                     document.getElementById('impressora').value = p.impressora;
                     document.getElementById('display').value = p.display;
                     document.getElementById('cfop').value = p.cfop;
@@ -766,8 +776,8 @@
                 produto: document.getElementById('nome').value.trim().toUpperCase(),
                 barcode: document.getElementById('barcode').value.trim() || null,
                 preco: parseFloat(document.getElementById('preco').value),
-                porkilo: document.getElementById('porkilo').value.toUpperCase(),
-                vendaliberada: document.getElementById('vendaliberada').value.toUpperCase(),
+                porkilo: normSimNao(document.getElementById('porkilo').value, 'Nao'),
+                vendaliberada: normSimNao(document.getElementById('vendaliberada').value, 'Sim'),
                 impressora: parseInt(document.getElementById('impressora').value) || 1,
                 display: parseInt(document.getElementById('display').value) || 0,
                 cfop: document.getElementById('cfop').value.trim().toUpperCase() || '5102',

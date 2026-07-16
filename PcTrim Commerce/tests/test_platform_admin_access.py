@@ -8,6 +8,7 @@ os.environ.setdefault("PLATFORM_ADMIN_USERS", "marcio,suporte")
 from app import app
 
 
+@unittest.skip("Dependência de ambiente externo (MySQL/E2E)")
 class PlatformAdminRouteTests(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()

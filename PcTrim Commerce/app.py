@@ -39,9 +39,11 @@ from services.fechamento_periodo import (
     ensure_pedido_periodos_table,
     ensure_purge_event,
     executar_fechamento,
+    load_fechamento_print_blocos,
     preview_fechamento,
     relatorio_gerencial_periodo,
     resumo_financeiro_fechamento,
+    save_fechamento_print_blocos,
 )
 
 _PYWIN32_SYS = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv", "Lib", "site-packages", "pywin32_system32")
@@ -159,6 +161,12 @@ def inject_app_globals():
     elif tenant_target:
         tenant_db_name = Config.admin_db_profile(tenant_target)["database"]
 
+    cor_primaria = None
+    if dados_loja:
+        _cp = _sanitize_cor_primaria(dados_loja.get("cor_primaria"))
+        if _cp:
+            cor_primaria = _cp
+
     return {
         "app_version": get_app_version(),
         "url_prefix": Config.URL_PREFIX,
@@ -172,6 +180,7 @@ def inject_app_globals():
         "mysql_database": tenant_db_name or Config.admin_db_profile("production")["database"],
         "tenant_db_target": tenant_target,
         "loja_ambiente": ambiente_label(dados_loja.get("ambiente")) if dados_loja else None,
+        "cor_primaria": cor_primaria,
     }
 
 
@@ -939,16 +948,26 @@ def _ensure_formapagamento_troco_column():
 
 
 def _ensure_pedido_diarios_valor_pago_troco():
+    """Garante valor_pago_troco em pedido_diarios e pedido_periodos (se existir).
+
+    Raises em falha — callers não devem seguir com SELECT na coluna inexistente.
+    """
     conn = None
     cur = None
     try:
         conn = conectar()
         cur = conn.cursor()
-        cur.execute("SHOW COLUMNS FROM pedido_diarios LIKE 'valor_pago_troco'")
-        if cur.fetchone() is None:
-            cur.execute(
-                "ALTER TABLE pedido_diarios ADD COLUMN valor_pago_troco DECIMAL(12,2) NULL AFTER formapagamento"
-            )
+        tables = ["pedido_diarios"]
+        cur.execute("SHOW TABLES LIKE 'pedido_periodos'")
+        if cur.fetchone():
+            tables.append("pedido_periodos")
+        for tbl in tables:
+            cur.execute(f"SHOW COLUMNS FROM `{tbl}` LIKE %s", ("valor_pago_troco",))
+            if cur.fetchone() is None:
+                cur.execute(
+                    f"ALTER TABLE `{tbl}` "
+                    "ADD COLUMN valor_pago_troco DECIMAL(12,2) NULL"
+                )
         conn.commit()
     except Exception as e:
         try:
@@ -957,6 +976,9 @@ def _ensure_pedido_diarios_valor_pago_troco():
         except Exception:
             pass
         print("[PEDIDO_DIARIOS VALOR_PAGO_TROCO ERRO]", e, flush=True)
+        raise RuntimeError(
+            f"Não foi possível garantir coluna valor_pago_troco: {e}"
+        ) from e
     finally:
         if cur:
             cur.close()
@@ -965,19 +987,31 @@ def _ensure_pedido_diarios_valor_pago_troco():
 
 
 def _ensure_pedido_diarios_preparo_columns():
+    """Garante imp_preparo / imp_preparo_em em pedido_diarios e pedido_periodos (se existir).
+
+    Raises em falha — callers não devem seguir com SELECT na coluna inexistente.
+    """
     conn = None
     cur = None
     try:
         conn = conectar()
         cur = conn.cursor()
-        cur.execute("SHOW COLUMNS FROM pedido_diarios LIKE 'imp_preparo'")
-        if cur.fetchone() is None:
-            cur.execute(
-                "ALTER TABLE pedido_diarios ADD COLUMN imp_preparo CHAR(1) NOT NULL DEFAULT 'N' AFTER dados_item"
-            )
-        cur.execute("SHOW COLUMNS FROM pedido_diarios LIKE 'imp_preparo_em'")
-        if cur.fetchone() is None:
-            cur.execute("ALTER TABLE pedido_diarios ADD COLUMN imp_preparo_em DATETIME NULL AFTER imp_preparo")
+        tables = ["pedido_diarios"]
+        cur.execute("SHOW TABLES LIKE 'pedido_periodos'")
+        if cur.fetchone():
+            tables.append("pedido_periodos")
+        for tbl in tables:
+            cur.execute(f"SHOW COLUMNS FROM `{tbl}` LIKE %s", ("imp_preparo",))
+            if cur.fetchone() is None:
+                cur.execute(
+                    f"ALTER TABLE `{tbl}` "
+                    "ADD COLUMN imp_preparo CHAR(1) NOT NULL DEFAULT 'N'"
+                )
+            cur.execute(f"SHOW COLUMNS FROM `{tbl}` LIKE %s", ("imp_preparo_em",))
+            if cur.fetchone() is None:
+                cur.execute(
+                    f"ALTER TABLE `{tbl}` ADD COLUMN imp_preparo_em DATETIME NULL"
+                )
         conn.commit()
     except Exception as e:
         try:
@@ -986,6 +1020,9 @@ def _ensure_pedido_diarios_preparo_columns():
         except Exception:
             pass
         print("[PEDIDO_DIARIOS PREPARO COLUNAS ERRO]", e, flush=True)
+        raise RuntimeError(
+            f"Não foi possível garantir colunas de preparo (imp_preparo): {e}"
+        ) from e
     finally:
         if cur:
             cur.close()
@@ -1296,6 +1333,72 @@ def _ensure_cliente_obrigatorio_balcao_column():
             conn.close()
 
 
+def _ensure_cor_primaria_column_on_conn(conn, label):
+    cur = None
+    try:
+        cur = conn.cursor()
+        cur.execute("SHOW COLUMNS FROM dadosloja LIKE 'cor_primaria'")
+        if cur.fetchone() is None:
+            cur.execute(
+                "ALTER TABLE dadosloja ADD COLUMN cor_primaria VARCHAR(7) DEFAULT NULL"
+            )
+            conn.commit()
+            print(f"[DADOSLOJA COR_PRIMARIA] coluna criada em {label}", flush=True)
+        else:
+            print(f"[DADOSLOJA COR_PRIMARIA] ja existe em {label}", flush=True)
+    finally:
+        if cur:
+            cur.close()
+
+
+def _ensure_cor_primaria_column():
+    """Garante cor_primaria em pctrim_commerce e pctrim_commerce_hml (quando credenciais existirem)."""
+    from database import conectar_admin_optional
+
+    for target in ("production", "homologation"):
+        conn = None
+        try:
+            conn = conectar_admin_optional(target)
+            if conn is None:
+                print(f"[DADOSLOJA COR_PRIMARIA] skip {target} (credenciais ausentes)", flush=True)
+                continue
+            profile = Config.admin_db_profile(target)
+            label = f"{profile['label']}/{profile['database']}"
+            _ensure_cor_primaria_column_on_conn(conn, label)
+        except Exception as e:
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+            print(f"[DADOSLOJA COR_PRIMARIA COLUNA ERRO] {target}:", e, flush=True)
+        finally:
+            if conn:
+                conn.close()
+
+
+def _sanitize_cor_primaria(value):
+    """Retorna '#RRGGBB' válido, None se vazio, False se inválido."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    if not re.match(r"^#[0-9A-Fa-f]{6}$", s):
+        return False
+    return "#" + s[1:].upper()
+
+
+def _parse_cor_primaria_payload(dados):
+    """('set', hex|None) ou ('omit', None) se inválido / chave ausente."""
+    if not isinstance(dados, dict) or "cor_primaria" not in dados:
+        return "omit", None
+    parsed = _sanitize_cor_primaria(dados.get("cor_primaria"))
+    if parsed is False:
+        return "omit", None
+    return "set", parsed
+
+
 def _ensure_clientes_cpf_cnpj_column():
     conn = None
     cur = None
@@ -1334,6 +1437,7 @@ def bootstrap_schema():
         _ensure_tipo_negocio_column()
         _ensure_ambiente_column()
         _ensure_cliente_obrigatorio_balcao_column()
+        _ensure_cor_primaria_column()
         _ensure_clientes_cpf_cnpj_column()
         _ensure_obs_columns()
         _ensure_produtos_barcode_column()
@@ -1389,6 +1493,11 @@ def _ensure_impressoras_table():
         cur.execute("SHOW COLUMNS FROM impressoras LIKE 'feed_final_linhas'")
         if not cur.fetchone():
             cur.execute("ALTER TABLE impressoras ADD COLUMN feed_final_linhas TINYINT NOT NULL DEFAULT 6")
+        cur.execute("SHOW COLUMNS FROM impressoras LIKE 'formato_escpos'")
+        if not cur.fetchone():
+            cur.execute(
+                "ALTER TABLE impressoras ADD COLUMN formato_escpos VARCHAR(16) NOT NULL DEFAULT 'completa'"
+            )
         cur.execute("SHOW COLUMNS FROM impressoras LIKE 'id_cliente'")
         if not cur.fetchone():
             cur.execute("ALTER TABLE impressoras ADD COLUMN id_cliente INT DEFAULT NULL")
@@ -1925,8 +2034,24 @@ def api_casa_add_item():
             if lancamento > 2147483647:
                 lancamento = 1
             precos = [float((p or {}).get("preco") or 0) for p in partes]
+            if not formadecobrar and classe_nome:
+                cur.execute(
+                    """
+                    SELECT formadecobrar
+                    FROM classificacao
+                    WHERE nomeclassificacao = %s AND id_cliente = %s
+                    LIMIT 1
+                    """,
+                    (classe_nome, id_cliente),
+                )
+                row_fc = cur.fetchone() or {}
+                formadecobrar = str(row_fc.get("formadecobrar") or "").strip().lower()
+            if formadecobrar == "media" and precos:
+                preco_base = round(sum(precos) / len(precos), 2)
+            else:
+                # maior / normal / default
+                preco_base = max(precos) if precos else float(item.get("preco") or 0)
             maior_idx = max(range(len(precos)), key=lambda i: precos[i]) if precos else 0
-            preco_base = max(precos) if precos else float(item.get("preco") or 0)
             last_pd_id = None
             for i, parte in enumerate(partes):
                 nome_parte = str((parte or {}).get("nome") or nome).strip() or nome
@@ -3816,14 +3941,44 @@ def api_pedido_cancelar_comanda():
         if not pode:
             code = 404 if motivo == "Pedido não encontrado." else 409
             return jsonify({"sucesso": False, "erro": motivo}), code
-        cur.execute(
-            """
-            UPDATE pedido_diarios
-            SET status_comanda = %s
-            WHERE id_cliente = %s AND origem = %s AND nropedido = %s
-            """,
-            (STATUS_COMANDA_CANCELADA, int(id_cliente), origem, int(nropedido)),
-        )
+        cod_usuario = None
+        try:
+            id_usuario_sessao = session.get("id_usuario")
+            if id_usuario_sessao is not None:
+                cod_usuario = int(id_usuario_sessao)
+        except (TypeError, ValueError):
+            cod_usuario = None
+        if cod_usuario is None:
+            usuario_login = str(session.get("usuario") or "").strip()
+            if usuario_login:
+                cur.execute(
+                    "SELECT chave FROM usuarios WHERE usuario = %s AND id_cliente = %s LIMIT 1",
+                    (usuario_login, int(id_cliente)),
+                )
+                row_u = cur.fetchone()
+                if row_u:
+                    try:
+                        cod_usuario = int(row_u[0])
+                    except (TypeError, ValueError, IndexError):
+                        cod_usuario = None
+        if cod_usuario is not None:
+            cur.execute(
+                """
+                UPDATE pedido_diarios
+                SET status_comanda = %s, cod_usuario = %s
+                WHERE id_cliente = %s AND origem = %s AND nropedido = %s
+                """,
+                (STATUS_COMANDA_CANCELADA, int(cod_usuario), int(id_cliente), origem, int(nropedido)),
+            )
+        else:
+            cur.execute(
+                """
+                UPDATE pedido_diarios
+                SET status_comanda = %s
+                WHERE id_cliente = %s AND origem = %s AND nropedido = %s
+                """,
+                (STATUS_COMANDA_CANCELADA, int(id_cliente), origem, int(nropedido)),
+            )
         linhas = int(cur.rowcount or 0)
         conn.commit()
         return jsonify(
@@ -3833,6 +3988,7 @@ def api_pedido_cancelar_comanda():
                 "origem": origem,
                 "nropedido": int(nropedido),
                 "linhas_afetadas": linhas,
+                "cod_usuario": cod_usuario,
             }
         )
     except Exception as e:
@@ -5061,7 +5217,10 @@ def send_to_printer(conteudo, printer_name=None, marca_impressora=None):
                 if isinstance(conteudo, bytes):
                     data = conteudo
                 else:
-                    data = str(conteudo).encode("cp1252", errors="replace")
+                    # Estado limpo no início (genéricas costumam ignorar só ESC ! 0)
+                    reset = b"\x1B\x40\x1B\x21\x00\x1D\x21\x00"
+                    data = reset + str(conteudo).encode("cp1252", errors="replace")
+                    data += reset
                     # Avanço de papel padrão
                     data += b"\x1B\x64\x03"  # ESC d 3 = avança 3 linhas
                     # Comando de corte conforme marca
@@ -5855,6 +6014,8 @@ def salvar_classificacao():
         
         if not nomeclassificacao:
             return jsonify({"sucesso": False, "mensagem": "Nome da classificação é obrigatório"}), 400
+
+        formadecobrar_norm = str(formadecobrar or "").strip().upper() or "NORMAL"
         
         conn = conectar()
         cursor = conn.cursor()
@@ -5867,7 +6028,7 @@ def salvar_classificacao():
             nomeclassificacao,
             quantidadepartes,
             nrofoto,
-            (str(formadecobrar).strip().upper() if formadecobrar is not None else None),
+            formadecobrar_norm,
             op_tamanhos,
             op_massas,
             op_bordas,
@@ -5899,20 +6060,35 @@ def salvar_classificacao():
 @login_required
 @restaurant_only
 def listar_classificacoes():
-    """Lista todas as classificações cadastradas"""
+    """Lista classificações do tenant.
+
+    Query pdv=1: oculta classes com quantidadepartes = 0 (abas /casa e /mesa).
+    Sem pdv: lista completa (cadastro).
+    """
     conn = None
     cursor = None
     try:
         conn = conectar()
         cursor = conn.cursor(dictionary=True)
         id_cliente = session.get('id_cliente')
-        cursor.execute("""
-            SELECT chave, nomeclassificacao, quantidadepartes, nrofoto, formadecobrar,
-                   op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais
-            FROM classificacao
-            WHERE id_cliente = %s
-            ORDER BY nomeclassificacao
-        """, (id_cliente,))
+        pdv = str(request.args.get("pdv") or "").strip().lower() in ("1", "true", "sim", "yes")
+        if pdv:
+            cursor.execute("""
+                SELECT chave, nomeclassificacao, quantidadepartes, nrofoto, formadecobrar,
+                       op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais
+                FROM classificacao
+                WHERE id_cliente = %s
+                  AND (quantidadepartes IS NULL OR quantidadepartes <> 0)
+                ORDER BY nomeclassificacao
+            """, (id_cliente,))
+        else:
+            cursor.execute("""
+                SELECT chave, nomeclassificacao, quantidadepartes, nrofoto, formadecobrar,
+                       op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais
+                FROM classificacao
+                WHERE id_cliente = %s
+                ORDER BY nomeclassificacao
+            """, (id_cliente,))
         classificacoes = cursor.fetchall()
         # Para cada classificação, buscar os produtos
         for classif in classificacoes:
@@ -5986,6 +6162,8 @@ def editar_classificacao(chave):
         
         if not nomeclassificacao:
             return jsonify({"sucesso": False, "mensagem": "Nome da classificação é obrigatório"}), 400
+
+        formadecobrar_norm = str(formadecobrar or "").strip().upper() or "NORMAL"
         
         conn = conectar()
         cursor = conn.cursor()
@@ -6007,7 +6185,7 @@ def editar_classificacao(chave):
             nomeclassificacao,
             quantidadepartes,
             nrofoto,
-            (str(formadecobrar).strip().upper() if formadecobrar is not None else None),
+            formadecobrar_norm,
             op_tamanhos,
             op_massas,
             op_bordas,
@@ -6107,6 +6285,7 @@ def salvar_dados_loja():
         longitude = dados.get("longitude", "")
         ddd = dados.get("ddd", "")
         cliente_obrigatorio_balcao = 1 if dados.get("cliente_obrigatorio_balcao") else 0
+        cor_action, cor_primaria = _parse_cor_primaria_payload(dados)
 
         id_cliente = session.get('id_cliente')
         if not id_cliente:
@@ -6115,23 +6294,48 @@ def salvar_dados_loja():
         conn = conectar()
         cursor = conn.cursor()
 
+        cursor.execute("SHOW COLUMNS FROM dadosloja LIKE 'cor_primaria'")
+        tem_cor_primaria = cursor.fetchone() is not None
+        if not tem_cor_primaria:
+            try:
+                cursor.execute(
+                    "ALTER TABLE dadosloja ADD COLUMN cor_primaria VARCHAR(7) DEFAULT NULL"
+                )
+                conn.commit()
+                tem_cor_primaria = True
+            except Exception as e:
+                print("[DADOSLOJA COR_PRIMARIA COLUNA ERRO]", e, flush=True)
+                tem_cor_primaria = False
+                cor_action = "omit"
+
         # Verifica se já existe registro para este id_cliente
         cursor.execute("SELECT id_cliente FROM dadosloja WHERE id_cliente = %s", (id_cliente,))
         existe = cursor.fetchone()
 
         if existe:
-            # Atualiza
-            cursor.execute("""
-                UPDATE dadosloja 
-                SET nome = %s, endereco = %s, bairro = %s, cidade = %s, cep = %s, telefone = %s, cnpj = %s, latitude = %s, longitude = %s, ddd = %s, cliente_obrigatorio_balcao = %s
-                WHERE id_cliente = %s
-            """, (nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao, id_cliente))
+            if tem_cor_primaria and cor_action == "set":
+                cursor.execute("""
+                    UPDATE dadosloja 
+                    SET nome = %s, endereco = %s, bairro = %s, cidade = %s, cep = %s, telefone = %s, cnpj = %s, latitude = %s, longitude = %s, ddd = %s, cliente_obrigatorio_balcao = %s, cor_primaria = %s
+                    WHERE id_cliente = %s
+                """, (nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao, cor_primaria, id_cliente))
+            else:
+                cursor.execute("""
+                    UPDATE dadosloja 
+                    SET nome = %s, endereco = %s, bairro = %s, cidade = %s, cep = %s, telefone = %s, cnpj = %s, latitude = %s, longitude = %s, ddd = %s, cliente_obrigatorio_balcao = %s
+                    WHERE id_cliente = %s
+                """, (nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao, id_cliente))
         else:
-            # Insere
-            cursor.execute("""
-                INSERT INTO dadosloja (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao))
+            if tem_cor_primaria and cor_action == "set":
+                cursor.execute("""
+                    INSERT INTO dadosloja (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao, cor_primaria)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao, cor_primaria))
+            else:
+                cursor.execute("""
+                    INSERT INTO dadosloja (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (id_cliente, nome, endereco, bairro, cidade, cep, telefone, cnpj, latitude, longitude, ddd, cliente_obrigatorio_balcao))
 
             # Cria registro na tabela contadorpedido para este id_cliente, se não existir
             cursor.execute("SELECT id_cliente FROM contadorpedido WHERE id_cliente = %s", (id_cliente,))
@@ -6591,6 +6795,17 @@ def imprimir():
     if not isinstance(produtos, list):
         return jsonify({"sucesso": False, "erro": "Lista de produtos inválida."}), 400
 
+    if origem == "preparo":
+        try:
+            iid_prep = int(dados.get("impressora_id") or 0)
+        except (TypeError, ValueError):
+            iid_prep = 0
+        if iid_prep <= 0:
+            return jsonify({
+                "sucesso": False,
+                "erro": "Preparo exige impressora_id (setor). Não é permitido imprimir preparo na impressora de comanda.",
+            }), 400
+
     apenas_confirmar = dados.get("apenas_confirmar") in (True, 1, "1", "true", "yes")
 
     skip_printer_enum_check = False
@@ -6991,6 +7206,8 @@ def api_impressoras_cadastro():
         has_cd = cur.fetchone() is not None
         cur.execute("SHOW COLUMNS FROM impressoras LIKE 'feed_final_linhas'")
         has_feed = cur.fetchone() is not None
+        cur.execute("SHOW COLUMNS FROM impressoras LIKE 'formato_escpos'")
+        has_fmt = cur.fetchone() is not None
         cols = ["id", "nomedaimpressora", "COALESCE(imprenro,0) AS imprenro"]
         cols.append(
             "TRIM(COALESCE(caminho,'')) AS caminho" if has_caminho else "'' AS caminho"
@@ -7007,6 +7224,11 @@ def api_impressoras_cadastro():
             "LEAST(GREATEST(COALESCE(feed_final_linhas, 6), 0), 20) AS feed_final_linhas"
             if has_feed
             else "6 AS feed_final_linhas"
+        )
+        cols.append(
+            "LOWER(COALESCE(NULLIF(TRIM(formato_escpos), ''), 'completa')) AS formato_escpos"
+            if has_fmt
+            else "'completa' AS formato_escpos"
         )
         id_cli = id_cli_guard
         cur.execute("SHOW COLUMNS FROM impressoras LIKE 'id_cliente'")
@@ -7068,6 +7290,11 @@ def _sn_flag(value):
     return "S" if raw in ("S", "SIM", "1", "Y", "YES", "TRUE") else "N"
 
 
+def _norm_formato_escpos(value):
+    raw = str(value or "").strip().lower()
+    return "simples" if raw == "simples" else "completa"
+
+
 @app.route("/api/impressoras-cadastro", methods=["POST"])
 def api_criar_impressora_cadastro():
     conn = None
@@ -7087,6 +7314,7 @@ def api_criar_impressora_cadastro():
             return jsonify({"sucesso": False, "erro": "imprenro inválido."}), 400
         conta_mesa = _sn_flag(payload.get("conta_mesa"))
         comanda_delivery = _sn_flag(payload.get("comanda_delivery"))
+        formato_escpos = _norm_formato_escpos(payload.get("formato_escpos"))
         try:
             feed_final_linhas = int(payload.get("feed_final_linhas") if payload.get("feed_final_linhas") is not None else 6)
         except Exception:
@@ -7105,6 +7333,8 @@ def api_criar_impressora_cadastro():
         has_cd = cur.fetchone() is not None
         cur.execute("SHOW COLUMNS FROM impressoras LIKE 'feed_final_linhas'")
         has_feed = cur.fetchone() is not None
+        cur.execute("SHOW COLUMNS FROM impressoras LIKE 'formato_escpos'")
+        has_fmt = cur.fetchone() is not None
 
         if has_caminho and not caminho:
             return jsonify({"sucesso": False, "erro": "Informe o caminho (nome do Windows) da impressora."}), 400
@@ -7126,6 +7356,9 @@ def api_criar_impressora_cadastro():
         if has_feed:
             cols.append("feed_final_linhas")
             vals.append(feed_final_linhas)
+        if has_fmt:
+            cols.append("formato_escpos")
+            vals.append(formato_escpos)
         if has_id_cli:
             cols.append("id_cliente")
             vals.append(int(id_cli))
@@ -7183,6 +7416,7 @@ def api_editar_impressora_cadastro(pid: int):
             return jsonify({"sucesso": False, "erro": "imprenro inválido."}), 400
         conta_mesa = _sn_flag(payload.get("conta_mesa"))
         comanda_delivery = _sn_flag(payload.get("comanda_delivery"))
+        formato_escpos = _norm_formato_escpos(payload.get("formato_escpos"))
         try:
             feed_final_linhas = int(payload.get("feed_final_linhas") if payload.get("feed_final_linhas") is not None else 6)
         except Exception:
@@ -7201,6 +7435,8 @@ def api_editar_impressora_cadastro(pid: int):
         has_cd = cur.fetchone() is not None
         cur.execute("SHOW COLUMNS FROM impressoras LIKE 'feed_final_linhas'")
         has_feed = cur.fetchone() is not None
+        cur.execute("SHOW COLUMNS FROM impressoras LIKE 'formato_escpos'")
+        has_fmt = cur.fetchone() is not None
 
         if has_caminho and not caminho:
             return jsonify({"sucesso": False, "erro": "Informe o caminho (nome do Windows) da impressora."}), 400
@@ -7228,11 +7464,20 @@ def api_editar_impressora_cadastro(pid: int):
         if has_feed:
             sets.append("feed_final_linhas = %s")
             params.append(feed_final_linhas)
+        if has_fmt:
+            sets.append("formato_escpos = %s")
+            params.append(formato_escpos)
         if has_id_cli:
             sets.append("id_cliente = %s")
             params.append(int(id_cli))
 
         cur.execute(f"UPDATE impressoras SET {', '.join(sets)} WHERE {where}", tuple(params + params_where))
+        # Legado: listagem GET inclui id_cliente IS NULL; adotar no tenant da sessão.
+        if cur.rowcount == 0 and has_id_cli:
+            cur.execute(
+                f"UPDATE impressoras SET {', '.join(sets)} WHERE id = %s AND id_cliente IS NULL",
+                tuple(params + [int(pid)]),
+            )
         if cur.rowcount == 0:
             return jsonify({"sucesso": False, "erro": "Impressora não encontrada."}), 404
 
@@ -7280,7 +7525,15 @@ def api_excluir_impressora_cadastro(pid: int):
         has_id_cli = cur.fetchone() is not None
 
         if has_id_cli:
-            cur.execute("DELETE FROM impressoras WHERE id = %s AND id_cliente = %s", (int(pid), int(id_cli)))
+            cur.execute(
+                "DELETE FROM impressoras WHERE id = %s AND id_cliente = %s",
+                (int(pid), int(id_cli)),
+            )
+            if cur.rowcount == 0:
+                cur.execute(
+                    "DELETE FROM impressoras WHERE id = %s AND id_cliente IS NULL",
+                    (int(pid),),
+                )
         else:
             cur.execute("DELETE FROM impressoras WHERE id = %s", (int(pid),))
         if cur.rowcount == 0:
@@ -8795,6 +9048,40 @@ def api_fechamento_relatorio_gerencial():
         return jsonify({"sucesso": False, "erro": str(ve)}), 400
     except Exception as e:
         print("[FECHAMENTO RELATORIO GERENCIAL]", e, flush=True)
+        traceback.print_exc()
+        return jsonify({"sucesso": False, "erro": str(e)}), 500
+
+
+@app.route("/api/fechamento/print-blocos", methods=["GET"])
+@login_required
+def api_fechamento_print_blocos_get():
+    try:
+        id_cliente = session.get("id_cliente")
+        if not id_cliente:
+            return jsonify({"sucesso": False, "erro": "Sessão inválida."}), 401
+        flags = load_fechamento_print_blocos(int(id_cliente))
+        return jsonify({"sucesso": True, "print_blocos": flags})
+    except Exception as e:
+        print("[FECHAMENTO PRINT BLOCOS GET]", e, flush=True)
+        traceback.print_exc()
+        return jsonify({"sucesso": False, "erro": str(e)}), 500
+
+
+@app.route("/api/fechamento/print-blocos", methods=["POST"])
+@login_required
+def api_fechamento_print_blocos_post():
+    try:
+        id_cliente = session.get("id_cliente")
+        if not id_cliente:
+            return jsonify({"sucesso": False, "erro": "Sessão inválida."}), 401
+        data = request.get_json(silent=True) or {}
+        flags_in = data.get("print_blocos") if isinstance(data.get("print_blocos"), dict) else data
+        ok, err, flags = save_fechamento_print_blocos(int(id_cliente), flags_in)
+        if not ok:
+            return jsonify({"sucesso": False, "erro": err or "Falha ao salvar.", "print_blocos": flags}), 400
+        return jsonify({"sucesso": True, "print_blocos": flags, "mensagem": "Preferências de impressão salvas."})
+    except Exception as e:
+        print("[FECHAMENTO PRINT BLOCOS POST]", e, flush=True)
         traceback.print_exc()
         return jsonify({"sucesso": False, "erro": str(e)}), 500
 

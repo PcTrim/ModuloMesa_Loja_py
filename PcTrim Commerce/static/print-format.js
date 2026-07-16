@@ -107,6 +107,45 @@
     return [hr("-", w), center(t, w), hr("-", w)];
   }
 
+  function normFormato(v) {
+    return toStr(v).trim().toLowerCase() === "simples" ? "simples" : "completa";
+  }
+
+  function isSimples(formato) {
+    return normFormato(formato) === "simples";
+  }
+
+  /** ESC ! 0 + GS ! 0 — fecha bloco de tamanho em impressoras ESC/POS. */
+  function sizeReset() {
+    return "\x1b!\x00\x1d!\x00";
+  }
+
+  /** Título grande: completa = ESC ! 0x30; simples = só padding central. */
+  function bigTitle(s, formato, width) {
+    var t = toStr(s);
+    if (isSimples(formato)) return center(t, width);
+    return "\x1b!\x30" + t + sizeReset();
+  }
+
+  /** Ênfase média (altura dupla 0x10): completa = ESC; simples = texto. */
+  function midTitle(s, formato, width) {
+    var t = toStr(s);
+    if (isSimples(formato)) return width != null ? center(t, width) : t;
+    return "\x1b!\x10" + t + sizeReset();
+  }
+
+  function boldText(s, formato) {
+    var t = toStr(s);
+    if (isSimples(formato)) return t;
+    return "\x1bE\x01" + t + "\x1bE\x00";
+  }
+
+  /** ESC a 1/0 — só no perfil completa. */
+  function alignCenterCmd(on, formato) {
+    if (isSimples(formato)) return "";
+    return on ? "\x1ba\x01" : "\x1ba\x00";
+  }
+
   global.lojaPrintFmt = {
     width: clampWidth,
     hr: hr,
@@ -115,6 +154,13 @@
     cols: cols,
     kv: kv,
     blockTitle: blockTitle,
+    normFormato: normFormato,
+    isSimples: isSimples,
+    sizeReset: sizeReset,
+    bigTitle: bigTitle,
+    midTitle: midTitle,
+    boldText: boldText,
+    alignCenterCmd: alignCenterCmd,
   };
 })(window);
 
