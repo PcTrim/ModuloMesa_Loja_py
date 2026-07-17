@@ -1,6 +1,8 @@
 @echo off
 chcp 65001 >nul
-title LojaOnline - Print Bridge
+title LojaOnline - Print Bridge (diagnostico)
+rem Uso diario sem janela: Abrir Print Bridge.vbs
+rem Este .bat cria/atualiza .venv e mostra logs no console.
 cd /d "%~dp0"
 
 set "PY_BOOT="

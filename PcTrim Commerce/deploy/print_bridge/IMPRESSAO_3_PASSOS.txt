@@ -3,14 +3,16 @@ CADA PC COM IMPRESSORA = bridge neste PC (nao no Hostinger)
 === PC DA LOJA ===
 
 1) Copie print_bridge INTEIRA (sem .venv):
-   iniciar-print-bridge.bat, verificar-bridge.bat, rodar-bridge.cmd,
-   app.py, printer_core.py, printer_match.py, requirements.txt
+   Abrir Print Bridge.vbs, iniciar-print-bridge.bat, verificar-bridge.bat,
+   rodar-bridge.cmd, app.py, printer_core.py, printer_match.py, requirements.txt
 
 2) Python 3.13 (ou 3.x) com Add to PATH
 
 3) Duplo clique: verificar-bridge.bat  (opcional, diagnostico)
 
-4) Duplo clique: iniciar-print-bridge.bat  - NAO FECHE a janela
+4) Primeira vez: iniciar-print-bridge.bat (cria .venv)
+   Uso diario: Abrir Print Bridge.vbs (silencioso; log print_bridge.log)
+   Diagnostico com janela: iniciar-print-bridge.bat
 
 5) Navegador neste PC: http://127.0.0.1:9123/health  -> "ok": true
 
@@ -21,7 +23,7 @@ CADA PC COM IMPRESSORA = bridge neste PC (nao no Hostinger)
 === MULTIESTACAO (cada caixa / terminal) ===
 
 Cada estacao DEVE ter:
-- Print Bridge ativo (bat aberto)
+- Print Bridge ativo (Abrir Print Bridge.vbs ou bat)
 - Filas Windows instaladas (USB local + rede, se usar)
 - Mapeamento COMPLETO em Configuracoes > Impressao deste terminal
   (todas as impressoras logicas com caminho Windows preenchido)
@@ -61,10 +63,12 @@ Cenarios de validacao controlada:
 
 === LOGS DO BRIDGE ===
 
-Na janela do bat: linhas [BRIDGE PRINT] / OK / ERRO com
-terminal_id, printer e status.
+Modo silencioso (VBS): arquivo print_bridge.log nesta pasta
+  (linhas [BRIDGE PRINT] / OK / ERRO com terminal_id, printer e status).
 
-Se .venv ja criado: rodar-bridge.cmd (reinicio rapido)
+Com janela (bat): as mesmas linhas aparecem no console.
+
+Se .venv ja criado: Abrir Print Bridge.vbs ou rodar-bridge.cmd
 
 ERRO /d ou errorlevel no .bat = arquivo antigo quebrado.
 Copie o iniciar-print-bridge.bat NOVO desta pasta.

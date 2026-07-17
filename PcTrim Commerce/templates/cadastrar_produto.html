@@ -58,7 +58,7 @@
                                 {% endif %}
                                 <th style="width: 110px;">Por kilo</th>
                                 <th style="width: 120px;">Venda</th>
-                                <th style="width: 220px; text-align: center;">Ações</th>
+                                <th style="width: {{ 280 if is_retail else 220 }}px; text-align: center;">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="corpoTabela">
@@ -181,6 +181,9 @@
 
                     <div class="cfg-cadastro-actions">
                         <button type="button" class="btn-outline" onclick="lojaGo('/configuracoes')">Voltar</button>
+                        {% if is_retail %}
+                        <button type="button" class="btn-outline" id="btnImprimirEtiqueta" style="display:none;" onclick="imprimirEtiquetaDoForm()">Imprimir etiqueta</button>
+                        {% endif %}
                         <button type="button" class="btn-modal" id="btnCancelar" onclick="cancelarEdicao()">Cancelar</button>
                         <button type="submit" class="btn-green" id="btnSalvar">Salvar</button>
                     </div>
@@ -392,6 +395,73 @@
             if (codigoEl) codigoEl.value = '';
             setCodigoSomenteLeitura(false);
             resetRetailFields();
+            atualizarBtnImprimirEtiqueta();
+        }
+
+        let _etiquetaImprimindo = false;
+
+        function atualizarBtnImprimirEtiqueta() {
+            if (!IS_RETAIL) return;
+            const btn = document.getElementById('btnImprimirEtiqueta');
+            if (!btn) return;
+            const bc = (document.getElementById('barcode')?.value || '').trim();
+            btn.style.display = bc ? '' : 'none';
+        }
+
+        async function imprimirEtiquetaProduto(product) {
+            if (!IS_RETAIL) return;
+            if (_etiquetaImprimindo) return;
+
+            const buildFn = window.buildBarcodeLabel;
+            if (typeof buildFn !== 'function') {
+                mostrarMensagem('Módulo de etiqueta não carregado.', 'erro');
+                return;
+            }
+            const built = buildFn(product || {});
+            if (!built.ok) {
+                mostrarMensagem(built.erro || 'Informe o código de barras antes de imprimir', 'erro');
+                return;
+            }
+            if (typeof window.lojaImprimir !== 'function') {
+                mostrarMensagem('Print Bridge JS não carregado.', 'erro');
+                return;
+            }
+
+            _etiquetaImprimindo = true;
+            mostrarMensagem('Enviando para impressora...', 'sucesso');
+            try {
+                const r = await window.lojaImprimir({
+                    conteudo: built.conteudo,
+                    copias: 1,
+                    origem: 'casa',
+                    skip_confirm: true,
+                });
+                if (!r || !r.ok) {
+                    const err = (r && r.data && r.data.erro) || (r && r.erro) || 'Falha ao imprimir etiqueta.';
+                    mostrarMensagem(err, 'erro');
+                    return;
+                }
+                mostrarMensagem('Etiqueta enviada para impressão.', 'sucesso');
+            } catch (e) {
+                mostrarMensagem((e && e.message) || 'Erro ao imprimir etiqueta.', 'erro');
+            } finally {
+                _etiquetaImprimindo = false;
+            }
+        }
+
+        function imprimirEtiquetaDoForm() {
+            const barcode = (document.getElementById('barcode')?.value || '').trim();
+            if (!barcode) {
+                mostrarMensagem('Informe o código de barras antes de imprimir', 'erro');
+                document.getElementById('barcode')?.focus();
+                return;
+            }
+            const chave = (document.getElementById('chaveEdicao')?.value || document.getElementById('codigo')?.value || '').trim();
+            imprimirEtiquetaProduto({
+                chave: chave,
+                produto: (document.getElementById('nome')?.value || '').trim(),
+                barcode: barcode,
+            });
         }
 
         function sincronizarClasseDoSelect() {
@@ -628,6 +698,10 @@
                             <td>${Number(produto.controla_estoque) ? Number(produto.estoque || 0).toFixed(3) : '—'}</td>
                         ` : '';
                         const classeCol = IS_RETAIL ? '' : `<td><span class="pill">${produto.classe}</span></td>`;
+                        const bc = String(produto.barcode || '').trim();
+                        const btnEtiqueta = (IS_RETAIL && bc)
+                            ? `<button type="button" class="btn-mini" onclick='imprimirEtiquetaProduto(${JSON.stringify({ chave: produto.chave, produto: produto.produto, barcode: bc })})'>Etiqueta</button>`
+                            : '';
                         
                         tr.innerHTML = `
                             <td class="kcell">#${produto.chave}</td>
@@ -640,6 +714,7 @@
                             <td style="text-align: center;">
                                 <span class="tbl-actions">
                                     <button class="btn-mini" onclick="editarProduto(${produto.chave})">Editar</button>
+                                    ${btnEtiqueta}
                                     <button class="btn-mini btn-mini-danger" onclick="excluirProduto(${produto.chave}, '${produto.produto.replace(/'/g, "\\'")}')">Excluir</button>
                                 </span>
                             </td>
@@ -705,6 +780,7 @@
                     document.getElementById('btnSalvar').textContent = 'Atualizar';
                     const title = document.getElementById('produtoModalTitle');
                     if (title) title.textContent = 'Editar produto';
+                    atualizarBtnImprimirEtiqueta();
                     openProdutoModal();
                 }
             } catch (erro) {
@@ -837,6 +913,21 @@
             }
         }
     </script>
+{% if is_retail %}
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=29"></script>
+{% include 'partials/print_context.html' %}
+<script src="{{ url_for('static', filename='print-format.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='print-barcode-label.js') }}?v=3"></script>
+<script>
+(function () {
+  var bc = document.getElementById('barcode');
+  if (bc) {
+    bc.addEventListener('input', atualizarBtnImprimirEtiqueta);
+    bc.addEventListener('change', atualizarBtnImprimirEtiqueta);
+  }
+})();
+</script>
+{% endif %}
 {% if not is_retail %}
 {% include 'partials/modal_despacho_delivery.html' %}
 <script src="{{ url_for('static', filename='despacho-delivery.js') }}" defer></script>

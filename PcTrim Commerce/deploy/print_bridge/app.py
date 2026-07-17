@@ -1,7 +1,8 @@
 """
 Print Bridge — impressão local no Windows para o LojaOnline na web.
 
-Duplo clique: iniciar-print-bridge.bat
+Uso diario: Abrir Print Bridge.vbs (silencioso).
+Diagnostico: iniciar-print-bridge.bat
 """
 
 from __future__ import annotations
@@ -177,7 +178,7 @@ code{{word-break:break-all}}
 <div class="box">
 <p><strong>Print Bridge Agent</strong></p>
 <p>Terminal: <code id="tid"></code></p>
-<p id="msg" class="ok">Pronto. Deixe esta janela aberta e imprima pelo PDV — não feche.</p>
+<p id="msg" class="ok">Pronto. Pode voltar ao PDV — deixe esta janela aberta em segundo plano.</p>
 </div>
 <script>
 (function(){{
@@ -186,6 +187,23 @@ code{{word-break:break-all}}
   var msgEl = document.getElementById('msg');
   if (tidEl) tidEl.textContent = health.terminal_id || '—';
   var readySent = false;
+
+  function makeDiscreet() {{
+    try {{
+      window.resizeTo(280, 160);
+    }} catch (e0) {{}}
+    try {{
+      var aw = (window.screen && window.screen.availWidth) ? window.screen.availWidth : 1200;
+      var ah = (window.screen && window.screen.availHeight) ? window.screen.availHeight : 800;
+      window.moveTo(Math.max(0, aw - 20), Math.max(0, ah - 20));
+    }} catch (e1) {{}}
+    try {{
+      if (window.opener && !window.opener.closed) window.opener.focus();
+    }} catch (e2) {{}}
+    try {{
+      window.blur();
+    }} catch (e3) {{}}
+  }}
 
   function setMsg(text, ok) {{
     if (!msgEl) return;
@@ -208,6 +226,7 @@ code{{word-break:break-all}}
         }}, '*');
       }}
     }} catch (e) {{}}
+    makeDiscreet();
   }}
 
   async function handlePrint(ev) {{
@@ -250,7 +269,9 @@ code{{word-break:break-all}}
   }}
 
   window.addEventListener('message', handlePrint);
+  makeDiscreet();
   notifyReady();
+  setTimeout(makeDiscreet, 50);
   setTimeout(notifyReady, 200);
 }})();
 </script>

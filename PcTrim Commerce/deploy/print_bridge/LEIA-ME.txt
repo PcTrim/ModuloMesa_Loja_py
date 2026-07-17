@@ -1,17 +1,18 @@
 PRINT BRIDGE - PC DA LOJA (Windows)
 
 1) Copie esta pasta INTEIRA (sem .venv):
-   iniciar-print-bridge.bat, app.py, printer_core.py,
-   printer_match.py, requirements.txt
+   Abrir Print Bridge.vbs, iniciar-print-bridge.bat, app.py,
+   printer_core.py, printer_match.py, requirements.txt
 
 2) Python 3 ja instalado (ex.: 3.13) com Add to PATH
 
-3) Duplo clique: iniciar-print-bridge.bat
-   (roda app.py - NAO FECHE a janela)
+3) Primeira vez (cria .venv): duplo clique em iniciar-print-bridge.bat
+   Depois no dia a dia: Abrir Print Bridge.vbs (sem janela; log em print_bridge.log)
 
 4) Teste: http://127.0.0.1:9123/health
 
 5) Site gerente: Configuracoes - Impressoras
    (cadastro vem do MySQL, nao edite arquivo local)
 
-Se .venv ja existir: rodar-bridge.cmd (mais rapido)
+Diagnostico com janela: iniciar-print-bridge.bat ou rodar-bridge.cmd
+Se .venv ja existir: Abrir Print Bridge.vbs (preferido) ou rodar-bridge.cmd

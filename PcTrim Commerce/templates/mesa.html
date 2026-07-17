@@ -185,7 +185,7 @@
   </style>
   {% include 'partials/tenant_primary_color.html' %}
 </head>
-<body>
+<body class="pdv-mesa">
 <div class="pdv">
   <header class="topbar">
     <a class="home" href="{{ url_prefix }}/" title="Painel"><i data-lucide="home" width="18" height="18"></i></a>
@@ -261,10 +261,11 @@
 <div class="modal" id="modal-dados-item"><div class="modal-card"><h3>Detalhes do item</h3><pre id="dados-item-body" style="white-space:pre-wrap;font-size:13px;line-height:1.35;"></pre><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
-<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=14"></script>
+<script src="{{ url_for('static', filename='ui-feedback.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=29"></script>
 {% include 'partials/print_context.html' %}
 <script src="{{ url_for('static', filename='print-format.js') }}?v=2"></script>
-<script src="{{ url_for('static', filename='print-header.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='print-header.js') }}?v=3"></script>
 <script src="{{ url_for('static', filename='receber-hotkeys.js') }}?v=1"></script>
 {% include 'partials/retail_mode.html' %}
 <span id="pdv-boot" hidden data-json='{{ {"nromesa": (config.nromesa if config and config.nromesa else 100) | int, "mesasComRegistro": (mesas_com_registro | list)} | tojson | safe }}'></span>
@@ -280,6 +281,9 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     if(H && H.getCachedPrintMeta(nro, "MESA")) return H.getCachedPrintMeta(nro, "MESA");
     return {
       data_criacao: new Date().toISOString(),
+      data_hora: (window.lojaPrintHeader && window.lojaPrintHeader.formatPrintDateTime)
+        ? window.lojaPrintHeader.formatPrintDateTime(new Date())
+        : new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
       atendente: String((window.LOJA_PRINT_CTX||{}).usuario||"").trim()||"-"
     };
   }
@@ -1130,7 +1134,8 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
         const imp=await (window.lojaImprimir?window.lojaImprimir({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0,skip_confirm:true}):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0})}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j}))));
         if(!imp.ok){
           const d=imp.data||{};
-          alert("Falha ao imprimir preparo: "+(d.erro||d.mensagem||"impressão"));
+          if(window.uiFeedback) window.uiFeedback.error("Falha ao imprimir preparo: "+(d.erro||d.mensagem||"impressão"));
+          else alert("Falha ao imprimir preparo: "+(d.erro||d.mensagem||"impressão"));
           return;
         }
       }
@@ -1138,28 +1143,33 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
       const r=await fetch("/api/preparo/marcar",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({ids:idsUniq})});
       const ct=(r.headers.get("content-type")||"").toLowerCase();
       if(ct.indexOf("application/json")===-1){
-        alert(`Erro ao marcar distribuição (resposta não-JSON / sessão expirada). HTTP ${r.status}.`);
+        if(window.uiFeedback) window.uiFeedback.error(`Erro ao marcar distribuição (resposta não-JSON / sessão expirada). HTTP ${r.status}.`);
+        else alert(`Erro ao marcar distribuição (resposta não-JSON / sessão expirada). HTTP ${r.status}.`);
         return;
       }
       const d=await r.json().catch(()=>null);
       if(!r.ok || !d || d.sucesso!==true){
-        alert((d&&d.erro)||`Erro ao marcar distribuição (HTTP ${r.status}).`);
+        if(window.uiFeedback) window.uiFeedback.error((d&&d.erro)||`Erro ao marcar distribuição (HTTP ${r.status}).`);
+        else alert((d&&d.erro)||`Erro ao marcar distribuição (HTTP ${r.status}).`);
         return;
       }
       const total = Number(d.total)||0;
       const atualizados = Number(d.atualizados)||0;
       const ja = Number(d.ja_marcados)||0;
       if(total <= 0){
-        alert("Erro: servidor não encontrou os itens para marcar (ids não batem com pedido_diarios).");
+        if(window.uiFeedback) window.uiFeedback.error("Erro: servidor não encontrou os itens para marcar (ids não batem com pedido_diarios).");
+        else alert("Erro: servidor não encontrou os itens para marcar (ids não batem com pedido_diarios).");
         return;
       }
       if(atualizados <= 0 && ja < total){
-        alert("Não foi possível marcar os itens como distribuídos. Verifique login/sessão e tente novamente.");
+        if(window.uiFeedback) window.uiFeedback.error("Não foi possível marcar os itens como distribuídos. Verifique login/sessão e tente novamente.");
+        else alert("Não foi possível marcar os itens como distribuídos. Verifique login/sessão e tente novamente.");
         return;
       }
       await loadItens();
       await loadMesas();
-      alert("Distribuição enviada para preparo.");
+      if(window.uiFeedback) window.uiFeedback.success("Distribuição enviada para preparo.");
+      else alert("Distribuição enviada para preparo.");
     }finally{
       if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Distribuir preparo"; }
       updateDistribuirPreparoUiMesa();
@@ -1413,7 +1423,8 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     const conteudo=textoImpressao();
     let ok=false;
     const imp=await (window.lojaImprimir?window.lojaImprimir({conteudo:conteudo,copias:1,origem:"mesa"}):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({conteudo:conteudo,copias:1,origem:"mesa"})}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j}))));
-    if(imp.ok){ ok=true; alert("Enviado Ã  impressão."); } else alert("Erro: "+((imp.data&&imp.data.erro)||"impressão"));
+    if(imp.ok){ ok=true; if(window.uiFeedback) window.uiFeedback.success("Enviado à impressão."); else alert("Enviado à impressão."); }
+    else { if(window.uiFeedback) window.uiFeedback.error("Erro: "+((imp.data&&imp.data.erro)||"impressão")); else alert("Erro: "+((imp.data&&imp.data.erro)||"impressão")); }
     if(ok){
       try{
         await apiJson(`/api/mesa/${encodeURIComponent(state.mesa)}/status`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"CONTA"})});
@@ -1503,10 +1514,12 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     try{
       await apiJson(`/api/mesa/${state.mesa}/ajuste-item`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({valor:val})});
       const acoes=el("acoes-rapidas-mesa"); if(acoes) acoes.open=false;
-      alert(`Ajuste aplicado como item técnico: ${val>=0?"taxa extra":"desconto"} de ${money(val)}.`);
+      if(window.uiFeedback) window.uiFeedback.success(`Ajuste aplicado como item técnico: ${val>=0?"taxa extra":"desconto"} de ${money(val)}.`);
+      else alert(`Ajuste aplicado como item técnico: ${val>=0?"taxa extra":"desconto"} de ${money(val)}.`);
       await loadItens(); await loadMesas();
     }catch(e){
-      alert(e.message||"Não foi possível aplicar o ajuste.");
+      if(window.uiFeedback) window.uiFeedback.error(e.message||"Não foi possível aplicar o ajuste.");
+      else alert(e.message||"Não foi possível aplicar o ajuste.");
     }
   }
 
@@ -1759,8 +1772,10 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
       closeModals();
       await loadItens(); await loadMesas();
       setStatus("Mesa recebida.");
+      if(window.uiFeedback) window.uiFeedback.success("Mesa marcada como RECEBIDO.");
     }catch(e){
-      alert(e.message||"Não foi possível receber.");
+      if(window.uiFeedback) window.uiFeedback.error(e.message||"Não foi possível receber.");
+      else alert(e.message||"Não foi possível receber.");
     }finally{
       btnRecConf.disabled=false;
     }

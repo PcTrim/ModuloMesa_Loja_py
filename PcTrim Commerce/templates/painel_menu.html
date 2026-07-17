@@ -1100,7 +1100,8 @@
     </div>
   </div>
   <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
-  <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=14"></script>
+  <script src="{{ url_for('static', filename='ui-feedback.js') }}?v=1"></script>
+  <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=29"></script>
   <script src="{{ url_for('static', filename='receber-hotkeys.js') }}?v=1"></script>
   {% include 'partials/retail_mode.html' %}
   <script>
@@ -1776,13 +1777,16 @@
         .then(function (imp) {
           var d = imp.data || {};
           if (!imp.ok) {
-            alert((d && d.erro) || 'Falha na impressão.');
+            if (window.uiFeedback) window.uiFeedback.error((d && d.erro) || 'Falha na impressão.');
+            else alert((d && d.erro) || 'Falha na impressão.');
             return;
           }
-          alert('Impressão enviada: ' + (d.printer || '') + (d.via ? ' (' + d.via + ')' : '') + '.');
+          if (window.uiFeedback) window.uiFeedback.success('Impressão enviada: ' + (d.printer || '') + (d.via ? ' (' + d.via + ')' : '') + '.');
+          else alert('Impressão enviada: ' + (d.printer || '') + (d.via ? ' (' + d.via + ')' : '') + '.');
         })
         .catch(function () {
-          alert('Erro de rede na impressão.');
+          if (window.uiFeedback) window.uiFeedback.error('Erro de rede na impressão.');
+          else alert('Erro de rede na impressão.');
         });
     }
     function fechamentoImprimirResumo() {
@@ -1856,11 +1860,13 @@
           if (d.relatorio_gerencial_erro) {
             msgOk += '\nAviso (gerencial): ' + String(d.relatorio_gerencial_erro);
           }
-          alert(msgOk);
+          if (window.uiFeedback) window.uiFeedback.success(msgOk);
+          else alert(msgOk);
           fecharFechamentoModal();
         })
         .catch(function () {
-          alert('Erro de rede ao executar fechamento.');
+          if (window.uiFeedback) window.uiFeedback.error('Erro de rede ao executar fechamento.');
+          else alert('Erro de rede ao executar fechamento.');
         });
     }
     (function () {
@@ -3312,16 +3318,21 @@
               .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d || {} }; }); })
               .then(function (x) {
                 if (!x.ok || (x.d && x.d.sucesso === false)) {
-                  alert((x.d && (x.d.erro || x.d.mensagem)) || "Não foi possível marcar como RECEBIDO.");
+                  if (window.uiFeedback) window.uiFeedback.error((x.d && (x.d.erro || x.d.mensagem)) || "Não foi possível marcar como RECEBIDO.");
+                  else alert((x.d && (x.d.erro || x.d.mensagem)) || "Não foi possível marcar como RECEBIDO.");
                   return;
                 }
-                alert("Pedido marcado como RECEBIDO.");
+                if (window.uiFeedback) window.uiFeedback.success("Pedido marcado como RECEBIDO.");
+                else alert("Pedido marcado como RECEBIDO.");
                 st.sel = null;
                 st.valores = {};
                 st._formKey = "";
                 Promise.all([loadPedidos()]).finally(function () { renderList(); renderForm(); });
               })
-              .catch(function () { alert("Falha de rede na baixa."); })
+              .catch(function () {
+                if (window.uiFeedback) window.uiFeedback.error("Falha de rede na baixa.");
+                else alert("Falha de rede na baixa.");
+              })
               .finally(function () { btnConf.disabled = false; });
           };
         }

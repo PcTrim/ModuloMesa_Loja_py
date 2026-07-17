@@ -47,6 +47,7 @@
     if (!d || isNaN(d.getTime())) d = new Date();
     try {
       return d.toLocaleString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
@@ -66,6 +67,7 @@
 
   function resolveDataHora(meta) {
     var m = meta || {};
+    if (trimStr(m.data_hora)) return trimStr(m.data_hora);
     if (m.data_criacao) return formatPrintDateTime(m.data_criacao);
     return formatPrintDateTime(new Date());
   }
@@ -147,6 +149,7 @@
     if (nro <= 0) {
       var fallback = {
         data_criacao: new Date().toISOString(),
+        data_hora: formatPrintDateTime(new Date()),
         atendente: resolveAtendente({}, global.LOJA_PRINT_CTX),
       };
       return Promise.resolve(fallback);
@@ -166,6 +169,7 @@
       .then(function (d) {
         var meta = {
           data_criacao: (d && d.data_criacao) || new Date().toISOString(),
+          data_hora: (d && d.data_hora) || formatPrintDateTime((d && d.data_criacao) || new Date()),
           atendente: resolveAtendente(d, global.LOJA_PRINT_CTX),
           atendente_chave: d && d.atendente_chave,
         };
@@ -175,6 +179,7 @@
       .catch(function () {
         var meta = {
           data_criacao: new Date().toISOString(),
+          data_hora: formatPrintDateTime(new Date()),
           atendente: resolveAtendente({}, global.LOJA_PRINT_CTX),
         };
         metaCache[metaCacheKey(nro, orig)] = meta;

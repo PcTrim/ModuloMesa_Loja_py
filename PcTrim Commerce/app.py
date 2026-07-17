@@ -1539,8 +1539,15 @@ def _ensure_terminal_impressora_table():
             )
             """
         )
+        # mysql-connector: consumir resultado do DDL antes do próximo execute
+        try:
+            while cur.nextset():
+                pass
+        except Exception:
+            pass
         cur.execute("SHOW INDEX FROM terminal_impressora WHERE Key_name = 'uq_terminal_imp'")
-        if not cur.fetchone():
+        idx_rows = cur.fetchall() or []
+        if not idx_rows:
             cur.execute(
                 """
                 DELETE t1 FROM terminal_impressora t1
@@ -1554,12 +1561,22 @@ def _ensure_terminal_impressora_table():
                  )
                 """
             )
+            try:
+                while cur.nextset():
+                    pass
+            except Exception:
+                pass
             cur.execute(
                 """
                 ALTER TABLE terminal_impressora
                 ADD UNIQUE KEY uq_terminal_imp (terminal_id, impressora_id, id_cliente)
                 """
             )
+            try:
+                while cur.nextset():
+                    pass
+            except Exception:
+                pass
         conn.commit()
     except Exception as e:
         try:

@@ -1,9 +1,12 @@
 """Metadados para cabeçalho de impressão de pedidos."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from database import conectar
+
+_TZ_BR = ZoneInfo("America/Sao_Paulo")
 
 
 def _normalize_origem(origem: str | None) -> str:
@@ -15,6 +18,22 @@ def _normalize_origem(origem: str | None) -> str:
     return "DELIVERY"
 
 
+def _to_sao_paulo(dt: datetime | None) -> datetime:
+    """Converte datetime para America/Sao_Paulo. Naive = UTC (VPS Hostinger)."""
+    if dt is None:
+        return datetime.now(_TZ_BR).replace(microsecond=0)
+    if getattr(dt, "tzinfo", None) is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_TZ_BR).replace(microsecond=0)
+
+
+def _format_meta_datetime(dt: datetime | None) -> tuple[str, str]:
+    br = _to_sao_paulo(dt)
+    data_iso = br.isoformat()
+    data_hora = br.strftime("%d/%m/%Y %H:%M")
+    return data_iso, data_hora
+
+
 def get_impressao_meta(id_cliente: int, nropedido: int, origem: str | None, usuario_sessao: str | None) -> dict:
     """Retorna data_criacao e atendente do pedido para impressão."""
     origem_db = _normalize_origem(origem)
@@ -22,11 +41,12 @@ def get_impressao_meta(id_cliente: int, nropedido: int, origem: str | None, usua
         origem_db = "DELIVERY"
 
     fallback_atendente = str(usuario_sessao or "").strip() or None
-    now_iso = datetime.now().replace(microsecond=0).isoformat()
+    now_iso, now_hora = _format_meta_datetime(None)
 
     if not id_cliente or nropedido <= 0:
         return {
             "data_criacao": now_iso,
+            "data_hora": now_hora,
             "atendente": fallback_atendente,
             "atendente_chave": None,
         }
@@ -75,14 +95,19 @@ def get_impressao_meta(id_cliente: int, nropedido: int, origem: str | None, usua
                 atendente_chave = int(row_u.get("cod_usuario"))
 
         if data_criacao is None:
-            data_iso = now_iso
+            data_iso, data_hora = now_iso, now_hora
         elif hasattr(data_criacao, "isoformat"):
-            data_iso = data_criacao.replace(microsecond=0).isoformat()
+            data_iso, data_hora = _format_meta_datetime(data_criacao)
         else:
-            data_iso = str(data_criacao)
+            try:
+                parsed = datetime.fromisoformat(str(data_criacao).replace(" ", "T"))
+                data_iso, data_hora = _format_meta_datetime(parsed)
+            except ValueError:
+                data_iso, data_hora = now_iso, now_hora
 
         return {
             "data_criacao": data_iso,
+            "data_hora": data_hora,
             "atendente": atendente,
             "atendente_chave": atendente_chave,
         }

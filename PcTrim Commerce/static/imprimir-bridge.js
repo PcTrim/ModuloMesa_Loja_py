@@ -9,7 +9,102 @@
   var lastPrinterResolveError = null;
   var agentPopup = null;
   var agentReady = false;
+  var agentOpenedOnce = false;
+  var agentEnsureInFlight = null;
+  var agentWarmedUp = false;
   var printJobSeq = 0;
+
+  function agentWindowFeatures() {
+    // Popup discreto: pequeno e deslocado. Sem focus().
+    return "width=200,height=150,left=9999,top=9999,scrollbars=no,resizable=yes";
+  }
+
+  function focusBackToPdv() {
+    try {
+      window.focus();
+    } catch (_e) {}
+  }
+
+  function closeAgentPopupSoon() {
+    setTimeout(function () {
+      try {
+        if (agentPopup) {
+          try {
+            agentPopup.opener = null;
+          } catch (_o) {}
+          if (!agentPopup.closed) agentPopup.close();
+        }
+      } catch (e) {
+        console.warn("[PRINT DEBUG] Falha ao fechar Agent", e);
+      }
+      agentPopup = null;
+      agentReady = false;
+    }, 1500);
+  }
+
+  function restorePdvLayout() {
+    try {
+      document.body.style.display = "";
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
+      document.body.style.pointerEvents = "";
+      window.dispatchEvent(new Event("resize"));
+    } catch (e) {
+      console.warn("[PRINT DEBUG] Falha ao restaurar layout", e);
+    }
+  }
+
+  function restoreUiAfterAgentPrint() {
+    try {
+      // remover modais abertos
+      document.querySelectorAll(".modal.open").forEach(function (m) {
+        m.classList.remove("open");
+      });
+
+      // remover backdrops (Bootstrap / similares)
+      document.querySelectorAll(".modal-backdrop").forEach(function (b) {
+        b.remove();
+      });
+
+      // limpar estado do body
+      document.body.classList.remove("modal-open");
+
+      // restaurar scroll
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
+
+    } catch (e) {
+      console.warn("[PRINT DEBUG] Falha ao restaurar UI", e);
+    }
+
+    restorePdvLayout();
+  }
+
+  window.lojaRestorePdvLayout = restorePdvLayout;
+
+  function setPrintStatusBanner(kind, message) {
+    var banner = document.getElementById("banner-terminal-imp");
+    var txt = document.getElementById("banner-terminal-imp-text");
+    if (!banner || !txt) return;
+    if (kind === "off") {
+      banner.style.display = "none";
+      return;
+    }
+    // Banner verde de sucesso desligado: só aviso amarelo (PDV) usa este elemento.
+    if (kind === "ok") return;
+    txt.textContent = String(message || "");
+    banner.style.display = "block";
+    banner.style.background = "rgba(255,180,0,0.15)";
+    banner.style.border = "1px solid rgba(255,180,0,0.35)";
+  }
+
+  function markAgentActive() {
+    // no-op: não mostrar «Impressão local ativa»
+  }
+
+  function agentIsAlive() {
+    return false;
+  }
 
   function bridgeBase() {
     return BRIDGE_BASE.replace(/\/$/, "");
@@ -140,7 +235,7 @@
       timer = setTimeout(function () {
         finish(
           null,
-          "Tempo esgotado no pairing. Confirme que iniciar-print-bridge.bat está aberto e tente Detectar de novo."
+          "Tempo esgotado no pairing. Confirme que o Print Bridge está iniciado e tente Detectar de novo."
         );
       }, timeoutMs);
     });
@@ -154,14 +249,19 @@
 
   function ensureAgent(timeoutMs) {
     timeoutMs = timeoutMs || 20000;
-    return new Promise(function (resolve) {
-      if (agentPopup && !agentPopup.closed && agentReady) {
-        resolve(true);
-        return;
-      }
+    if (agentIsAlive()) {
+      markAgentActive();
+      return Promise.resolve(true);
+    }
+    if (agentEnsureInFlight) {
+      return agentEnsureInFlight;
+    }
+    var isReopen = agentOpenedOnce && (!agentPopup || agentPopup.closed);
+    agentEnsureInFlight = new Promise(function (resolve) {
       var done = false;
       var timer = null;
       var url = bridgeBase() + "/agent";
+      var feats = agentWindowFeatures();
 
       function finish(ok, err) {
         if (done) return;
@@ -171,6 +271,14 @@
         } catch (_e) {}
         if (timer) clearTimeout(timer);
         if (!ok && err) lastBridgeError = err;
+        if (ok) {
+          agentOpenedOnce = true;
+          markAgentActive();
+          focusBackToPdv();
+          setTimeout(focusBackToPdv, 50);
+          setTimeout(focusBackToPdv, 200);
+        }
+        agentEnsureInFlight = null;
         resolve(!!ok);
       }
 
@@ -186,15 +294,18 @@
       try {
         if (!agentPopup || agentPopup.closed) {
           agentReady = false;
-          agentPopup = window.open(url, "lojaPrintBridgeAgent", "width=440,height=280");
-        } else {
+          agentPopup = window.open(url, "print_agent", feats);
+        } else if (!agentReady) {
           try {
             agentPopup.location.href = url;
           } catch (_e2) {
-            agentPopup = window.open(url, "lojaPrintBridgeAgent", "width=440,height=280");
+            agentPopup = window.open(url, "print_agent", feats);
           }
-          agentReady = false;
         }
+        // Nunca agentPopup.focus() — devolve o foco ao PDV já no open (antes do ready).
+        focusBackToPdv();
+        setTimeout(focusBackToPdv, 0);
+        setTimeout(focusBackToPdv, 50);
       } catch (e) {
         finish(false, "Não foi possível abrir o popup do Print Bridge Agent.");
         return;
@@ -209,11 +320,38 @@
       timer = setTimeout(function () {
         finish(
           false,
-          "Print Bridge Agent não respondeu. Confirme iniciar-print-bridge.bat aberto e permita o popup."
+          "Print Bridge Agent não respondeu. Confirme que o Print Bridge está iniciado e permita o popup."
         );
       }, timeoutMs);
     });
+    return agentEnsureInFlight;
   }
+
+  /** Warm-up: abre Agent uma vez se /health ok (pode falhar sem gesto do usuário). */
+  async function warmUpAgent() {
+    if (agentIsAlive()) {
+      markAgentActive();
+      return true;
+    }
+    if (agentWarmedUp) return false;
+    var h = await getBridgeHealth(true);
+    if (!h || !h.terminal_id) return false;
+    agentWarmedUp = true;
+    var ok = await ensureAgent(12000);
+    focusBackToPdv();
+    return !!ok;
+  }
+
+  function bindWarmUpOnGesture() {
+    var once = function () {
+      document.removeEventListener("pointerdown", once, true);
+      document.removeEventListener("keydown", once, true);
+      warmUpAgent().catch(function () {});
+    };
+    document.addEventListener("pointerdown", once, true);
+    document.addEventListener("keydown", once, true);
+  }
+  // Warm-up automático desligado: Agent não abre sozinho no PDV.
 
   function printViaAgent(payload, timeoutMs) {
     timeoutMs = timeoutMs || 60000;
@@ -389,27 +527,17 @@
   }
 
   async function tryBridgePrint(body) {
-    // Agent popup: contorna bloqueio Chrome (VPS → 127.0.0.1) e informa terminal_id no ready.
-    var agentOk = await ensureAgent();
-    if (!agentOk) {
-      return {
-        ok: false,
-        status: 0,
-        data: {},
-        printer: null,
-        erro:
-          lastBridgeError ||
-          "Print Bridge Agent indisponível. Abra iniciar-print-bridge.bat e permita o popup ao imprimir.",
-      };
-    }
-
-    var terminalId = cachedTerminalId;
+    // Lazy Agent: tenta fetch direto primeiro; só abre popup se rede/PNA bloquear.
+    var terminalId = cachedTerminalId || null;
     var printer = String(body.printer || "").trim();
     if (!printer || /^https?:\/\//i.test(printer)) {
       printer = await resolvePrinterName(body);
     }
     if (!printer) {
       if (lastPrinterResolveError) {
+        try {
+          console.warn("[PRINT DEBUG] Sem impressora (resolve)", lastPrinterResolveError);
+        } catch (_w0) {}
         return {
           ok: false,
           status: 403,
@@ -423,24 +551,40 @@
         origem === "mesa" || body.conta_mesa
           ? "conta_mesa = 'S'"
           : "comanda_delivery = 'S'";
+      var errCad =
+        "Nenhuma impressora no cadastro para esta tela (" +
+        flag +
+        " na tabela impressoras). Atualize nomedaimpressora/caminho no MySQL.";
+      try {
+        console.warn("[PRINT DEBUG] Sem impressora (cadastro)", errCad);
+      } catch (_w1) {}
       return {
         ok: false,
         status: 0,
         data: {},
         printer: null,
-        erro:
-          "Nenhuma impressora no cadastro para esta tela (" +
-          flag +
-          " na tabela impressoras). Atualize nomedaimpressora/caminho no MySQL.",
+        erro: errCad,
       };
     }
     var payload = Object.assign({}, body);
     payload.printer = printer;
     if (terminalId) payload.terminal_id = terminalId;
 
-    // Fetch direto (ok em localhost); se Chrome bloquear, imprime via agent.
     var url = bridgeBase() + "/imprimir";
     try {
+      console.log("[PRINT DEBUG] URL final:", url);
+      var payloadLog = Object.assign({}, payload);
+      if (payloadLog.conteudo != null) {
+        var c = String(payloadLog.conteudo);
+        if (c.length > 400) payloadLog.conteudo = c.slice(0, 400) + "…[truncado " + c.length + " chars]";
+      }
+      console.log("[PRINT DEBUG] Iniciando envio para Bridge", {
+        url: url,
+        printer: printer,
+        terminalId: terminalId || null,
+        origem: payload.origem || null,
+        payload: payloadLog,
+      });
       var r = await fetch(url, {
         method: "POST",
         mode: "cors",
@@ -451,6 +595,19 @@
         return {};
       });
       var ok = r.ok && d.sucesso !== false;
+      console.log("[PRINT DEBUG] Resposta do Bridge", {
+        status: r.status,
+        ok: ok,
+        response: d,
+      });
+      if (!ok) {
+        console.warn("[PRINT DEBUG] Bridge recusou / !ok", {
+          status: r.status,
+          erro: pickErro(d, "Bridge recusou impressão (HTTP " + r.status + ")"),
+          body: d,
+        });
+      }
+      if (ok && agentIsAlive()) markAgentActive();
       return {
         ok: ok,
         status: r.status,
@@ -459,7 +616,52 @@
         erro: ok ? null : pickErro(d, "Bridge recusou impressão (HTTP " + r.status + ")"),
       };
     } catch (_e) {
-      return await printViaAgent(payload);
+      try {
+        console.error("[PRINT DEBUG] Falha no Bridge", _e, _e && _e.stack);
+      } catch (_ce) {}
+      try {
+        if (agentIsAlive()) {
+          console.log("[PRINT DEBUG] Agent já ativo, usando fallback");
+          var viaAlive = await printViaAgent(payload);
+          restoreUiAfterAgentPrint();
+          closeAgentPopupSoon();
+          return viaAlive;
+        }
+
+        console.log("[PRINT DEBUG] Iniciando Agent sob demanda...");
+        var agentOk = await ensureAgent();
+        if (!agentOk) {
+          return {
+            ok: false,
+            status: 0,
+            data: {},
+            printer: null,
+            erro: "Falha ao imprimir. Verifique o Print Bridge ou o Agent.",
+          };
+        }
+        if (cachedTerminalId && !payload.terminal_id) {
+          payload.terminal_id = cachedTerminalId;
+        }
+        if (!payload.printer || /^https?:\/\//i.test(String(payload.printer))) {
+          var p2 = await resolvePrinterName(payload);
+          if (p2) payload.printer = p2;
+        }
+        var viaAgent = await printViaAgent(payload);
+        restoreUiAfterAgentPrint();
+        closeAgentPopupSoon();
+        return viaAgent;
+      } catch (agentError) {
+        try {
+          console.error("[PRINT DEBUG] Falha também no Agent", agentError, agentError && agentError.stack);
+        } catch (_ae) {}
+        return {
+          ok: false,
+          status: 0,
+          data: {},
+          printer: null,
+          erro: "Falha ao imprimir. Verifique o Print Bridge ou o Agent.",
+        };
+      }
     }
   }
 
@@ -575,6 +777,8 @@
   window.lojaGetLastBridgeError = getLastBridgeError;
   window.lojaPairBridge = pairBridge;
   window.lojaGetBridgeHealthOrPair = getBridgeHealthOrPair;
+  window.lojaEnsurePrintAgent = ensureAgent;
+  window.lojaWarmUpPrintAgent = warmUpAgent;
   window.lojaImprimir = async function (body) {
     body = body || {};
     var origem = String(body.origem || "").trim().toLowerCase();
@@ -592,7 +796,7 @@
       }
     }
 
-    var tidKnown = cachedTerminalId || (await getBridgeTerminalId(false));
+    var tidKnown = cachedTerminalId || null;
     var bridgeContext = !!(tidKnown || agentReady || (agentPopup && !agentPopup.closed));
 
     if (body.impressora_id != null && !body.printer) {
@@ -679,7 +883,7 @@
         data: {
           erro:
             br.erro ||
-            "Falha na impressão via Print Bridge. Verifique o bat, o Agent e o mapeamento do terminal.",
+            "Falha na impressão via Print Bridge. Verifique o Print Bridge, o Agent e o mapeamento do terminal.",
         },
         via: "bridge",
       };
@@ -692,7 +896,7 @@
     var err = srv.erro || br.erro || "Falha na impressão.";
     if (String(err).indexOf("linux") >= 0) {
       err =
-        "Abra iniciar-print-bridge.bat neste PC e tente de novo. (O servidor não imprime direto.)";
+        "Inicie o Print Bridge neste PC e tente de novo. (O servidor não imprime direto.)";
     }
     return { ok: false, status: srv.status || br.status, data: Object.assign({}, srv.data, { erro: err }) };
   };

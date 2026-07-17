@@ -247,7 +247,7 @@
   </style>
   {% include 'partials/tenant_primary_color.html' %}
 </head>
-<body{% if IS_RETAIL %} class="retail-pdv"{% endif %}>
+<body{% if IS_RETAIL %} class="retail-pdv pdv-casa"{% else %} class="pdv-casa"{% endif %}>
 <div class="pdv">
   <header class="topbar">
     <a class="home" href="{{ url_prefix }}/" title="Painel"><i data-lucide="home" width="18" height="18"></i></a>
@@ -255,6 +255,7 @@
     <div class="brand">{{ nome_fantasia or 'Minha Loja' }}</div>
     <span class="badge" id="pedido-badge">{% if IS_RETAIL %}Venda -{% else %}Pedido -{% endif %}</span>
     <button type="button" class="badge-pend-aguarde" id="btn-pend-aguarde" data-retail-hide style="display:none;" title="Ver pedidos em AGUARDE">AGUARDE · 0</button>
+    <button type="button" class="badge-pend-aguarde" id="btn-despacho-top" data-despacho-open data-retail-hide style="display:none;" title="Despachar pedido delivery">Despacho</button>
     <span class="badge" id="comanda-status-badge" style="display:none;">COMANDA MODIFICADA</span>
     <div class="toggle">
       <button type="button" data-modo="mesa" data-retail-hide>Mesa</button>
@@ -265,11 +266,12 @@
     <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro"><i data-lucide="sun" class="icon-light" width="18" height="18"></i><i data-lucide="moon" class="icon-dark" width="18" height="18"></i></button>
   </header>
 
+  <div id="banner-terminal-imp" class="status-line" style="display:none; margin:0 8px 0; padding:10px 12px; border-radius:8px; background:rgba(255,180,0,0.15); border:1px solid rgba(255,180,0,0.35); flex-shrink:0;">
+    <span id="banner-terminal-imp-text">Este terminal ainda não está configurado para impressão.</span>
+    <a href="{{ url_prefix }}/configuracoes-dados" style="margin-left:8px;">Configurar agora</a>
+  </div>
+
   <main class="shell">
-    <div id="banner-terminal-imp" class="status-line" style="display:none; margin:0 0 10px; padding:10px 12px; border-radius:8px; background:rgba(255,180,0,0.15); border:1px solid rgba(255,180,0,0.35);">
-      <span id="banner-terminal-imp-text">Este terminal ainda não está configurado para impressão.</span>
-      <a href="{{ url_prefix }}/configuracoes-dados" style="margin-left:8px;">Configurar agora</a>
-    </div>
     <aside class="left">
       <p class="title">Cliente</p>
       <div class="form" id="delivery-form" data-retail-hide autocomplete="off">
@@ -401,10 +403,11 @@
 <div class="modal" id="modal-dados-item"><div class="modal-card zoom"><h3>Detalhes do item</h3><pre id="dados-item-body" class="conferencia-pre" style="white-space:pre-wrap;"></pre><button class="btn-outline" data-close-modal>Fechar</button></div></div>
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
-<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=14"></script>
+<script src="{{ url_for('static', filename='ui-feedback.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=29"></script>
 {% include 'partials/print_context.html' %}
 <script src="{{ url_for('static', filename='print-format.js') }}?v=2"></script>
-<script src="{{ url_for('static', filename='print-header.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='print-header.js') }}?v=3"></script>
 <script src="{{ url_for('static', filename='receber-hotkeys.js') }}?v=1"></script>
 {% include 'partials/retail_mode.html' %}
 <script>
@@ -424,6 +427,9 @@
     if(H && H.getCachedPrintMeta(nro, orig)) return H.getCachedPrintMeta(nro, orig);
     return {
       data_criacao: new Date().toISOString(),
+      data_hora: (window.lojaPrintHeader && window.lojaPrintHeader.formatPrintDateTime)
+        ? window.lojaPrintHeader.formatPrintDateTime(new Date())
+        : new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
       atendente: String((window.LOJA_PRINT_CTX||{}).usuario||"").trim()||"-"
     };
   }
@@ -601,6 +607,8 @@
     const showEntrega = state.modo==="delivery";
     if (el("sum-entrega")) el("sum-entrega").style.display = showEntrega ? "flex" : "none";
     if (!showEntrega) state.taxaEntrega = 0;
+    const btnDesp=el("btn-despacho-top");
+    if(btnDesp) btnDesp.style.display = (!IS_RETAIL && state.modo==="delivery") ? "inline-flex" : "none";
     recalcTotals(state.subtotal);
     applyClienteFieldsLock();
     updatePrintState();
@@ -2049,7 +2057,8 @@
       await loadItens("normal");
       const busca=el("busca-produto");
       if(busca) busca.focus();
-      alert(d.mensagem || "Cliente salvo com sucesso.");
+      if(window.uiFeedback) window.uiFeedback.success(d.mensagem || "Cliente salvo com sucesso.");
+      else alert(d.mensagem || "Cliente salvo com sucesso.");
     } catch (e) {
       console.error(e);
       alert("Não foi possível salvar os dados do cliente.");
@@ -2410,7 +2419,8 @@
       await refreshPendentesAguarde();
       if(ok){
         await ensurePrintMetaCasa();
-        alert(`Comanda ${pedido} carregada.`);
+        if(window.uiFeedback) window.uiFeedback.success(`Comanda ${pedido} carregada.`);
+        else alert(`Comanda ${pedido} carregada.`);
       } else {
         state.emRecuperacao=false;
         state.pedidoId=0;
@@ -2705,6 +2715,8 @@
       if(banner){
         if(txt) txt.textContent="Terminal "+tid+" não configurado para impressão.";
         banner.style.display="block";
+        banner.style.background="rgba(255,180,0,0.15)";
+        banner.style.border="1px solid rgba(255,180,0,0.35)";
       }
     }catch(_e){}
   }
@@ -2978,7 +2990,10 @@
     const btn=el("btn-distribuir-preparo");
     const prevLabel=btn?btn.textContent:"";
     const fail=(msg)=>{
-      if(!silent) alert(String(msg||"Erro na distribuição."));
+      if(!silent){
+        if(window.uiFeedback) window.uiFeedback.error(String(msg||"Erro na distribuição."));
+        else alert(String(msg||"Erro na distribuição."));
+      }
       return {ok:false,message:String(msg||"Erro na distribuição.")};
     };
     const pendIds=_preparoPendentesIds();
@@ -3102,7 +3117,7 @@
       }
       await loadItens(state.emRecuperacao?"recuperacao":"normal");
       updateDistribuirPreparoUiCasa();
-      if(!silent) alert("Distribuição enviada para preparo.");
+      if(!silent){ if(window.uiFeedback) window.uiFeedback.success("Distribuição enviada para preparo."); else alert("Distribuição enviada para preparo."); }
       return {ok:true,total,atualizados,ja,impresso_em:Number(plans.length)||0};
     } finally {
       if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Distribuir preparo"; }
@@ -3178,10 +3193,12 @@
       preencherConferencias();
       renderResumoZoom();
       renderEditorZoom();
-      alert("Alterações aplicadas com sucesso.");
+      if(window.uiFeedback) window.uiFeedback.success("Alterações aplicadas com sucesso.");
+      else alert("Alterações aplicadas com sucesso.");
     }catch(e){
       console.error(e);
-      alert("Não foi possível aplicar todas as alterações. Revise e tente novamente.");
+      if(window.uiFeedback) window.uiFeedback.error("Não foi possível aplicar todas as alterações. Revise e tente novamente.");
+      else alert("Não foi possível aplicar todas as alterações. Revise e tente novamente.");
     }finally{
       if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Aplicar alterações"; }
     }
@@ -3196,7 +3213,7 @@
     const detalhes=el("detalhes-pedido"); if(detalhes) detalhes.open=false; await preencherConferencias(); atualizarBotaoWhatsapp(); openModal("modal-conferencia");
   }
   async function abrirConferenciaZoom(){ const detalhes=el("detalhes-pedido"); if(detalhes) detalhes.open=false; await preencherConferencias(); renderResumoZoom(); renderEditorZoom(); openModal("modal-conferencia-zoom"); }
-  async function salvarPedidoTxtInterno(fechar=true, formaOverride=null){ const conteudo=(state.conferenciaConteudo||textoImpressao()||"").trim(); if(!conteudo){ alert("Conteúdo vazio para salvar."); return null; } const formaEnv = (formaOverride!==null && formaOverride!==undefined) ? String(formaOverride||"") : String(state.formaPagamento||""); const r=await fetch("/api/casa/salvar-txt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nropedido:Number(state.pedidoId),conteudo,forma_pagamento:formaEnv||""})}); const ct=(r.headers.get("content-type")||"").toLowerCase(); const d=ct.includes("application/json")?await r.json().catch(()=>({})):{}; if(!r.ok||d.sucesso===false){ if(r.status===404){ alert("Endpoint não encontrado (404). Reinicie o servidor para carregar a rota /api/casa/salvar-txt."); return null; } const txt=!ct.includes("application/json")?await r.text().catch(()=>""):""; alert(d.erro||`Falha ao salvar arquivo .txt (HTTP ${r.status}). ${txt?txt.slice(0,180):""}`); return null; } alert("Pedido salvo em: "+(d.caminho||"-")+(d.aviso?"\n\n"+d.aviso:"")); if(fechar) closeModals(); return {conteudo,arquivo:d.arquivo,caminho:d.caminho}; }
+  async function salvarPedidoTxtInterno(fechar=true, formaOverride=null){ const conteudo=(state.conferenciaConteudo||textoImpressao()||"").trim(); if(!conteudo){ alert("Conteúdo vazio para salvar."); return null; } const formaEnv = (formaOverride!==null && formaOverride!==undefined) ? String(formaOverride||"") : String(state.formaPagamento||""); const r=await fetch("/api/casa/salvar-txt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nropedido:Number(state.pedidoId),conteudo,forma_pagamento:formaEnv||""})}); const ct=(r.headers.get("content-type")||"").toLowerCase(); const d=ct.includes("application/json")?await r.json().catch(()=>({})):{}; if(!r.ok||d.sucesso===false){ if(r.status===404){ alert("Endpoint não encontrado (404). Reinicie o servidor para carregar a rota /api/casa/salvar-txt."); return null; } const txt=!ct.includes("application/json")?await r.text().catch(()=>""):""; alert(d.erro||`Falha ao salvar arquivo .txt (HTTP ${r.status}). ${txt?txt.slice(0,180):""}`); return null; } if(fechar) closeModals(); return {conteudo,arquivo:d.arquivo,caminho:d.caminho}; }
   async function salvarPedidoTxt(){ await salvarPedidoTxtInterno(true); }
   function totalAtualCasa(){
     const serv=0;
@@ -3239,8 +3256,10 @@
       refreshFormaPagamentoUi();
     }
   }
-  async function openBaixaBalcaoModal(nropedido, printerName){
-    const total = totalAtualCasa();
+  async function openBaixaBalcaoModal(nropedido, printerName, totalOverride){
+    const total = (totalOverride!=null && Number.isFinite(Number(totalOverride)))
+      ? Math.round(Number(totalOverride)*100)/100
+      : totalAtualCasa();
     const bbTotal=el("bb-total"), bbSomado=el("bb-somado"), bbRest=el("bb-restante"), bbTroco=el("bb-troco");
     const bbTit=el("bb-titulo"), bbSub=el("bb-sub"), bbFormas=el("bb-formas");
     if(bbTit) bbTit.textContent = `${LABEL_PEDIDO} #${Number(nropedido)||0}`;
@@ -3398,11 +3417,16 @@
     }
     const imp=await (window.lojaImprimir?window.lojaImprimir(body):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json().then(d=>({ok:r.ok&&d.sucesso!==false,data:d}))));
     const d=imp.data||{};
-    if(!imp.ok){
+    const impressoNoPc = !!(imp.ok || d.bridge_ok === true);
+    if(!impressoNoPc){
       const lista=Array.isArray(d.impressoras_disponiveis)&&d.impressoras_disponiveis.length?`\nDisponíveis: ${d.impressoras_disponiveis.join(" | ")}`:"";
-      alert("Falha na impressão: "+(d.erro||d.mensagem||("HTTP "+(imp.status||"?")))+lista);
+      if(window.uiFeedback) window.uiFeedback.error("Falha na impressão: "+(d.erro||d.mensagem||("HTTP "+(imp.status||"?")))+lista);
+      else alert("Falha na impressão: "+(d.erro||d.mensagem||("HTTP "+(imp.status||"?")))+lista);
       return;
     }
+    const confirmWarn = (!imp.ok && d.bridge_ok)
+      ? `\n\nAtenção: ${d.erro||d.mensagem||"cupom impresso, mas falhou confirmar no servidor."}`
+      : "";
     const printerUsed = d.printer_windows || d.printer || impressoraCasaLabel;
     let preparoRes=null;
     try{
@@ -3413,19 +3437,41 @@
     const preparoMsg = (preparoRes && preparoRes.ok===false)
       ? `\n\nAtenção: preparo NÃƒO foi distribuído.\n${String(preparoRes.message||"")}`
       : ((preparoRes && preparoRes.ok===true && !preparoRes.skipped) ? `\n\nPreparo distribuído.` : "");
+    function reforcarUiAposVenda(){
+      try{
+        closeModals();
+        document.body.classList.remove("modal-open");
+        document.body.style.overflow = "";
+        document.body.style.paddingRight = "";
+        if(typeof window.lojaRestorePdvLayout==="function"){
+          window.lojaRestorePdvLayout();
+        }
+        if(typeof syncModeUi==="function") syncModeUi();
+      }catch(_e){}
+    }
     if(state.modo==="balcao" && String(state.balcaoPagamentoMomento||"agora")==="agora"){
       const pedidoNro = Number(state.pedidoId)||0;
-      const recebido = await openBaixaBalcaoModal(pedidoNro, printerUsed);
+      const totalSnap = totalAtualCasa();
       await avancarParaProximoPedido();
       await resetPedidoRapido(false);
-      alert(recebido ? `Pedido impresso e recebido.\nImpressora: ${printerUsed}${preparoMsg}` : `Pedido impresso.\nBaixa pendente.\nImpressora: ${printerUsed}${preparoMsg}`);
+      reforcarUiAposVenda();
+      const recebido = await openBaixaBalcaoModal(pedidoNro, printerUsed, totalSnap);
+      if(window.uiFeedback){
+        if(confirmWarn) window.uiFeedback.warn(String(d.erro||d.mensagem||"Cupom impresso, mas falhou confirmar no servidor."));
+        else window.uiFeedback.success(recebido ? "Impresso." : "Impresso. Baixa pendente.");
+      }
       return;
     }
     await avancarParaProximoPedido();
-    const pw = d.printer_windows && d.printer && d.printer_windows !== d.printer
-      ? `${d.printer_windows} (cadastro: ${d.printer})` : printerUsed;
-    alert(`Pedido enviado para impressão.\nImpressora: ${pw}${preparoMsg}`);
-    await resetPedidoRapido(false);
+    try{
+      if(window.uiFeedback){
+        if(confirmWarn) window.uiFeedback.warn(String(d.erro||d.mensagem||"Cupom impresso, mas falhou confirmar no servidor."));
+        else window.uiFeedback.success("Impresso.");
+      }
+    }finally{
+      await resetPedidoRapido(false);
+      reforcarUiAposVenda();
+    }
     }finally{
       if(btn){ btn.disabled=false; btn.textContent=prev||"Salvar e imprimir"; }
       if(btnTxt) btnTxt.disabled=false;
@@ -3658,7 +3704,7 @@
       onConfirm:()=>{ receberBaixaBalcao(); },
     });
   }
-  document.addEventListener("DOMContentLoaded",async()=>{ bindPedidoPreviewRefresh(); if(window.lojaPrintHeader) window.lojaPrintHeader.ensureLojaDados(); window.applyRetailUi(); bindHotkeys(); refreshImpressoraCasaLabel(); if(!IS_RETAIL) await carregarDddPadrao(); if(IS_RETAIL) await carregarConfigBalcao(); const params=new URLSearchParams(window.location.search); const modoParam=params.get("modo"); if(IS_RETAIL){ state.modo="balcao"; }else{ state.modo=(modoParam==="balcao"||modoParam==="delivery")?modoParam:"delivery"; } const pedidoParam=Number(String(params.get("pedido")||"").replace(/[^\d]/g,""))||0; const telParam=String(params.get("tel")||"").replace(/\D/g,""); const recParam=params.get("rec")==="1"; if(pedidoParam>0 && recParam){ state.pedidoId=pedidoParam; state.pedidoReservado=true; state.pedidoPreview=state.pedidoId; state.emRecuperacao=true; updatePedidoBadge(); if(state.modo==="delivery" && telParam){ const local=telParam.length>9?telParam.slice(-9):telParam; if(el("cli-fone")) el("cli-fone").value=local; } } await syncPedidoAtual(); syncModeUi(); captureClienteSnapshot(); applyInitialUiState(); if(!IS_RETAIL) setClienteStatus("Pedidos anteriores: -"); await refreshTaxaServico(); if(IS_RETAIL && window.RetailPdv) await window.RetailPdv.loadCatalogTabs({state,el,renderProdutos}); else await loadClassTabs(); const _ldMode=pedidoParam>0 && recParam ? "recuperacao" : "normal"; const _ldOk=await loadItens(_ldMode); if(pedidoParam>0 && recParam && _ldOk===false){ state.emRecuperacao=false; state.pedidoId=0; state.pedidoReservado=false; await syncPedidoAtual(); await loadItens("normal"); updatePedidoBadge(); } if(!IS_RETAIL){ await refreshPendentesAguarde(); const btnPend=el("btn-pend-aguarde"); if(btnPend) btnPend.onclick=async()=>{ await refreshPendentesAguarde(); renderAguardePendentesModal(); openModal("modal-aguarde-pendentes"); }; } if(IS_RETAIL){ history.replaceState({},"",lojaUrl("/casa?modo=balcao")); await resetPedidoRapido(true); syncModeUi(); } lucide.createIcons(); });
+  document.addEventListener("DOMContentLoaded",async()=>{ bindPedidoPreviewRefresh(); if(window.lojaPrintHeader) window.lojaPrintHeader.ensureLojaDados(); window.applyRetailUi(); bindHotkeys(); refreshImpressoraCasaLabel(); if(!IS_RETAIL) await carregarDddPadrao(); if(IS_RETAIL) await carregarConfigBalcao(); const params=new URLSearchParams(window.location.search); const modoParam=params.get("modo"); if(IS_RETAIL){ state.modo="balcao"; }else{ state.modo=(modoParam==="balcao"||modoParam==="delivery")?modoParam:"delivery"; } const pedidoParam=Number(String(params.get("pedido")||"").replace(/[^\d]/g,""))||0; const telParam=String(params.get("tel")||"").replace(/\D/g,""); const recParam=params.get("rec")==="1"; if(pedidoParam>0 && recParam){ state.pedidoId=pedidoParam; state.pedidoReservado=true; state.pedidoPreview=state.pedidoId; state.emRecuperacao=true; updatePedidoBadge(); if(state.modo==="delivery" && telParam){ const local=telParam.length>9?telParam.slice(-9):telParam; if(el("cli-fone")) el("cli-fone").value=local; } } await syncPedidoAtual(); syncModeUi(); captureClienteSnapshot(); applyInitialUiState(); if(!IS_RETAIL) setClienteStatus("Pedidos anteriores: -"); await refreshTaxaServico(); if(IS_RETAIL && window.RetailPdv) await window.RetailPdv.loadCatalogTabs({state,el,renderProdutos}); else await loadClassTabs(); const _ldMode=pedidoParam>0 && recParam ? "recuperacao" : "normal"; const _ldOk=await loadItens(_ldMode); if(pedidoParam>0 && recParam && _ldOk===false){ state.emRecuperacao=false; state.pedidoId=0; state.pedidoReservado=false; await syncPedidoAtual(); await loadItens("normal"); updatePedidoBadge(); } if(!IS_RETAIL){ await refreshPendentesAguarde(); const btnPend=el("btn-pend-aguarde"); if(btnPend) btnPend.onclick=async()=>{ await refreshPendentesAguarde(); renderAguardePendentesModal(); openModal("modal-aguarde-pendentes"); }; }     if(IS_RETAIL){ history.replaceState({},"",lojaUrl("/casa?modo=balcao")); await resetPedidoRapido(true); syncModeUi(); } try{ await checarTerminalImpressao(); }catch(_wu){} lucide.createIcons(); });
 })();
 </script>
 {% if not IS_RETAIL %}
