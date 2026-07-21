@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, render_template, request, session
 from decorators import login_required
 from database import conectar
 from services.business_mode import is_retail
+from services.catalogo_modo import contar_produtos_varejo_ocultos, sql_filtro_produto_restaurante
 from services.dados_loja import obter_dados_loja
 from services.retail_catalog import RetailCatalogError, apply_retail_produto_save, enrich_produto_retail
 
@@ -63,6 +64,27 @@ def _norm_sim_nao(value, default: str = "Nao") -> str:
     if raw in ("N", "NAO", "0", "FALSE", "NO"):
         return "Nao"
     return fallback
+
+
+def _parse_impressora_produto(dados: dict, *, restaurante: bool):
+    """Restaurante: NULL = herdar da classificação; retail: default 1."""
+    if not restaurante:
+        raw = dados.get("impressora", 1)
+        try:
+            return int(raw) if raw is not None and str(raw).strip() != "" else 1
+        except (TypeError, ValueError):
+            return 1
+    if dados.get("impressora_herdar") in (True, 1, "1", "true", "sim", "s"):
+        return None
+    if "impressora" not in dados or dados.get("impressora") is None:
+        return None
+    raw = dados.get("impressora")
+    if isinstance(raw, str) and not raw.strip():
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
 
 
 def _resolver_classe_retail(cursor, id_cliente: int, dados: dict) -> str:
@@ -129,7 +151,7 @@ def salvar_produto():
         preco = dados.get("preco", 0)
         classe = dados.get("classe", "").strip().upper()
         porkilo = _norm_sim_nao(dados.get("porkilo", "Nao"), default="Nao")
-        impressora = dados.get("impressora", 1)
+        impressora = _parse_impressora_produto(dados, restaurante=not is_retail())
         cfop = dados.get("cfop", "5102")
         ncm = dados.get("ncm", "")
         display = dados.get("display", 0)
@@ -278,20 +300,27 @@ def listar_produtos():
                 (id_cliente, id_cliente),
             )
         else:
+            produtos_varejo_ocultos = contar_produtos_varejo_ocultos(cursor, id_cliente)
+            filtro_rest = sql_filtro_produto_restaurante("p")
             cursor.execute(
-                """
-                SELECT chave, produto, preco, classe, porkilo, impressora, cfop, ncm,
-                       display, vendaliberada, descricao, barcode, controla_estoque
-                FROM produtos
-                WHERE id_cliente = %s
-                ORDER BY produto
-            """,
-                (id_cliente,),
+                f"""
+                SELECT p.chave, p.produto, p.preco, p.classe, p.porkilo, p.impressora, p.cfop, p.ncm,
+                       p.display, p.vendaliberada, p.descricao, p.barcode, p.controla_estoque
+                FROM produtos p
+                WHERE p.id_cliente = %s
+                {filtro_rest}
+                ORDER BY p.produto
+                """,
+                (id_cliente, id_cliente),
             )
 
         produtos = cursor.fetchall()
 
-        return jsonify({"sucesso": True, "produtos": produtos})
+        payload = {"sucesso": True, "produtos": produtos}
+        if not is_retail():
+            payload["produtos_varejo_ocultos"] = produtos_varejo_ocultos
+            payload["catalogo_mismatch"] = produtos_varejo_ocultos > 0 and len(produtos) == 0
+        return jsonify(payload)
 
     except mysql.connector.Error as db_err:
         print("[DB ERROR]", db_err)
@@ -328,8 +357,7 @@ def obter_produto(chave):
         produto = cursor.fetchone()
 
         if produto:
-            if is_retail():
-                enrich_produto_retail(cursor, id_cliente, produto)
+            enrich_produto_retail(cursor, id_cliente, produto)
             return jsonify({"sucesso": True, "produto": produto})
         else:
             return jsonify({"sucesso": False, "erro": "Produto não encontrado"}), 404
@@ -409,7 +437,7 @@ def editar_produto(chave):
         preco = dados.get("preco", 0)
         classe = dados.get("classe", "").strip().upper()
         porkilo = _norm_sim_nao(dados.get("porkilo", "Nao"), default="Nao")
-        impressora = dados.get("impressora", 1)
+        impressora = _parse_impressora_produto(dados, restaurante=not is_retail())
         cfop = dados.get("cfop", "5102")
         ncm = dados.get("ncm", "")
         display = dados.get("display", 0)

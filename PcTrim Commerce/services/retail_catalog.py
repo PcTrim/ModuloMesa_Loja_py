@@ -4,6 +4,8 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from services.catalogo_modo import sql_filtro_produto_restaurante
+
 
 class RetailCatalogError(ValueError):
     """Erro de validação ou regra de negócio do catálogo retail."""
@@ -234,6 +236,7 @@ def listar_produtos_pdv_retail(
 
 def listar_produtos_por_classificacao(cur, id_cliente: int, classe: str) -> list[dict]:
     """Produtos de uma classificação (PDV restaurante) com saldo agregado."""
+    filtro_rest = sql_filtro_produto_restaurante("p")
     sql = """
         SELECT
             p.chave,
@@ -244,11 +247,12 @@ def listar_produtos_por_classificacao(cur, id_cliente: int, classe: str) -> list
             COALESCE(p.controla_estoque, 0) AS controla_estoque,
             COALESCE(mv.saldo_atual, 0) AS estoque_atual
         FROM produtos p
-""" + SQL_JOIN_SALDO_ESTOQUE + """
+""" + SQL_JOIN_SALDO_ESTOQUE + f"""
         WHERE p.classe = %s AND p.id_cliente = %s
+        {filtro_rest}
         ORDER BY p.produto
     """
-    cur.execute(sql, (id_cliente, classe, id_cliente))
+    cur.execute(sql, (id_cliente, classe, id_cliente, id_cliente))
     rows = cur.fetchall() or []
     result: list[dict] = []
     for row in rows:

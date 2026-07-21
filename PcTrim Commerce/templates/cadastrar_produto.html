@@ -26,6 +26,7 @@
         <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
         <div class="brand">Produtos</div>
         {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/modo_negocio_badge.html' %}
         {% include 'partials/topbar_meta.html' %}
         <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
             <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
@@ -36,6 +37,7 @@
     <main class="cfg-content cfg-cadastro-page">
         <div class="cfg-wrap cfg-cadastro-wrap">
             <div id="mensagem" class="mensagem" style="display:none;"></div>
+            <div id="avisoProdutosOrfaos" class="help" style="display:none;margin:0 0 12px;padding:10px 12px;border-radius:8px;background:var(--cfg-card-bg, rgba(255,193,7,.12));border:1px solid rgba(255,193,7,.35);"></div>
 
             <section class="cfg-section-card" id="produtosListPanel">
                 <div class="cfg-cadastro-head">
@@ -50,7 +52,7 @@
                                 <th>Produto</th>
                                 <th style="width: 110px;">Preço</th>
                                 {% if not is_retail %}
-                                <th style="width: 130px;">Classe</th>
+                                <th style="width: 150px;">Classificação</th>
                                 {% endif %}
                                 {% if is_retail %}
                                 <th style="width: 130px;">Categoria</th>
@@ -84,19 +86,22 @@
                     <input type="text" id="nome" required placeholder="Nome do produto" data-hint="Nome que o operador verá no PDV.">
                     <input type="text" id="barcode" maxlength="50" placeholder="Código de barras (opcional)" data-hint="Código de barras, se o produto tiver.">
 
+                    {% if not is_retail %}
+                    <div id="blocoClassificacaoRestaurante">
                     <div class="row-split">
                         <input type="number" id="preco" step="0.01" required placeholder="Preço (R$)" data-hint="Valor de venda em reais.">
-                        {% if not is_retail %}
                         <select id="classificacaoSelect" required data-hint="Grupo do produto no cardápio ou PDV.">
                             <option value="">{{ label_classif }}...</option>
                         </select>
-                        {% endif %}
                     </div>
-                    {% if not is_retail %}
                     <div class="help" id="classificacaoHelp" style="margin-top:-4px;margin-bottom:8px;"></div>
 
                     <input type="text" id="classe" required placeholder="Classe (preenchida pela {{ label_classif|lower }})" readonly>
+                    </div>
                     {% else %}
+                    <div class="row-split">
+                        <input type="number" id="preco" step="0.01" required placeholder="Preço (R$)" data-hint="Valor de venda em reais.">
+                    </div>
                     <input type="hidden" id="classe" value="">
                     <input type="hidden" id="classificacaoSelect" value="">
                     {% endif %}
@@ -114,8 +119,17 @@
                     </div>
 
                     {% if not is_retail %}
-                    <div class="row-split">
-                        <select id="impressora">
+                    <div class="field-group" id="blocoImpressoraProduto">
+                        <p class="title">Impressora de preparo</p>
+                        <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                            <input type="radio" name="modoImpressora" id="modoImpressoraHerdar" value="herdar" checked>
+                            Herdar da classificação
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <input type="radio" name="modoImpressora" id="modoImpressoraEspecifica" value="especifica">
+                            Impressora específica
+                        </label>
+                        <select id="impressoraEspecifica" disabled data-hint="Número lógico da impressora de preparo (imprenro).">
                             <option value="1">Impressora (padrão)</option>
                         </select>
                         <input type="number" id="display" value="0" placeholder="Display">
@@ -383,6 +397,34 @@
             };
         }
 
+        function toggleImpressoraProduto() {
+            const especifica = document.getElementById('modoImpressoraEspecifica')?.checked;
+            const select = document.getElementById('impressoraEspecifica');
+            if (select) select.disabled = !especifica;
+        }
+
+        function setModoImpressoraProduto(modo, valorEspecifico) {
+            const herdar = document.getElementById('modoImpressoraHerdar');
+            const especifica = document.getElementById('modoImpressoraEspecifica');
+            const select = document.getElementById('impressoraEspecifica');
+            if (modo === 'especifica') {
+                if (especifica) especifica.checked = true;
+                if (select && valorEspecifico != null && valorEspecifico !== '') {
+                    const want = String(valorEspecifico);
+                    if (!Array.from(select.options).some(o => o.value === want)) {
+                        const opt = document.createElement('option');
+                        opt.value = want;
+                        opt.textContent = `Impressora ${want}`;
+                        select.appendChild(opt);
+                    }
+                    select.value = want;
+                }
+            } else {
+                if (herdar) herdar.checked = true;
+            }
+            toggleImpressoraProduto();
+        }
+
         function resetProdutoForm() {
             document.getElementById('formProduto').reset();
             document.getElementById('chaveEdicao').value = '';
@@ -394,6 +436,7 @@
             const codigoEl = document.getElementById('codigo');
             if (codigoEl) codigoEl.value = '';
             setCodigoSomenteLeitura(false);
+            if (!IS_RETAIL) setModoImpressoraProduto('herdar');
             resetRetailFields();
             atualizarBtnImprimirEtiqueta();
         }
@@ -502,7 +545,7 @@
             const placeholder = `${LABEL_CLASSIF}...`;
             select.innerHTML = `<option value="">${placeholder}</option>`;
             items.forEach(item => {
-                const nome = String(item.nome || item.nomeclassificacao || '').trim();
+                const nome = String(item.nomeclassificacao || item.nome || '').trim();
                 if (!nome || nome === placeholder) return;
                 const opt = document.createElement('option');
                 opt.value = nome.toUpperCase();
@@ -567,7 +610,7 @@
                 ...(IS_RETAIL ? ['category_id', 'subcategory_id'] : ['classificacaoSelect', 'classe']),
                 'porkilo',
                 'vendaliberada',
-                ...(IS_RETAIL ? [] : ['impressora', 'display']),
+                ...(IS_RETAIL ? [] : ['modoImpressoraHerdar', 'impressoraEspecifica', 'display']),
                 'cfop',
                 'ncm',
                 'descricao'
@@ -595,7 +638,7 @@
 
             // Carrega classificações (somente restaurante)
             if (!IS_RETAIL) {
-                fetch('/carrossel-imagens')
+                fetch('/api/listar-classificacoes')
                     .then(r => r.json())
                     .then(data => {
                         const items = Array.isArray(data) ? data : [];
@@ -613,6 +656,8 @@
             }
 
             if (!IS_RETAIL) {
+                document.getElementById('modoImpressoraHerdar')?.addEventListener('change', toggleImpressoraProduto);
+                document.getElementById('modoImpressoraEspecifica')?.addEventListener('change', toggleImpressoraProduto);
                 carregarImpressorasParaProduto().finally(() => {
                     carregarProdutos();
                 });
@@ -632,7 +677,7 @@
         });
 
         async function carregarImpressorasParaProduto() {
-            const select = document.getElementById('impressora');
+            const select = document.getElementById('impressoraEspecifica');
             if (!select) return;
             const currentValue = String(select.value || '1');
             try {
@@ -676,6 +721,38 @@
         }
 
         // Carrega lista de produtos
+        async function verificarAvisoProdutosOrfaos(produtos, produtosVarejoOcultos) {
+            const box = document.getElementById('avisoProdutosOrfaos');
+            if (!box) return;
+            try {
+                if (IS_RETAIL) {
+                    const list = Array.isArray(produtos) ? produtos : [];
+                    const semCat = list.filter(p => !p.category_id);
+                    if (!semCat.length) {
+                        box.style.display = 'none';
+                        box.textContent = '';
+                        return;
+                    }
+                    box.style.display = 'block';
+                    box.innerHTML = `<strong>Atenção:</strong> ${semCat.length} produto(s) sem categoria retail. ` +
+                        'Edite e associe uma categoria em Catálogo retail.';
+                    return;
+                }
+                const ocultos = Number(produtosVarejoOcultos) || 0;
+                if (ocultos > 0) {
+                    box.style.display = 'block';
+                    box.innerHTML =
+                        '<strong>Catálogo varejo oculto:</strong> ' + ocultos +
+                        ' produto(s) pertencem ao catálogo varejo (categoria) e não são exibidos no modo restaurante.';
+                    return;
+                }
+                box.style.display = 'none';
+                box.textContent = '';
+            } catch (e) {
+                console.error('Erro ao verificar produtos ocultos:', e);
+            }
+        }
+
         async function carregarProdutos() {
             try {
                 const response = await fetch('/api/listar-produtos');
@@ -697,7 +774,7 @@
                             <td><span class="pill">${produto.categoria_nome || '—'}</span></td>
                             <td>${Number(produto.controla_estoque) ? Number(produto.estoque || 0).toFixed(3) : '—'}</td>
                         ` : '';
-                        const classeCol = IS_RETAIL ? '' : `<td><span class="pill">${produto.classe}</span></td>`;
+                        const classeCol = IS_RETAIL ? '' : `<td><span class="pill">${produto.classe || '—'}</span></td>`;
                         const bc = String(produto.barcode || '').trim();
                         const btnEtiqueta = (IS_RETAIL && bc)
                             ? `<button type="button" class="btn-mini" onclick='imprimirEtiquetaProduto(${JSON.stringify({ chave: produto.chave, produto: produto.produto, barcode: bc })})'>Etiqueta</button>`
@@ -721,8 +798,10 @@
                         `;
                         tbody.appendChild(tr);
                     });
+                    await verificarAvisoProdutosOrfaos(result.produtos, result.produtos_varejo_ocultos);
                 } else {
                     tbody.innerHTML = `<tr><td colspan="${COL_SPAN_PRODUTOS}" class="empty">Nenhum produto cadastrado.</td></tr>`;
+                    await verificarAvisoProdutosOrfaos([], result.produtos_varejo_ocultos);
                 }
             } catch (erro) {
                 console.error('Erro ao carregar produtos:', erro);
@@ -751,7 +830,7 @@
                         if (selectClass) {
                             const options = selectClass.options;
                             for (let i = 0; i < options.length; i++) {
-                                if (options[i].value.toUpperCase() === p.classe.toUpperCase()) {
+                                if (options[i].value.toUpperCase() === String(p.classe || '').toUpperCase()) {
                                     selectClass.selectedIndex = i;
                                     break;
                                 }
@@ -761,7 +840,11 @@
                     }
                     document.getElementById('porkilo').value = normSimNao(p.porkilo, 'Nao');
                     document.getElementById('vendaliberada').value = normSimNao(p.vendaliberada, 'Sim');
-                    document.getElementById('impressora').value = p.impressora;
+                    if (p.impressora == null || p.impressora === '') {
+                        setModoImpressoraProduto('herdar');
+                    } else {
+                        setModoImpressoraProduto('especifica', p.impressora);
+                    }
                     document.getElementById('display').value = p.display;
                     document.getElementById('cfop').value = p.cfop;
                     document.getElementById('ncm').value = p.ncm || '';
@@ -840,10 +923,7 @@
             }
             if (!IS_RETAIL && !(document.getElementById('classe').value || '').trim()) {
                 mostrarMensagem(`Informe um ${LABEL_CLASSIF_LOWER} antes de salvar.`, 'erro');
-                const destino = document.getElementById('classificacaoSelect')?.disabled
-                    ? document.getElementById('classe')
-                    : document.getElementById('classificacaoSelect');
-                destino?.focus();
+                document.getElementById('classificacaoSelect')?.focus();
                 return;
             }
             
@@ -854,7 +934,6 @@
                 preco: parseFloat(document.getElementById('preco').value),
                 porkilo: normSimNao(document.getElementById('porkilo').value, 'Nao'),
                 vendaliberada: normSimNao(document.getElementById('vendaliberada').value, 'Sim'),
-                impressora: parseInt(document.getElementById('impressora').value) || 1,
                 display: parseInt(document.getElementById('display').value) || 0,
                 cfop: document.getElementById('cfop').value.trim().toUpperCase() || '5102',
                 ncm: document.getElementById('ncm').value.trim().toUpperCase() || '',
@@ -865,6 +944,15 @@
                 dados.classe = document.getElementById('classe').value.trim().toUpperCase();
                 const ctrl = document.getElementById('controla_estoque');
                 if (ctrl) dados.controla_estoque = ctrl.checked ? 1 : 0;
+                const modoEspecifica = document.getElementById('modoImpressoraEspecifica')?.checked;
+                if (modoEspecifica) {
+                    dados.impressora = parseInt(document.getElementById('impressoraEspecifica').value, 10) || null;
+                } else {
+                    dados.impressora = null;
+                    dados.impressora_herdar = true;
+                }
+            } else {
+                dados.impressora = parseInt(document.getElementById('impressora').value) || 1;
             }
 
             if (IS_RETAIL) {

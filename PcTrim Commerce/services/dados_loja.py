@@ -1,11 +1,13 @@
 """Load loja row from dadosloja by tenant."""
-from database import conectar
+from database import conectar, conectar_admin
+from services.loja_ambiente import fetch_loja_ambiente_for_cliente
 
 
 def obter_dados_loja(id_cliente=None):
     """Obtém dados da loja cadastrados na tabela dadosloja.
 
     Quando id_cliente é informado, filtra por esse tenant; caso contrário usa registro chave=1 (fallback legado).
+    Com id_cliente, usa o banco de dadosloja.ambiente (produção/homologação).
     """
     dados_padrao = {
         "latitude": -7.0793693,
@@ -24,7 +26,11 @@ def obter_dados_loja(id_cliente=None):
     conn = None
     cursor = None
     try:
-        conn = conectar()
+        if id_cliente:
+            target = fetch_loja_ambiente_for_cliente(id_cliente)
+            conn = conectar_admin(target)
+        else:
+            conn = conectar()
         cursor = conn.cursor(dictionary=True)
         if id_cliente:
             cursor.execute("SELECT * FROM dadosloja WHERE id_cliente = %s LIMIT 1", (id_cliente,))

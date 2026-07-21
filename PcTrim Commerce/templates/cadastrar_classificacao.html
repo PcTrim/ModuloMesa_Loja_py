@@ -26,6 +26,7 @@
         <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
         <div class="brand">{{ label_classif_pl }}</div>
         {% if id_cliente %}<span class="badge">ID {{ id_cliente }}</span>{% endif %}
+        {% include 'partials/modo_negocio_badge.html' %}
         {% include 'partials/topbar_meta.html' %}
         <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
             <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
@@ -51,8 +52,14 @@
             <section class="cfg-section-card" id="classificacoesListPanel">
                 <div class="cfg-cadastro-head">
                     <h2 class="cfg-section-title">{{ label_classif_pl }} cadastradas</h2>
-                    <button type="button" class="btn-purple cfg-cadastro-btn-inline" onclick="novaClassificacao()">+ Nova {{ label_classif }}</button>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        {% if not is_retail %}
+                        <button type="button" class="btn-outline cfg-cadastro-btn-inline" id="btnSyncClassificacoes" onclick="sincronizarClassificacoesProdutos()">Sincronizar dos produtos</button>
+                        {% endif %}
+                        <button type="button" class="btn-purple cfg-cadastro-btn-inline" onclick="novaClassificacao()">+ Nova {{ label_classif }}</button>
+                    </div>
                 </div>
+                <div id="avisoClassificacoesOrfas" class="help" style="display:none;margin:0 0 12px;padding:10px 12px;border-radius:8px;background:var(--cfg-card-bg, rgba(255,193,7,.12));border:1px solid rgba(255,193,7,.35);"></div>
                 <div class="cfg-cadastro-table-wrap">
                     <table class="tbl cfg-table" id="tabelaListaClassificacoes">
                 <thead>
@@ -325,11 +332,20 @@
                         </select>
                     </div>
 
+                    <div class="row-split main-fields">
+                        <div style="display:grid;gap:4px;">
+                            <select id="impressora" name="impressora" data-hint="Impressora padrão de preparo para produtos desta classificação.">
+                                <option value="">Sem padrão</option>
+                            </select>
+                            <div class="help">Define a impressora padrão para os produtos desta classificação.</div>
+                        </div>
+                    </div>
+
                     <div class="details" style="margin-top:6px;">
                         <summary>Produtos desta {{ label_classif|lower }}</summary>
                         <div style="margin-top:10px; display:grid; gap:8px;">
                             <select id="produtos" name="produtos" multiple style="min-height: 170px;" data-hint="Produtos que entram nesta classificação. Segure Ctrl para escolher vários.">
-                                <option disabled>Carregando produtos...</option>
+                                <option disabled>Informe o nome da classificação para listar produtos</option>
                             </select>
                             <div class="help">Segure Ctrl (ou Cmd) para selecionar múltiplos produtos.</div>
                         </div>
@@ -481,7 +497,7 @@
         // Carregar produtos por classificação
         async function carregarProdutosPorClassificacao(nomeClassificacao) {
             if (!nomeClassificacao) {
-                carregarProdutos();
+                resetSelectProdutosInicial();
                 return;
             }
             try {
@@ -497,6 +513,12 @@
         }
 
         // Função auxiliar para preencher o select
+        function resetSelectProdutosInicial() {
+            const select = document.getElementById('produtos');
+            if (!select) return;
+            select.innerHTML = `<option disabled>Informe o nome da ${LABEL_CLASSIF_LOWER} para listar produtos</option>`;
+        }
+
         function preencherSelectProdutos(produtos) {
             const select = document.getElementById('produtos');
             if (!select) return;
@@ -637,8 +659,12 @@
         // Carregar classificações ao iniciar
         document.addEventListener('DOMContentLoaded', function() {
             carregarClassificacoes();
+            if (!IS_RETAIL) {
+                carregarImpressorasParaClassificacao();
+                verificarClassificacoesOrfas();
+            }
             if (document.getElementById('produtos')) {
-                carregarProdutos();
+                resetSelectProdutosInicial();
             }
             initOpEditors();
             // Configurar navegação com Enter e converter para maiúsculo
@@ -703,8 +729,45 @@
             editandoId = null;
             const formaEl = document.getElementById('formadecobrar');
             if (formaEl) formaEl.value = 'NORMAL';
+            const impEl = document.getElementById('impressora');
+            if (impEl) impEl.value = '';
+            resetSelectProdutosInicial();
             renderAllOpLists();
             setFormTituloModo('novo');
+        }
+
+        async function carregarImpressorasParaClassificacao() {
+            const select = document.getElementById('impressora');
+            if (!select) return;
+            const currentValue = String(select.value || '');
+            try {
+                const resp = await fetch('/api/impressoras-cadastro');
+                const data = await resp.json();
+                if (!resp.ok || !data?.sucesso) throw new Error(data?.erro || 'Falha ao carregar impressoras');
+                const rows = Array.isArray(data.impressoras) ? data.impressoras : [];
+                const items = [];
+                const seen = new Set();
+                rows.forEach(r => {
+                    const nome = String(r.nomedaimpressora || '').trim() || String(r.caminho || '').trim();
+                    const nro = Number(r.imprenro);
+                    if (!nome) return;
+                    if (!Number.isFinite(nro) || nro < 0) return;
+                    const key = String(nro);
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    items.push({ value: key, label: nome });
+                });
+                let html = '<option value="">Sem padrão</option>';
+                items.forEach(it => {
+                    html += `<option value="${it.value}">${it.label}</option>`;
+                });
+                select.innerHTML = html;
+                if (currentValue && Array.from(select.options).some(o => o.value === currentValue)) {
+                    select.value = currentValue;
+                }
+            } catch (e) {
+                console.error('Erro ao carregar impressoras:', e);
+            }
         }
 
         async function salvarClassificacao() {
@@ -719,6 +782,8 @@
             const op_bordas = (document.getElementById('op_bordas')?.value || '').trim();
             const op_coberturas = (document.getElementById('op_coberturas')?.value || '').trim();
             const op_adicionais = (document.getElementById('op_adicionais')?.value || '').trim();
+            const impressoraRaw = document.getElementById('impressora')?.value || '';
+            const impressora = impressoraRaw.trim() === '' ? null : parseInt(impressoraRaw, 10);
             const produtosSelect = document.getElementById('produtos');
             const produtosSelecionados = produtosSelect
                 ? Array.from(produtosSelect.selectedOptions).map(opt => opt.value)
@@ -755,6 +820,7 @@
                 op_bordas: op_bordas || null,
                 op_coberturas: op_coberturas || null,
                 op_adicionais: op_adicionais || null,
+                impressora: Number.isFinite(impressora) ? impressora : null,
                 produtos: produtosComQuantidade,
                 classe: classe
             };
@@ -855,6 +921,15 @@
                 if (document.getElementById('op_bordas')) document.getElementById('op_bordas').value = classificacao.op_bordas || '';
                 if (document.getElementById('op_coberturas')) document.getElementById('op_coberturas').value = classificacao.op_coberturas || '';
                 if (document.getElementById('op_adicionais')) document.getElementById('op_adicionais').value = classificacao.op_adicionais || '';
+                const impEl = document.getElementById('impressora');
+                if (impEl) {
+                    const impVal = classificacao.impressora;
+                    impEl.value = (impVal != null && impVal !== '') ? String(impVal) : '';
+                }
+
+                if (document.getElementById('produtos') && classificacao.nomeclassificacao) {
+                    await carregarProdutosPorClassificacao(classificacao.nomeclassificacao);
+                }
                 
                 editandoId = id;
                 renderAllOpLists();
@@ -901,6 +976,81 @@
             setTimeout(() => {
                 mensagem.style.display = 'none';
             }, 4000);
+        }
+
+        async function verificarClassificacoesOrfas() {
+            const box = document.getElementById('avisoClassificacoesOrfas');
+            const btn = document.getElementById('btnSyncClassificacoes');
+            if (!box || IS_RETAIL) return;
+            try {
+                const resp = await fetch('/api/classificacoes-orfas-produtos');
+                const data = await resp.json();
+                if (!resp.ok || !data?.sucesso) return;
+                const orfas = Array.isArray(data.orfas) ? data.orfas : [];
+                const retail = Array.isArray(data.retail_legacy) ? data.retail_legacy : [];
+                const partes = [];
+                if (retail.length) {
+                    const totalRetail = Number(data.total_produtos_retail_legacy) || 0;
+                    partes.push(
+                        '<strong>Catálogo varejo oculto:</strong> ' + totalRetail +
+                        ' produto(s) pertencem ao catálogo varejo (categoria) e não são exibidos no modo restaurante.'
+                    );
+                }
+                if (orfas.length) {
+                    const nomes = orfas.map(o => `${o.classe} (${o.qtd})`).join(', ');
+                    const total = Number(data.total_produtos_orfaos) || 0;
+                    partes.push(
+                        '<strong>Atenção:</strong> ' + total +
+                        ' produto(s) usam classificação não cadastrada: ' + nomes + '. ' +
+                        'Use <strong>Sincronizar dos produtos</strong> para criar as classificações automaticamente.'
+                    );
+                }
+                if (!partes.length) {
+                    box.style.display = 'none';
+                    box.textContent = '';
+                    if (btn) {
+                        btn.style.display = '';
+                        btn.disabled = false;
+                        btn.title = '';
+                    }
+                    return;
+                }
+                box.style.display = 'block';
+                box.innerHTML = partes.join('<br><br>');
+                if (btn) {
+                    if (orfas.length) {
+                        btn.style.display = '';
+                        btn.disabled = false;
+                        btn.title = '';
+                    } else {
+                        btn.style.display = 'none';
+                        btn.title = 'Produtos são de catálogo varejo — não aplicável ao modo restaurante.';
+                    }
+                }
+            } catch (e) {
+                console.error('Erro ao verificar classificações órfãs:', e);
+            }
+        }
+
+        async function sincronizarClassificacoesProdutos() {
+            const btn = document.getElementById('btnSyncClassificacoes');
+            if (btn) btn.disabled = true;
+            try {
+                const resp = await fetch('/api/sincronizar-classificacoes-produtos', { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok || !data?.sucesso) {
+                    mostrarMensagem(data?.mensagem || 'Erro ao sincronizar classificações', 'erro');
+                    return;
+                }
+                mostrarMensagem(data.mensagem || 'Sincronizado.', 'sucesso');
+                await carregarClassificacoes();
+                await verificarClassificacoesOrfas();
+            } catch (e) {
+                console.error('Erro ao sincronizar:', e);
+                mostrarMensagem('Erro ao sincronizar classificações', 'erro');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
         }
     </script>
 {% if not is_retail %}

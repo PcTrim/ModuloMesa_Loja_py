@@ -23,6 +23,7 @@
     <span class="top-logo" aria-hidden="true"><img src="{{ url_for('static', filename='img/logopctrim.png') }}" alt=""></span>
     <div class="brand">Configurações</div>
     <span class="badge">ID {{ id_cliente }}</span>
+    {% include 'partials/modo_negocio_badge.html' %}
     {% include 'partials/topbar_meta.html' %}
     <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro">
       <i data-lucide="sun" class="icon-light" width="18" height="18"></i>
@@ -36,6 +37,7 @@
     {% else %}
     <p class="cfg-intro">Cadastros e parâmetros do sistema. O fluxo de pedidos permanece em <strong>/casa</strong> e <strong>/mesa</strong>.</p>
     {% endif %}
+    <p class="help" style="margin:-8px 0 16px;">Modo de negócio definido pelo administrador em <strong>/admin/lojas</strong>.</p>
 
     <section class="cfg-grid" aria-label="Módulos de configuração">
 

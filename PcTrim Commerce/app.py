@@ -45,6 +45,7 @@ from services.fechamento_periodo import (
     resumo_financeiro_fechamento,
     save_fechamento_print_blocos,
 )
+from services.catalogo_modo import produto_tem_coluna_category_id as _produto_tem_category_id
 from helpers_app import calcular_distancia_cliente
 
 _PYWIN32_SYS = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv", "Lib", "site-packages", "pywin32_system32")
@@ -1031,20 +1032,258 @@ def _ensure_pedido_diarios_preparo_columns():
             conn.close()
 
 
+def _code_variants_produto(v):
+    s = str(v or "").strip()
+    if not s:
+        return []
+    out = [s]
+    if s.isdigit():
+        nz = s.lstrip("0") or "0"
+        if nz not in out:
+            out.append(nz)
+    return out
+
+
+def _parse_impressora_opcional(val):
+    if val is None:
+        return None
+    if isinstance(val, str) and not val.strip():
+        return None
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def _fetch_nomes_upper(cur, sql, params):
+    cur.execute(sql, params)
+    nomes = set()
+    for r in cur.fetchall() or []:
+        if isinstance(r, dict):
+            nome = str(r.get("nome") or "").strip().upper()
+        else:
+            nome = str(r[0] or "").strip().upper()
+        if nome:
+            nomes.add(nome)
+    return nomes
+
+
+def _analise_catalogo_classes_produto(cur, id_cliente):
+    """Separa órfãos restaurante reais de produtos/classes de catálogo varejo legacy."""
+    tem_category_id = _produto_tem_category_id(cur)
+    categorias = _fetch_nomes_upper(
+        cur,
+        "SELECT UPPER(TRIM(nome)) AS nome FROM categoria WHERE id_cliente = %s",
+        (id_cliente,),
+    )
+    cadastradas = _fetch_nomes_upper(
+        cur,
+        """
+        SELECT UPPER(TRIM(nomeclassificacao)) AS nome
+        FROM classificacao
+        WHERE id_cliente = %s
+        """,
+        (id_cliente,),
+    )
+    if tem_category_id:
+        cur.execute(
+            """
+            SELECT UPPER(TRIM(p.classe)) AS classe_key,
+                   MIN(TRIM(p.classe)) AS classe,
+                   COUNT(*) AS qtd,
+                   SUM(CASE WHEN p.category_id IS NOT NULL THEN 1 ELSE 0 END) AS com_category_id
+            FROM produtos p
+            WHERE p.id_cliente = %s AND TRIM(COALESCE(p.classe, '')) <> ''
+            GROUP BY UPPER(TRIM(p.classe))
+            """,
+            (id_cliente,),
+        )
+    else:
+        cur.execute(
+            """
+            SELECT UPPER(TRIM(p.classe)) AS classe_key,
+                   MIN(TRIM(p.classe)) AS classe,
+                   COUNT(*) AS qtd,
+                   0 AS com_category_id
+            FROM produtos p
+            WHERE p.id_cliente = %s AND TRIM(COALESCE(p.classe, '')) <> ''
+            GROUP BY UPPER(TRIM(p.classe))
+            """,
+            (id_cliente,),
+        )
+    rows = cur.fetchall() or []
+    orfas = []
+    retail_legacy = []
+    total_produtos_orfaos = 0
+    total_produtos_retail_legacy = 0
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        key = str(r.get("classe_key") or "").strip().upper()
+        if not key or key in cadastradas:
+            continue
+        qtd_total = int(r.get("qtd") or 0)
+        com_category_id = int(r.get("com_category_id") or 0)
+        categoria_existe = key in categorias
+        qtd_retail = 0
+        if categoria_existe:
+            qtd_retail = qtd_total
+        elif tem_category_id and com_category_id > 0:
+            qtd_retail = com_category_id
+        qtd_orfa = max(0, qtd_total - qtd_retail)
+        classe_nome = str(r.get("classe") or key).strip()
+        if qtd_retail > 0:
+            total_produtos_retail_legacy += qtd_retail
+            retail_legacy.append({
+                "classe": classe_nome,
+                "qtd": qtd_retail,
+                "categoria_existe": categoria_existe,
+            })
+        if qtd_orfa > 0:
+            total_produtos_orfaos += qtd_orfa
+            orfas.append({"classe": classe_nome, "qtd": qtd_orfa})
+    return {
+        "orfas": orfas,
+        "total_produtos_orfaos": total_produtos_orfaos,
+        "retail_legacy": retail_legacy,
+        "total_produtos_retail_legacy": total_produtos_retail_legacy,
+    }
+
+
+def _listar_classes_orfas_produto(cur, id_cliente):
+    """Classes em produtos.classe sem registro em classificacao (exclui catálogo varejo)."""
+    analise = _analise_catalogo_classes_produto(cur, id_cliente)
+    return analise["orfas"], analise["total_produtos_orfaos"]
+
+
+def _sincronizar_classificacoes_de_produtos(cur, id_cliente):
+    orfas, _ = _listar_classes_orfas_produto(cur, id_cliente)
+    criadas = []
+    for item in orfas:
+        nome = str(item.get("classe") or "").strip().upper()
+        if not nome:
+            continue
+        cur.execute(
+            """
+            INSERT INTO classificacao (nomeclassificacao, formadecobrar, id_cliente)
+            VALUES (%s, 'NORMAL', %s)
+            """,
+            (nome, id_cliente),
+        )
+        criadas.append(nome)
+    cur.execute(
+        """
+        SELECT COUNT(DISTINCT UPPER(TRIM(classe))) AS n
+        FROM produtos
+        WHERE id_cliente = %s AND TRIM(COALESCE(classe, '')) <> ''
+        """,
+        (id_cliente,),
+    )
+    row = cur.fetchone()
+    if isinstance(row, dict):
+        total_classes = int(row.get("n") or 0)
+    else:
+        total_classes = int(row[0] or 0) if row else 0
+    ja_existiam = max(0, total_classes - len(criadas))
+    return criadas, ja_existiam
+
+
+def _produto_setor_col_names(cur):
+    try:
+        cur.execute("SHOW COLUMNS FROM produtos")
+        cols = cur.fetchall() or []
+    except Exception:
+        return None, set(), []
+    col_names = []
+    for c in cols:
+        if isinstance(c, dict):
+            col_names.append(str(c.get("Field") or ""))
+        elif isinstance(c, (list, tuple)) and c:
+            col_names.append(str(c[0] or ""))
+    col_set = {c.lower() for c in col_names if c}
+    setor_col = None
+    if "impressora" in col_set:
+        setor_col = "impressora"
+    elif "impressoras" in col_set:
+        setor_col = "impressoras"
+    candidates = [
+        "chave",
+        "codigoproduto",
+        "codigo",
+        "codproduto",
+        "cod_produto",
+        "cod_item",
+        "produto_codigo",
+        "ean",
+        "codbarra",
+        "codbarras",
+        "cod_barras",
+        "referencia",
+        "ref",
+    ]
+    match_cols = []
+    for c in candidates:
+        if c.lower() in col_set and c not in match_cols:
+            match_cols.append(c)
+    if "chave" not in match_cols:
+        match_cols.insert(0, "chave")
+    return setor_col, col_set, match_cols
+
+
+def _resolver_setor_impressora(imp_prod, imp_classe):
+    if imp_prod is not None and str(imp_prod).strip() != "":
+        return str(int(imp_prod)) if str(imp_prod).strip().isdigit() else str(imp_prod).strip()
+    if imp_classe is not None and str(imp_classe).strip() != "":
+        return str(int(imp_classe)) if str(imp_classe).strip().isdigit() else str(imp_classe).strip()
+    return None
+
+
+def resolver_impressora(cur, id_cliente, codigoproduto):
+    if not id_cliente or codigoproduto is None:
+        return None
+    setor_col, _, match_cols = _produto_setor_col_names(cur)
+    if not setor_col:
+        return None
+    codes = _code_variants_produto(codigoproduto)
+    if not codes:
+        return None
+    ph = ",".join(["%s"] * len(codes))
+    where_parts = []
+    params = [int(id_cliente)]
+    for c in match_cols:
+        where_parts.append(f"p.{c} IN ({ph})")
+        params.extend(codes)
+    where_sql = " OR ".join(where_parts) if where_parts else "1=0"
+    q = f"""
+        SELECT p.{setor_col} AS imp_prod, c.impressora AS imp_classe
+        FROM produtos p
+        LEFT JOIN classificacao c
+          ON c.id_cliente = p.id_cliente
+         AND UPPER(TRIM(c.nomeclassificacao)) = UPPER(TRIM(p.classe))
+        WHERE p.id_cliente = %s AND ({where_sql})
+        LIMIT 1
+    """
+    try:
+        cur.execute(q, tuple(params))
+        row = cur.fetchone()
+    except Exception:
+        return None
+    if not row:
+        return None
+    if isinstance(row, dict):
+        imp_prod = row.get("imp_prod")
+        imp_classe = row.get("imp_classe")
+    else:
+        imp_prod = row[0] if len(row) > 0 else None
+        imp_classe = row[1] if len(row) > 1 else None
+    return _resolver_setor_impressora(imp_prod, imp_classe)
+
+
 def _preencher_impressoras_produto(cur, id_cliente, rows, src_cod_field="codigoproduto", dest_field="impressoras_produto"):
     if not id_cliente or not rows:
         return
     def _code_variants(v):
-        s = str(v or "").strip()
-        if not s:
-            return []
-        out = [s]
-        s2 = s.strip()
-        if s2.isdigit():
-            nz = s2.lstrip("0") or "0"
-            if nz not in out:
-                out.append(nz)
-        return out
+        return _code_variants_produto(v)
     precisa = False
     for r in rows:
         try:
@@ -1068,46 +1307,9 @@ def _preencher_impressoras_produto(cur, id_cliente, rows, src_cod_field="codigop
     codes = list(dict.fromkeys(codes))
     if not codes:
         return
-    try:
-        cur.execute("SHOW COLUMNS FROM produtos")
-        cols = cur.fetchall() or []
-    except Exception:
-        return
-    col_names = []
-    for c in cols:
-        if isinstance(c, dict):
-            col_names.append(str(c.get("Field") or ""))
-        elif isinstance(c, (list, tuple)) and c:
-            col_names.append(str(c[0] or ""))
-    col_set = {c.lower() for c in col_names if c}
-    setor_col = None
-    if "impressora" in col_set:
-        setor_col = "impressora"
-    elif "impressoras" in col_set:
-        setor_col = "impressoras"
+    setor_col, _, match_cols = _produto_setor_col_names(cur)
     if not setor_col:
         return
-    candidates = [
-        "chave",
-        "codigoproduto",
-        "codigo",
-        "codproduto",
-        "cod_produto",
-        "cod_item",
-        "produto_codigo",
-        "ean",
-        "codbarra",
-        "codbarras",
-        "cod_barras",
-        "referencia",
-        "ref",
-    ]
-    match_cols = []
-    for c in candidates:
-        if c.lower() in col_set and c not in match_cols:
-            match_cols.append(c)
-    if "chave" not in match_cols:
-        match_cols.insert(0, "chave")
     ph = ",".join(["%s"] * len(codes))
     where_parts = []
     params = [int(id_cliente)]
@@ -1118,7 +1320,14 @@ def _preencher_impressoras_produto(cur, id_cliente, rows, src_cod_field="codigop
     sel_cols = ", ".join([f"p.{c} AS {c}" for c in match_cols if c != "chave"])
     if sel_cols:
         sel_cols = ", " + sel_cols
-    q = f"SELECT p.chave AS chave, COALESCE(p.{setor_col},'') AS setor{sel_cols} FROM produtos p WHERE p.id_cliente = %s AND ({where_sql})"
+    q = f"""
+        SELECT p.chave AS chave, p.{setor_col} AS imp_prod, c.impressora AS imp_classe{sel_cols}
+        FROM produtos p
+        LEFT JOIN classificacao c
+          ON c.id_cliente = p.id_cliente
+         AND UPPER(TRIM(c.nomeclassificacao)) = UPPER(TRIM(p.classe))
+        WHERE p.id_cliente = %s AND ({where_sql})
+    """
     try:
         cur.execute(q, tuple(params))
         prod_rows = cur.fetchall() or []
@@ -1128,7 +1337,7 @@ def _preencher_impressoras_produto(cur, id_cliente, rows, src_cod_field="codigop
     for pr in prod_rows:
         if not isinstance(pr, dict):
             continue
-        setor = str(pr.get("setor") or "").strip()
+        setor = _resolver_setor_impressora(pr.get("imp_prod"), pr.get("imp_classe"))
         if not setor:
             continue
         for c in match_cols:
@@ -1180,11 +1389,9 @@ def _forma_pagamento_exige_troco(cur, id_cliente, nome_forma):
     return t in ("S", "SIM", "1", "Y")
 
 
-def _ensure_classificacao_opcoes_columns():
-    conn = None
+def _ensure_classificacao_opcoes_columns_on_conn(conn):
     cur = None
     try:
-        conn = conectar()
         cur = conn.cursor()
         cur.execute("SHOW COLUMNS FROM classificacao LIKE 'op_tamanhos'")
         if cur.fetchone() is None:
@@ -1201,19 +1408,35 @@ def _ensure_classificacao_opcoes_columns():
         cur.execute("SHOW COLUMNS FROM classificacao LIKE 'op_adicionais'")
         if cur.fetchone() is None:
             cur.execute("ALTER TABLE classificacao ADD COLUMN op_adicionais TEXT NULL")
+        cur.execute("SHOW COLUMNS FROM classificacao LIKE 'impressora'")
+        if cur.fetchone() is None:
+            cur.execute("ALTER TABLE classificacao ADD COLUMN impressora TINYINT NULL")
         conn.commit()
-    except Exception as e:
-        try:
-            if conn:
-                conn.rollback()
-        except Exception:
-            pass
-        print("[CLASSIFICACAO OPCOES COLUNAS ERRO]", e, flush=True)
     finally:
         if cur:
             cur.close()
-        if conn:
-            conn.close()
+
+
+def _ensure_classificacao_opcoes_columns():
+    from database import conectar_admin_optional
+
+    for target in ("production", "homologation"):
+        conn = None
+        try:
+            conn = conectar_admin_optional(target)
+            if conn is None:
+                continue
+            _ensure_classificacao_opcoes_columns_on_conn(conn)
+        except Exception as e:
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+            print(f"[CLASSIFICACAO OPCOES COLUNAS ERRO] {target}:", e, flush=True)
+        finally:
+            if conn:
+                conn.close()
 
 
 def _ensure_produtos_barcode_column():
@@ -5980,6 +6203,7 @@ def salvar_classificacao():
         op_bordas = dados.get("op_bordas")
         op_coberturas = dados.get("op_coberturas")
         op_adicionais = dados.get("op_adicionais")
+        impressora = _parse_impressora_opcional(dados.get("impressora"))
         
         if not nomeclassificacao:
             return jsonify({"sucesso": False, "mensagem": "Nome da classificação é obrigatório"}), 400
@@ -5987,12 +6211,13 @@ def salvar_classificacao():
         formadecobrar_norm = str(formadecobrar or "").strip().upper() or "NORMAL"
         
         conn = conectar()
+        _ensure_classificacao_opcoes_columns_on_conn(conn)
         cursor = conn.cursor()
         
         id_cliente = session.get('id_cliente')
         cursor.execute("""
-            INSERT INTO classificacao (nomeclassificacao, quantidadepartes, nrofoto, formadecobrar, op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais, id_cliente)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO classificacao (nomeclassificacao, quantidadepartes, nrofoto, formadecobrar, op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais, impressora, id_cliente)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             nomeclassificacao,
             quantidadepartes,
@@ -6003,6 +6228,7 @@ def salvar_classificacao():
             op_bordas,
             op_coberturas,
             op_adicionais,
+            impressora,
             id_cliente,
         ))
         
@@ -6038,13 +6264,14 @@ def listar_classificacoes():
     cursor = None
     try:
         conn = conectar()
+        _ensure_classificacao_opcoes_columns_on_conn(conn)
         cursor = conn.cursor(dictionary=True)
         id_cliente = session.get('id_cliente')
         pdv = str(request.args.get("pdv") or "").strip().lower() in ("1", "true", "sim", "yes")
         if pdv:
             cursor.execute("""
                 SELECT chave, nomeclassificacao, quantidadepartes, nrofoto, formadecobrar,
-                       op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais
+                       op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais, impressora
                 FROM classificacao
                 WHERE id_cliente = %s
                   AND (quantidadepartes IS NULL OR quantidadepartes <> 0)
@@ -6053,7 +6280,7 @@ def listar_classificacoes():
         else:
             cursor.execute("""
                 SELECT chave, nomeclassificacao, quantidadepartes, nrofoto, formadecobrar,
-                       op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais
+                       op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais, impressora
                 FROM classificacao
                 WHERE id_cliente = %s
                 ORDER BY nomeclassificacao
@@ -6083,12 +6310,13 @@ def obter_classificacao(chave):
     cursor = None
     try:
         conn = conectar()
+        _ensure_classificacao_opcoes_columns_on_conn(conn)
         cursor = conn.cursor(dictionary=True)
         
         id_cliente = session.get('id_cliente')
         cursor.execute("""
             SELECT chave, nomeclassificacao, quantidadepartes, nrofoto, formadecobrar,
-                   op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais
+                   op_tamanhos, op_massas, op_bordas, op_coberturas, op_adicionais, impressora
             FROM classificacao
             WHERE chave = %s AND id_cliente = %s
         """, (chave, id_cliente))
@@ -6128,6 +6356,7 @@ def editar_classificacao(chave):
         op_bordas = dados.get("op_bordas")
         op_coberturas = dados.get("op_coberturas")
         op_adicionais = dados.get("op_adicionais")
+        impressora = _parse_impressora_opcional(dados.get("impressora"))
         
         if not nomeclassificacao:
             return jsonify({"sucesso": False, "mensagem": "Nome da classificação é obrigatório"}), 400
@@ -6135,6 +6364,7 @@ def editar_classificacao(chave):
         formadecobrar_norm = str(formadecobrar or "").strip().upper() or "NORMAL"
         
         conn = conectar()
+        _ensure_classificacao_opcoes_columns_on_conn(conn)
         cursor = conn.cursor()
         
         id_cliente = session.get('id_cliente')
@@ -6148,7 +6378,8 @@ def editar_classificacao(chave):
                 op_massas = %s,
                 op_bordas = %s,
                 op_coberturas = %s,
-                op_adicionais = %s
+                op_adicionais = %s,
+                impressora = %s
             WHERE chave = %s AND id_cliente = %s
         """, (
             nomeclassificacao,
@@ -6160,6 +6391,7 @@ def editar_classificacao(chave):
             op_bordas,
             op_coberturas,
             op_adicionais,
+            impressora,
             chave,
             id_cliente,
         ))
@@ -6179,6 +6411,71 @@ def editar_classificacao(chave):
         print("[DB ERROR]", db_err)
         return jsonify({"sucesso": False, "mensagem": "Erro ao editar classificação"}), 500
     
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@app.route("/api/classificacoes-orfas-produtos", methods=["GET"])
+@login_required
+@restaurant_only
+def classificacoes_orfas_produtos():
+    """Lista classes usadas em produtos sem cadastro em classificacao."""
+    conn = None
+    cursor = None
+    try:
+        id_cliente = session.get("id_cliente")
+        conn = conectar()
+        cursor = conn.cursor(dictionary=True)
+        analise = _analise_catalogo_classes_produto(cursor, id_cliente)
+        return jsonify({
+            "sucesso": True,
+            "orfas": analise["orfas"],
+            "total_produtos_orfaos": analise["total_produtos_orfaos"],
+            "retail_legacy": analise["retail_legacy"],
+            "total_produtos_retail_legacy": analise["total_produtos_retail_legacy"],
+        })
+    except mysql.connector.Error as db_err:
+        print("[DB ERROR]", db_err)
+        return jsonify({"sucesso": False, "mensagem": "Erro ao verificar classificações órfãs"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.route("/api/sincronizar-classificacoes-produtos", methods=["POST"])
+@login_required
+@restaurant_only
+@gerente_required
+def sincronizar_classificacoes_produtos():
+    """Cria classificacao para cada produtos.classe distinta ainda não cadastrada."""
+    conn = None
+    cursor = None
+    try:
+        id_cliente = session.get("id_cliente")
+        conn = conectar()
+        _ensure_classificacao_opcoes_columns_on_conn(conn)
+        cursor = conn.cursor(dictionary=True)
+        criadas, ja_existiam = _sincronizar_classificacoes_de_produtos(cursor, id_cliente)
+        conn.commit()
+        return jsonify({
+            "sucesso": True,
+            "criadas": criadas,
+            "ja_existiam": ja_existiam,
+            "mensagem": (
+                f"{len(criadas)} classificação(ões) criada(s)."
+                if criadas
+                else "Nenhuma classificação nova — catálogo já alinhado."
+            ),
+        })
+    except mysql.connector.Error as db_err:
+        if conn:
+            conn.rollback()
+        print("[DB ERROR]", db_err)
+        return jsonify({"sucesso": False, "mensagem": "Erro ao sincronizar classificações"}), 500
     finally:
         if cursor:
             cursor.close()
