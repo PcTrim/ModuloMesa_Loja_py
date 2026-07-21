@@ -24,16 +24,26 @@ class PrintQueueContractTests(unittest.TestCase):
 
     def test_distribuir_preparo_silencioso_no_salvar_e_imprimir(self):
         src = INDEX.read_text(encoding="utf-8")
-        self.assertIn(
-            "distribuirPreparoCasa({auto:true,fromSalvar:true,silent:true})",
-            src,
-            "salvarEImprimir deve chamar distribuirPreparoCasa em modo silencioso",
-        )
+        self.assertIn("_snapshotPreparoCasa", src)
+        self.assertIn("preparoBackground", src)
+        self.assertIn("preparoMetaById:snap.preparoMetaById", src)
         self.assertRegex(
             src,
             r"const silent = \(opts\.silent!==undefined && opts\.silent!==null\) \? !!opts\.silent : \(auto \|\| fromSalvar\)",
             "distribuirPreparoCasa deve silenciar feedback quando auto ou fromSalvar",
         )
+
+    def test_reset_antes_preparo_background(self):
+        src = INDEX.read_text(encoding="utf-8")
+        start = src.find("async function salvarEImprimir")
+        self.assertGreater(start, -1)
+        end = src.find("function isTypingContext", start)
+        body = src[start:end]
+        idx_reset = body.find("await resetPedidoRapido(false)")
+        idx_preparo_call = body.find("preparoBackground();")
+        self.assertGreater(idx_reset, -1)
+        self.assertGreater(idx_preparo_call, -1)
+        self.assertLess(idx_reset, idx_preparo_call, "reset deve ocorrer antes da chamada ao preparo em background")
 
     def test_salvar_e_imprimir_comanda_antes_preparo(self):
         src = INDEX.read_text(encoding="utf-8")

@@ -2986,6 +2986,14 @@
     });
     return Array.from(new Set(ids));
   }
+  function _snapshotPreparoCasa(){
+    return {
+      pedidoId:Number(state.pedidoId)||0,
+      preparoMetaById:JSON.parse(JSON.stringify(state.preparoMetaById||{})),
+      itens:itensAtuaisParaZoom(),
+      pendIds:_preparoPendentesIds(),
+    };
+  }
   function updateDistribuirPreparoUiCasa(){
     const btn=el("btn-distribuir-preparo");
     if(!btn) return;
@@ -3114,6 +3122,9 @@
     const auto = !!opts.auto;
     const fromSalvar = !!opts.fromSalvar;
     const silent = (opts.silent!==undefined && opts.silent!==null) ? !!opts.silent : (auto || fromSalvar);
+    const useSnapshot = opts.preparoMetaById!=null || opts.itens!=null || opts.pendIds!=null;
+    const pedidoId = (opts.pedidoId!=null && opts.pedidoId!==undefined) ? (Number(opts.pedidoId)||0) : (Number(state.pedidoId)||0);
+    const metaById = useSnapshot ? (opts.preparoMetaById||{}) : state.preparoMetaById;
     const btn=(!auto && !fromSalvar) ? el("btn-distribuir-preparo") : null;
     const prevLabel=btn?btn.textContent:"";
     const fail=(msg)=>{
@@ -3123,7 +3134,7 @@
       }
       return {ok:false,message:String(msg||"Erro na distribuição.")};
     };
-    const pendIds=_preparoPendentesIds();
+    const pendIds=useSnapshot ? (Array.isArray(opts.pendIds)?opts.pendIds:[]) : _preparoPendentesIds();
     if(!pendIds.length){
       updateDistribuirPreparoUiCasa();
       if(!silent) alert("Nenhum item pendente de distribuição.");
@@ -3143,7 +3154,7 @@
       if(!fallback && !Object.keys(mapByNro).length){ return fail("Nenhuma impressora cadastrada para distribuir."); }
 
       const pendSet=new Set(pendIds);
-      const itens=itensAtuaisParaZoom();
+      const itens=useSnapshot ? (Array.isArray(opts.itens)?opts.itens:[]) : itensAtuaisParaZoom();
       const grupos={};
       const idsToMark=[];
       const missingSetor=[];
@@ -3154,7 +3165,7 @@
           if(!partes.length) return;
           const nros=new Set();
           partes.forEach((p)=>{
-            const meta=state.preparoMetaById[p.id]||{};
+            const meta=metaById[p.id]||{};
             const cod=String(meta.codigoproduto||"").toUpperCase();
             if(cod==="AJUSTE_TECNICO"||cod==="CAMPANHA") return;
             const ns=_parseImprenros(meta.impressoras);
@@ -3176,7 +3187,7 @@
         }
         const id=String(it.id||"");
         if(!id || !pendSet.has(id)) return;
-        const meta=state.preparoMetaById[id]||{};
+        const meta=metaById[id]||{};
         if(["AJUSTE_TECNICO","CAMPANHA"].includes(String(meta.codigoproduto||"").toUpperCase())) return;
         const nros=_parseImprenros(meta.impressoras);
         if(!nros.length){
@@ -3215,7 +3226,7 @@
       for(const p of plans){
         const row=p.row;
         if(!row || row.id==null){ return fail("Impressora inválida no cadastro para distribuição."); }
-        const titulo=`PEDIDO #${Number(state.pedidoId)||0}`;
+        const titulo=`PEDIDO #${pedidoId||0}`;
         const conteudo=_montarTextoPreparoCasa(titulo, grupos[p.key]||[], _feedFromImpRow(row), _formatoFromImpRow(row));
         const printBody={conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0,skip_confirm:true};
         const printRes=await _imprimirPreparoCasaBody(printBody, fromSalvar);
@@ -3240,10 +3251,12 @@
       if(atualizados <= 0 && ja < total){
         return fail("Não foi possível marcar os itens como distribuídos. Verifique login/sessão e tente novamente.");
       }
-      idsUniq.forEach((id)=>{
-        const k=String(id);
-        if(state.preparoMetaById[k]) state.preparoMetaById[k].imp_preparo="S";
-      });
+      if(!useSnapshot){
+        idsUniq.forEach((id)=>{
+          const k=String(id);
+          if(state.preparoMetaById[k]) state.preparoMetaById[k].imp_preparo="S";
+        });
+      }
       if(!fromSalvar) await loadItens(state.emRecuperacao?"recuperacao":"normal");
       updateDistribuirPreparoUiCasa();
       if(!silent){ if(window.uiFeedback) window.uiFeedback.success("Distribuição enviada para preparo."); else alert("Distribuição enviada para preparo."); }
@@ -3547,7 +3560,6 @@
         if(bn){ body.nome=bn; body.cliente=bn; }
       }
     }
-    let preparoRes=null;
     const imp=await _imprimirComRetry(body,{
       maxTry:2,
       retryDelayMs:800,
@@ -3565,41 +3577,14 @@
       else alert(msgComanda+"\n\n"+errDetalhe);
       return;
     }
-    try{
-      preparoRes = await distribuirPreparoCasa({auto:true,fromSalvar:true,silent:true});
-    }catch(e){
-      preparoRes = {ok:false,message:String(e && e.message ? e.message : e)};
-    }
     const confirmWarn = (!imp.ok && d.bridge_ok)
       ? (d.erro||d.mensagem||"cupom impresso, mas falhou confirmar no servidor.")
       : "";
     const printerUsed = d.printer_windows || d.printer || impressoraCasaLabel;
-    const preparoOk = !!(preparoRes && preparoRes.ok===true && !preparoRes.skipped);
-    const preparoFail = !!(preparoRes && preparoRes.ok===false);
-    function feedbackSalvarImprimir(recebidoOpt){
-      const recebido = recebidoOpt;
-      let msgOk="Comanda impressa.";
-      if(preparoOk) msgOk="Comanda e preparo enviados.";
-      if(confirmWarn){
-        if(preparoFail){
-          try{ console.warn("[PDV] Preparo falhou:", preparoRes.message); }catch(_e){}
-          window.uiFeedback.warn("Comanda impressa. Preparo não foi para a cozinha — use Distribuir preparo.");
-        }else if(preparoOk){
-          window.uiFeedback.warn("Comanda impressa (confirmação pendente). Preparo enviado.");
-        }else{
-          window.uiFeedback.warn("Comanda impressa (confirmação pendente).");
-        }
-        return;
-      }
-      if(preparoFail){
-        try{ console.warn("[PDV] Preparo falhou:", preparoRes.message); }catch(_e){}
-        window.uiFeedback.warn("Comanda impressa. Preparo não foi para a cozinha — use Distribuir preparo.");
-        return;
-      }
-      if(recebido===true) window.uiFeedback.success(msgOk);
-      else if(recebido===false) window.uiFeedback.success(preparoOk ? "Comanda e preparo enviados. Baixa pendente." : "Comanda impressa. Baixa pendente.");
-      else window.uiFeedback.success(msgOk);
-    }
+    const pedidoNro = Number(state.pedidoId)||0;
+    const totalSnap = totalAtualCasa();
+    const snap = _snapshotPreparoCasa();
+    const modoBalcaoAgora = state.modo==="balcao" && String(state.balcaoPagamentoMomento||"agora")==="agora";
     function reforcarUiAposVenda(){
       try{
         closeModals();
@@ -3612,23 +3597,42 @@
         if(typeof syncModeUi==="function") syncModeUi();
       }catch(_e){}
     }
-    if(state.modo==="balcao" && String(state.balcaoPagamentoMomento||"agora")==="agora"){
-      const pedidoNro = Number(state.pedidoId)||0;
-      const totalSnap = totalAtualCasa();
-      await avancarParaProximoPedido();
-      await resetPedidoRapido(false);
-      reforcarUiAposVenda();
-      const recebido = await openBaixaBalcaoModal(pedidoNro, printerUsed, totalSnap);
-      if(window.uiFeedback) feedbackSalvarImprimir(recebido);
-      return;
+    function toastComandaOk(){
+      if(!window.uiFeedback) return;
+      if(confirmWarn) window.uiFeedback.warn("Comanda impressa (confirmação pendente).");
+      else window.uiFeedback.success("Comanda impressa.");
+    }
+    function preparoBackground(){
+      distribuirPreparoCasa({
+        auto:true,
+        fromSalvar:true,
+        silent:true,
+        pedidoId:snap.pedidoId,
+        preparoMetaById:snap.preparoMetaById,
+        itens:snap.itens,
+        pendIds:snap.pendIds,
+      }).then((preparoRes)=>{
+        if(preparoRes && preparoRes.ok===false){
+          try{ console.warn("[PDV] Preparo falhou (background):", preparoRes.message); }catch(_e){}
+          if(window.uiFeedback) window.uiFeedback.warn("Preparo do pedido #"+pedidoNro+" não foi para a cozinha — use F7 Recuperar e Distribuir preparo.");
+        }
+      }).catch((eBg)=>{
+        try{ console.warn("[PDV] Preparo background erro:", eBg); }catch(_e){}
+      });
     }
     await avancarParaProximoPedido();
-    try{
-      if(window.uiFeedback) feedbackSalvarImprimir(null);
-    }finally{
-      await resetPedidoRapido(false);
-      reforcarUiAposVenda();
+    await resetPedidoRapido(false);
+    reforcarUiAposVenda();
+    if(btn){ btn.disabled=false; btn.textContent=prev||"Salvar e imprimir"; }
+    if(btnTxt) btnTxt.disabled=false;
+    toastComandaOk();
+    preparoBackground();
+    if(modoBalcaoAgora){
+      const recebido = await openBaixaBalcaoModal(pedidoNro, printerUsed, totalSnap);
+      if(recebido===false && window.uiFeedback) window.uiFeedback.success("Baixa pendente.");
+      return;
     }
+    return;
     }finally{
       if(btn){ btn.disabled=false; btn.textContent=prev||"Salvar e imprimir"; }
       if(btnTxt) btnTxt.disabled=false;
