@@ -937,7 +937,7 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     const grupoPorLanc=new Map();
     const nomeSemPrefixo=(txt)=>String(txt||"").replace(/^\s*\d+\s*\/\s*\d+\s+/,"").trim();
     groupRegs(regs).forEach((arr)=>{
-      arr.forEach((it)=>{ subtotal+=lineTot(it); const id=pkItem(it); if(id!=null){ state.preparoMetaById[String(id)]={ imp_preparo:String(it.imp_preparo||"N"), impressoras:String(it.impressoras_produto||""), codigoproduto:String(it.codigoproduto||"") }; } });
+      arr.forEach((it)=>{ subtotal+=lineTot(it); const id=pkItem(it); if(id!=null){ state.preparoMetaById[String(id)]={ imp_preparo:String(it.imp_preparo||"N"), impressoras:String(it.impressoras_produto ?? ""), codigoproduto:String(it.codigoproduto||"") }; } });
       if(arr.length===1){
         const it=arr[0];
         const id=pkItem(it); const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const qtd=Number(it.quantidade)||1; const desc=(it.descricao_produto||"").trim();

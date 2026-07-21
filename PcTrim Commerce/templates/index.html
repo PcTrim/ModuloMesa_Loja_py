@@ -1382,7 +1382,7 @@
       updateClienteLocalizadoBadge();
       renderHistoricoClienteResumo();
     }
-    regs.forEach((it)=>{ subtotal+=lineTot(it); const id=pkItem(it); if(id!=null){ state.preparoMetaById[String(id)]={ imp_preparo:String(it.imp_preparo||"N"), impressoras:String(it.impressoras_produto||""), codigoproduto:String(it.codigoproduto||"") }; } });
+    regs.forEach((it)=>{ subtotal+=lineTot(it); const id=pkItem(it); if(id!=null){ state.preparoMetaById[String(id)]={ imp_preparo:String(it.imp_preparo||"N"), impressoras:String(it.impressoras_produto ?? ""), codigoproduto:String(it.codigoproduto||"") }; } });
     const grupos=new Map();
     const simples=[];
     regs.forEach((it)=>{
@@ -3548,7 +3548,8 @@
       reforcarUiAposVenda();
       const recebido = await openBaixaBalcaoModal(pedidoNro, printerUsed, totalSnap);
       if(window.uiFeedback){
-        if(confirmWarn) window.uiFeedback.warn(String(d.erro||d.mensagem||"Cupom impresso, mas falhou confirmar no servidor."));
+        if(confirmWarn) window.uiFeedback.warn(String(d.erro||d.mensagem||"Cupom impresso, mas falhou confirmar no servidor.")+preparoMsg);
+        else if(preparoRes && preparoRes.ok===false) window.uiFeedback.warn((recebido ? "Impresso." : "Impresso. Baixa pendente.")+preparoMsg);
         else window.uiFeedback.success(recebido ? "Impresso." : "Impresso. Baixa pendente.");
       }
       return;
@@ -3556,7 +3557,8 @@
     await avancarParaProximoPedido();
     try{
       if(window.uiFeedback){
-        if(confirmWarn) window.uiFeedback.warn(String(d.erro||d.mensagem||"Cupom impresso, mas falhou confirmar no servidor."));
+        if(confirmWarn) window.uiFeedback.warn(String(d.erro||d.mensagem||"Cupom impresso, mas falhou confirmar no servidor.")+preparoMsg);
+        else if(preparoRes && preparoRes.ok===false) window.uiFeedback.warn("Impresso."+preparoMsg);
         else window.uiFeedback.success("Impresso.");
       }
     }finally{

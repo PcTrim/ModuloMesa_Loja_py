@@ -229,8 +229,8 @@ class ImpressaoDistribuicao2003Tests(unittest.TestCase):
             None,
         )
         self.assertIsNotNone(alvo, "Item #148 deve aparecer no pedido balcão")
-        setor = str(alvo.get("impressoras_produto") or "").strip()
-        self.assertTrue(setor, "impressoras_produto deve estar preenchido para distribuição")
+        setor = str(alvo.get("impressoras_produto") if alvo.get("impressoras_produto") is not None else "").strip()
+        self.assertTrue(setor or alvo.get("impressoras_produto") == 0, "impressoras_produto deve estar preenchido para distribuição")
         self.assertEqual(setor, str(int(self.setor_classificacao or 0)))
 
         # Limpeza: remove item de teste
@@ -246,6 +246,23 @@ class ImpressaoDistribuicao2003Tests(unittest.TestCase):
             finally:
                 cur.close()
                 conn.close()
+
+
+class ImprenroZeroJsContractTests(unittest.TestCase):
+    """Documenta contrato: setor 0 não pode ser descartado como falsy (bug || vs ??)."""
+
+    def _fmt_setor_frontend_buggy(self, v):
+        return str(v or "")
+
+    def _fmt_setor_frontend_fixed(self, v):
+        return str(v if v is not None else "")
+
+    def test_imprenro_zero_nao_vira_vazio_com_coalescencia_nula(self):
+        self.assertEqual(self._fmt_setor_frontend_buggy(0), "")
+        self.assertEqual(self._fmt_setor_frontend_fixed(0), "0")
+
+    def test_imprenro_null_continua_vazio(self):
+        self.assertEqual(self._fmt_setor_frontend_fixed(None), "")
 
 
 class PreparoImpressaoMockTests(unittest.TestCase):
