@@ -15,10 +15,24 @@ class PrintQueueContractTests(unittest.TestCase):
         src = BRIDGE.read_text(encoding="utf-8")
         self.assertIn("enqueuePrint", src, "imprimir-bridge.js deve expor enqueuePrint")
         self.assertIn("PRINT_GAP_MS", src, "imprimir-bridge.js deve definir PRINT_GAP_MS")
+        self.assertIn("PRINT_SETTLE_MS", src, "imprimir-bridge.js deve pausar após cada job")
         self.assertRegex(
             src,
             r"window\.lojaImprimir\s*=\s*function\s*\([^)]*\)\s*\{[\s\S]*enqueuePrint",
             "lojaImprimir deve delegar para enqueuePrint",
+        )
+
+    def test_distribuir_preparo_silencioso_no_salvar_e_imprimir(self):
+        src = INDEX.read_text(encoding="utf-8")
+        self.assertIn(
+            "distribuirPreparoCasa({auto:true,fromSalvar:true,silent:true})",
+            src,
+            "salvarEImprimir deve chamar distribuirPreparoCasa em modo silencioso",
+        )
+        self.assertRegex(
+            src,
+            r"const silent = \(opts\.silent!==undefined && opts\.silent!==null\) \? !!opts\.silent : \(auto \|\| fromSalvar\)",
+            "distribuirPreparoCasa deve silenciar feedback quando auto ou fromSalvar",
         )
 
     def test_salvar_e_imprimir_comanda_antes_preparo(self):

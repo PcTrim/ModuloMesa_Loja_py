@@ -782,7 +782,8 @@
 
   var _printQueue = Promise.resolve();
   var _printQueueHasJob = false;
-  var PRINT_GAP_MS = 2000;
+  var PRINT_GAP_MS = 3500;
+  var PRINT_SETTLE_MS = 800;
 
   function enqueuePrint(task) {
     var run = _printQueue.catch(function () {});
@@ -795,7 +796,15 @@
     } else {
       _printQueueHasJob = true;
     }
-    run = run.then(task);
+    run = run
+      .then(task)
+      .then(function (result) {
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            resolve(result);
+          }, PRINT_SETTLE_MS);
+        });
+      });
     _printQueue = run.catch(function () {});
     return run;
   }

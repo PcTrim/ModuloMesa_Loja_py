@@ -404,7 +404,7 @@
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
 <script src="{{ url_for('static', filename='ui-feedback.js') }}?v=1"></script>
-<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=30"></script>
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=31"></script>
 {% include 'partials/print_context.html' %}
 <script src="{{ url_for('static', filename='print-format.js') }}?v=2"></script>
 <script src="{{ url_for('static', filename='print-header.js') }}?v=3"></script>
@@ -3108,7 +3108,7 @@
     opts = opts || {};
     const auto = !!opts.auto;
     const fromSalvar = !!opts.fromSalvar;
-    const silent = (opts.silent!==undefined && opts.silent!==null) ? !!opts.silent : (auto && !fromSalvar);
+    const silent = (opts.silent!==undefined && opts.silent!==null) ? !!opts.silent : (auto || fromSalvar);
     const btn=(!auto && !fromSalvar) ? el("btn-distribuir-preparo") : null;
     const prevLabel=btn?btn.textContent:"";
     const fail=(msg)=>{
@@ -3552,15 +3552,15 @@
     const impressoNoPc = !!(imp.ok || d.bridge_ok === true);
     if(!impressoNoPc){
       const lista=Array.isArray(d.impressoras_disponiveis)&&d.impressoras_disponiveis.length?`\nDisponíveis: ${d.impressoras_disponiveis.join(" | ")}`:"";
-      const errBase="Comanda não imprimiu. Preparo não foi enviado.";
       const errDetalhe=(d.erro||d.mensagem||imp.erro||("HTTP "+(imp.status||"?")))+lista;
-      const msgComanda=errBase+(errDetalhe?"\n\n"+errDetalhe:"");
+      try{ console.warn("[PDV] Comanda falhou:", errDetalhe); }catch(_e){}
+      const msgComanda="Comanda não imprimiu. Preparo não foi enviado.";
       if(window.uiFeedback) window.uiFeedback.error(msgComanda);
-      else alert(msgComanda);
+      else alert(msgComanda+"\n\n"+errDetalhe);
       return;
     }
     try{
-      preparoRes = await distribuirPreparoCasa({auto:true,fromSalvar:true});
+      preparoRes = await distribuirPreparoCasa({auto:true,fromSalvar:true,silent:true});
     }catch(e){
       preparoRes = {ok:false,message:String(e && e.message ? e.message : e)};
     }
@@ -3575,14 +3575,19 @@
       let msgOk="Comanda impressa.";
       if(preparoOk) msgOk="Comanda e preparo enviados.";
       if(confirmWarn){
-        const base=String(confirmWarn);
-        if(preparoFail) window.uiFeedback.warn(base+" Preparo NÃO foi para a cozinha: "+String(preparoRes.message||"")+". Clique Distribuir preparo.");
-        else if(preparoOk) window.uiFeedback.warn(base+" Preparo enviado.");
-        else window.uiFeedback.warn(base);
+        if(preparoFail){
+          try{ console.warn("[PDV] Preparo falhou:", preparoRes.message); }catch(_e){}
+          window.uiFeedback.warn("Comanda impressa. Preparo não foi para a cozinha — use Distribuir preparo.");
+        }else if(preparoOk){
+          window.uiFeedback.warn("Comanda impressa (confirmação pendente). Preparo enviado.");
+        }else{
+          window.uiFeedback.warn("Comanda impressa (confirmação pendente).");
+        }
         return;
       }
       if(preparoFail){
-        window.uiFeedback.warn("Comanda impressa. Preparo NÃO foi para a cozinha: "+String(preparoRes.message||"")+". Clique Distribuir preparo.");
+        try{ console.warn("[PDV] Preparo falhou:", preparoRes.message); }catch(_e){}
+        window.uiFeedback.warn("Comanda impressa. Preparo não foi para a cozinha — use Distribuir preparo.");
         return;
       }
       if(recebido===true) window.uiFeedback.success(msgOk);
