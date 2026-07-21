@@ -1,7 +1,9 @@
 """Shared helpers: geo, taxa, printing, delivery persistence."""
 import decimal
 import math
+import re
 import sys
+import unicodedata
 
 import mysql.connector
 import requests
@@ -18,6 +20,9 @@ except Exception:
     win32api = None
 
 
+DISTANCIA_COLISAO_METROS = 50
+
+
 def haversine_km(lat1, lon1, lat2, lon2):
     R = 6371.0
     dlat = math.radians(lat2 - lat1)
@@ -27,11 +32,86 @@ def haversine_km(lat1, lon1, lat2, lon2):
     return round(R * c, 2)
 
 
+def normalizar_campo_endereco(valor):
+    s = str(valor or "").strip().lower()
+    if not s:
+        return ""
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def normalizar_cep(valor):
+    digits = re.sub(r"\D", "", str(valor or ""))
+    return digits if len(digits) == 8 else ""
+
+
+def equivalente_se_ambos_presentes(valor_novo, valor_antigo):
+    a = normalizar_campo_endereco(valor_novo)
+    b = normalizar_campo_endereco(valor_antigo)
+    if not a or not b:
+        return True
+    return a == b
+
+
+def endereco_geo_inalterado(dados_novos, cliente_existente):
+    if not cliente_existente:
+        return False
+    cep_novo = normalizar_cep(dados_novos.get("cep"))
+    cep_antigo = normalizar_cep(cliente_existente.get("cep"))
+    if cep_novo == "" or cep_antigo == "":
+        return False
+    if cep_novo != cep_antigo:
+        return False
+    if normalizar_campo_endereco(dados_novos.get("endereco")) != normalizar_campo_endereco(
+        cliente_existente.get("endereco")
+    ):
+        return False
+    if normalizar_campo_endereco(dados_novos.get("nrocasa")) != normalizar_campo_endereco(
+        cliente_existente.get("nrocasa")
+    ):
+        return False
+    if not equivalente_se_ambos_presentes(dados_novos.get("cidade"), cliente_existente.get("cidade")):
+        return False
+    if not equivalente_se_ambos_presentes(dados_novos.get("estado"), cliente_existente.get("estado")):
+        return False
+    return True
+
+
+def montar_endereco_geocode(dados):
+    end = (dados.get("endereco") or "").strip()
+    nro = (dados.get("nrocasa") or "").strip()
+    bairro = (dados.get("bairro") or "").strip()
+    cidade = (dados.get("cidade") or "").strip()
+    uf = (dados.get("estado") or "").strip()
+    cep = normalizar_cep(dados.get("cep"))
+    partes = []
+    if end and nro:
+        partes.append(f"{end}, {nro}")
+    elif end:
+        partes.append(end)
+    elif nro:
+        partes.append(nro)
+    if bairro:
+        partes.append(bairro)
+    if cidade and uf:
+        partes.append(f"{cidade} - {uf}")
+    elif cidade:
+        partes.append(cidade)
+    elif uf:
+        partes.append(uf)
+    if cep:
+        partes.append(f"{cep[:5]}-{cep[5:]}")
+    partes.append("Brasil")
+    return ", ".join(partes)
+
+
 def geocodificar(endereco):
     if not endereco or len(endereco.strip()) < 5:
         return None, None
     url = "https://nominatim.openstreetmap.org/search"
-    params = {"q": endereco, "format": "json", "limit": 1}
+    params = {"q": endereco, "format": "json", "limit": 1, "countrycodes": "br"}
     headers = {"User-Agent": "novaloja-geocoder/1.0"}
     try:
         r = requests.get(url, params=params, headers=headers, timeout=8)
@@ -68,33 +148,95 @@ def distancia_osrm_km(lat_loja, lon_loja, lat_cli, lon_cli):
         return None
 
 
-def calcular_distancia_cliente(dados, id_cliente=None):
-    """Calcula distância entre a loja e o cliente usando dados cadastrados"""
+def coords_em_colisao(lat_loja, lon_loja, lat_cli, lon_cli):
+    if None in (lat_loja, lon_loja, lat_cli, lon_cli):
+        return False
+    try:
+        dist_m = haversine_km(lat_loja, lon_loja, lat_cli, lon_cli) * 1000
+        return dist_m <= DISTANCIA_COLISAO_METROS
+    except Exception:
+        return False
+
+
+def enderecos_textuais_diferentes(dados_cliente, dados_loja):
+    rua_cli = normalizar_campo_endereco(dados_cliente.get("endereco"))
+    rua_loja = normalizar_campo_endereco(dados_loja.get("endereco"))
+    nro_cli = normalizar_campo_endereco(dados_cliente.get("nrocasa"))
+    nro_loja = normalizar_campo_endereco(dados_loja.get("nrocasa") or "")
+    if rua_cli != rua_loja:
+        return True
+    if nro_cli != nro_loja:
+        return True
+    return False
+
+
+def resolver_distancia_km(loja_lat, loja_lon, lat_cli, lon_cli, dados_cliente, dados_loja):
+    dist_osrm = distancia_osrm_km(loja_lat, loja_lon, lat_cli, lon_cli)
+    if dist_osrm is not None and dist_osrm > 0:
+        return dist_osrm, "osrm"
+    if dist_osrm is None:
+        return 0, "falha_osrm"
+    if coords_em_colisao(loja_lat, loja_lon, lat_cli, lon_cli) and enderecos_textuais_diferentes(
+        dados_cliente, dados_loja
+    ):
+        dist_hav = haversine_km(loja_lat, loja_lon, lat_cli, lon_cli)
+        if dist_hav > 0:
+            return dist_hav, "haversine_correcao"
+    return 0, "osrm"
+
+
+def _aviso_precisao_endereco(dados):
+    if not str(dados.get("nrocasa") or "").strip():
+        return "Endereço sem número — distância pode ser imprecisa."
+    return None
+
+
+def _coords_salvas_validas(cliente_existente):
+    if not cliente_existente:
+        return None, None
+    try:
+        lat = cliente_existente.get("lat_cliente")
+        lon = cliente_existente.get("lon_cliente")
+        if lat is None or lon is None:
+            return None, None
+        return float(lat), float(lon)
+    except (TypeError, ValueError):
+        return None, None
+
+
+def calcular_distancia_cliente(dados, id_cliente=None, cliente_existente=None):
+    """Calcula distância entre a loja e o cliente usando dados cadastrados."""
     loja = obter_dados_loja(id_cliente)
     loja_lat = loja["latitude"]
     loja_lon = loja["longitude"]
+    aviso_precisao = _aviso_precisao_endereco(dados)
 
-    partes = [
-        dados.get("endereco", ""),
-        dados.get("nrocasa", ""),
-        dados.get("bairro", ""),
-        dados.get("cidade", ""),
-        dados.get("estado", ""),
-        "Brasil",
-    ]
-    endereco_str = ", ".join([p for p in partes if p])
-    lat_cli, lon_cli = geocodificar(endereco_str)
-    if lat_cli is not None and lon_cli is not None:
-        dist_osrm = distancia_osrm_km(loja_lat, loja_lon, lat_cli, lon_cli)
-        if dist_osrm is not None:
-            return dist_osrm, lat_cli, lon_cli
-        try:
-            dist_hav = haversine_km(loja_lat, loja_lon, lat_cli, lon_cli)
-            return dist_hav, lat_cli, lon_cli
-        except Exception as e:
-            print("[HAVERSINE ERRO]", e)
-            return 0, lat_cli, lon_cli
-    return 0, None, None
+    lat_cli = lon_cli = None
+    if endereco_geo_inalterado(dados, cliente_existente):
+        lat_cli, lon_cli = _coords_salvas_validas(cliente_existente)
+
+    if lat_cli is None or lon_cli is None:
+        endereco_str = montar_endereco_geocode(dados)
+        lat_cli, lon_cli = geocodificar(endereco_str)
+        if lat_cli is None or lon_cli is None:
+            return {
+                "distancia": 0,
+                "lat_cli": None,
+                "lon_cli": None,
+                "origem_calculo": "falha_geocode",
+                "aviso_precisao": aviso_precisao,
+            }
+
+    distancia, origem_calculo = resolver_distancia_km(
+        loja_lat, loja_lon, lat_cli, lon_cli, dados, loja
+    )
+    return {
+        "distancia": distancia,
+        "lat_cli": lat_cli,
+        "lon_cli": lon_cli,
+        "origem_calculo": origem_calculo,
+        "aviso_precisao": aviso_precisao,
+    }
 
 
 def calcular_taxa_entrega(distancia):

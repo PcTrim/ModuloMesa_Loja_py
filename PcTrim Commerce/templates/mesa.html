@@ -317,6 +317,45 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
   }
 
   function escapeHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;"); }
+  const CLASSE_FALLBACK="Pizza";
+  const NOME_FALLBACK="-";
+  const TOKENS_ESPECIAIS=new Set(["AJUSTE_TECNICO","CAMPANHA"]);
+  function _classeExibicao(classe){
+    const raw=String(classe||"").trim();
+    if(!raw) return CLASSE_FALLBACK;
+    return raw.charAt(0).toUpperCase()+raw.slice(1).toLowerCase();
+  }
+  function _normTokenEspecial(valor){
+    return String(valor||"").trim().toUpperCase().replace(/\s+/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+  }
+  function _ehTokenEspecial(valor){
+    const tok=_normTokenEspecial(valor);
+    return tok!=="" && TOKENS_ESPECIAIS.has(tok);
+  }
+  function _normClasseToken(s){
+    return String(s||"").toLowerCase().replace(/\s/g,"");
+  }
+  function _nomeJaContemClasse(nome,cls){
+    const c=_normClasseToken(cls);
+    if(!c) return false;
+    const re=/\(([^)]+)\)/g;
+    let m;
+    while((m=re.exec(String(nome||"")))!==null){
+      if(_normClasseToken(m[1])===c) return true;
+    }
+    return false;
+  }
+  function nomeItemExibicao(produto,classe,codigoproduto){
+    let nome=String(produto||"").trim();
+    if(!nome) nome=NOME_FALLBACK;
+    if(_ehTokenEspecial(codigoproduto)||_ehTokenEspecial(classe)) return nome;
+    const cls=_classeExibicao(classe);
+    if(_nomeJaContemClasse(nome,cls)) return nome;
+    return `${nome} (${cls})`;
+  }
+  function labelFracionada(classe){
+    return `${_classeExibicao(classe)} fracionada`;
+  }
   function parseOpcoesTxt(txt){
     const raw=String(txt||"").replace(/\r/g,"").trim();
     if(!raw) return [];
@@ -902,9 +941,10 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
       if(arr.length===1){
         const it=arr[0];
         const id=pkItem(it); const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const qtd=Number(it.quantidade)||1; const desc=(it.descricao_produto||"").trim();
+        const nomeEx=nomeItemExibicao(it.produto||it.nome,it.classe,it.codigoproduto);
         const ehAjuste=String(it.codigoproduto||"").toUpperCase()==="AJUSTE_TECNICO";
         const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":"");
-        row.innerHTML=`<div class="item-top"><div><span class="item-name">${escapeHtml(it.produto||it.nome||"-")}</span>${desc?`<div class="item-desc">${escapeHtml(desc)}</div>`:""}</div><div style="display:flex;gap:8px;align-items:center;">${dadosRaw?`<button type="button" class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button type="button" class="del" data-del="${id}">×</button></div></div><div class="item-mid"><div class="item-qty"><button type="button" class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button type="button" class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button type="button" class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`;
+        row.innerHTML=`<div class="item-top"><div><span class="item-name">${escapeHtml(nomeEx)}</span>${desc?`<div class="item-desc">${escapeHtml(desc)}</div>`:""}</div><div style="display:flex;gap:8px;align-items:center;">${dadosRaw?`<button type="button" class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button type="button" class="del" data-del="${id}">×</button></div></div><div class="item-mid"><div class="item-qty"><button type="button" class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button type="button" class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button type="button" class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`;
         host.appendChild(row);
       }else{
         const lanc=lancKey(arr[0]);
@@ -913,11 +953,11 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
         const qtd=Number(arr[0]?.quantidade)||1;
         const totalG=arr.reduce((s,x)=>s+lineTot(x),0);
         const dadosRaw=(arr[0]?.dados_item||"").trim(); if(lanc!=null) state.grupoDadosMap[String(lanc)]=dadosRaw;
-        const saboresLista=arr.map((x)=>nomeSemPrefixo(x.produto||x.nome||"-"));
+        const saboresLista=arr.map((x)=>nomeItemExibicao(nomeSemPrefixo(x.produto||x.nome),x.classe,x.codigoproduto));
         const saboresPreview=saboresLista.length<=2 ? saboresLista.join(" | ") : `${saboresLista.slice(0,2).join(" | ")} +${saboresLista.length-2}`;
-        const bodyObs=arr.map((x,idxItem)=>{ const idx=pkItem(x); const ob=(x.obs_item||"").trim(); const sepClass=idxItem===0?"":" sep"; const label=nomeSemPrefixo(x.produto||x.nome||"-"); return `<div class="item-obs${sepClass}"><span class="item-obs-label">${escapeHtml(label)}</span><input data-obs-item-group="${idx}" placeholder="Observação do sabor" value="${escapeHtml(ob)}"></div>`; }).join("");
+        const bodyObs=arr.map((x,idxItem)=>{ const idx=pkItem(x); const ob=(x.obs_item||"").trim(); const sepClass=idxItem===0?"":" sep"; const label=nomeItemExibicao(nomeSemPrefixo(x.produto||x.nome),x.classe,x.codigoproduto); return `<div class="item-obs${sepClass}"><span class="item-obs-label">${escapeHtml(label)}</span><input data-obs-item-group="${idx}" placeholder="Observação do sabor" value="${escapeHtml(ob)}"></div>`; }).join("");
         const row=document.createElement("div"); row.className="item fracionado";
-        row.innerHTML=`<div class="item-top"><div><span class="item-name" title="${escapeHtml(saboresLista.join(" | "))}">Pizza fracionada</span><div class="item-desc">${arr.length} sabor(es): ${escapeHtml(saboresPreview)}</div></div><div style="display:flex;gap:8px;align-items:center;">${dadosRaw?`<button type="button" class="obs-save" data-info-group="${lanc}" title="Detalhes do item">i</button>`:""}<button type="button" class="del" data-del-group="${idRef}">×</button></div></div><div class="item-mid"><div class="item-qty"><button type="button" class="qty-btn" data-minus-group="${lanc}">-</button><input class="qty-input" data-qtd-input-group="${lanc}" type="number" min="1" step="1" value="${qtd}"><button type="button" class="qty-btn" data-plus-group="${lanc}">+</button></div><span class="unit-price">${money(totalG/Math.max(1,qtd))}</span></div>${bodyObs}<div class="item-foot"><span></span><span class="item-v">${money(totalG)}</span></div>`;
+        row.innerHTML=`<div class="item-top"><div><span class="item-name" title="${escapeHtml(saboresLista.join(" | "))}">${escapeHtml(labelFracionada(arr[0]?.classe))}</span><div class="item-desc">${arr.length} sabor(es): ${escapeHtml(saboresPreview)}</div></div><div style="display:flex;gap:8px;align-items:center;">${dadosRaw?`<button type="button" class="obs-save" data-info-group="${lanc}" title="Detalhes do item">i</button>`:""}<button type="button" class="del" data-del-group="${idRef}">×</button></div></div><div class="item-mid"><div class="item-qty"><button type="button" class="qty-btn" data-minus-group="${lanc}">-</button><input class="qty-input" data-qtd-input-group="${lanc}" type="number" min="1" step="1" value="${qtd}"><button type="button" class="qty-btn" data-plus-group="${lanc}">+</button></div><span class="unit-price">${money(totalG/Math.max(1,qtd))}</span></div>${bodyObs}<div class="item-foot"><span></span><span class="item-v">${money(totalG)}</span></div>`;
         host.appendChild(row);
       }
     });
@@ -1031,6 +1071,16 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     out.push("");
     return `\n${out.join("\n")}\n`;
   }
+  function _withTimeout(promise, ms, msg){
+    const timeoutMs=Math.max(1000, Math.floor(Number(ms)||25000));
+    let timer=null;
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise((_,reject)=>{
+        timer=setTimeout(()=>reject(new Error(msg||"Tempo esgotado.")), timeoutMs);
+      })
+    ]).finally(()=>{ if(timer) clearTimeout(timer); });
+  }
   async function distribuirPreparoMesa(){
     const btn=el("btn-distribuir-preparo-mesa");
     const prevLabel=btn?btn.textContent:"";
@@ -1131,11 +1181,23 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
         if(!row || row.id==null){ alert("Impressora inválida no cadastro para distribuição."); return; }
         const titulo=`MESA ${Number(state.mesa)||0}`;
         const conteudo=_montarTextoPreparoMesa(titulo, grupos[p.key]||[], _feedFromImpRow(row), _formatoFromImpRow(row));
-        const imp=await (window.lojaImprimir?window.lojaImprimir({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0,skip_confirm:true}):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0})}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j}))));
-        if(!imp.ok){
-          const d=imp.data||{};
-          if(window.uiFeedback) window.uiFeedback.error("Falha ao imprimir preparo: "+(d.erro||d.mensagem||"impressão"));
-          else alert("Falha ao imprimir preparo: "+(d.erro||d.mensagem||"impressão"));
+        const printBody={conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0,skip_confirm:true};
+        const printP=window.lojaImprimir
+          ? window.lojaImprimir(printBody)
+          : fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(printBody)}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j})));
+        let imp;
+        try{
+          imp=await _withTimeout(printP,25000,"Tempo esgotado ao imprimir preparo. Verifique o Print Bridge e tente Distribuir preparo de novo.");
+        }catch(ePrint){
+          const msg=String(ePrint&&ePrint.message?ePrint.message:ePrint);
+          if(window.uiFeedback) window.uiFeedback.error(msg);
+          else alert(msg);
+          return;
+        }
+        if(!imp||!imp.ok){
+          const d=(imp&&imp.data)||{};
+          if(window.uiFeedback) window.uiFeedback.error("Falha ao imprimir preparo: "+(d.erro||d.mensagem||(imp&&imp.erro)||"impressão"));
+          else alert("Falha ao imprimir preparo: "+(d.erro||d.mensagem||(imp&&imp.erro)||"impressão"));
           return;
         }
       }
@@ -1170,6 +1232,10 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
       await loadMesas();
       if(window.uiFeedback) window.uiFeedback.success("Distribuição enviada para preparo.");
       else alert("Distribuição enviada para preparo.");
+    }catch(eDist){
+      const msg=String(eDist&&eDist.message?eDist.message:eDist);
+      if(window.uiFeedback) window.uiFeedback.error(msg);
+      else alert(msg);
     }finally{
       if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Distribuir preparo"; }
       updateDistribuirPreparoUiMesa();
@@ -1479,7 +1545,7 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     groupRegs(regs).forEach((arr)=>{
       if(arr.length===1){
         const it=arr[0];
-        const nome=escapeHtml(it.produto||it.nome||"-");
+        const nome=escapeHtml(nomeItemExibicao(it.produto||it.nome,it.classe,it.codigoproduto));
         const desc=((it.descricao_produto||"")+"").trim();
         const cod=(`${it.codigoproduto||""}`).trim();
         const qtd=Number(it.quantidade)||1;
@@ -1490,15 +1556,15 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
         const qtd=Number(arr[0]?.quantidade)||1;
         const totalG=arr.reduce((s,x)=>s+lineTot(x),0);
         const unit=totalG/Math.max(1,qtd);
-        const saboresPreview=arr.map((x)=>nomeSemPrefixo(x.produto||x.nome||"-")).join(" · ");
+        const saboresPreview=arr.map((x)=>nomeItemExibicao(nomeSemPrefixo(x.produto||x.nome),x.classe,x.codigoproduto)).join(" · ");
         const saboresHtml=arr.map((x)=>{
-          const n=nomeSemPrefixo(x.produto||x.nome||"-");
+          const n=nomeItemExibicao(nomeSemPrefixo(x.produto||x.nome),x.classe,x.codigoproduto);
           const obs=((x.obs_item||"")+"").trim();
           const pp=Number(x.preco)||0;
           const c=(`${x.codigoproduto||""}`).trim();
           return `<div class="mesa-conf-sabor"><div class="mesa-conf-sabor-nome">${escapeHtml(n)}</div><div class="mesa-conf-sabor-meta">Valor na parte: ${money(pp)}${c?` · Cód. ${escapeHtml(c)}`:""}</div>${obs?`<div class="mesa-conf-obs" style="margin-top:10px;"><div class="mesa-conf-obs-lbl">Observação do sabor</div>${escapeHtml(obs)}</div>`:""}</div>`;
         }).join("");
-        blocks.push(`<article class="mesa-conf-item mesa-conf-item-frac"><div class="mesa-conf-item-name">Pizza fracionada</div><div class="mesa-conf-item-desc">${arr.length} sabor(es): ${escapeHtml(saboresPreview)}</div><div class="mesa-conf-item-row"><span class="mesa-conf-qty-pricing">${qtd} × ${money(unit)}</span><span class="mesa-conf-line-total">${money(totalG)}</span></div><div class="mesa-conf-frac-sabores">${saboresHtml}</div></article>`);
+        blocks.push(`<article class="mesa-conf-item mesa-conf-item-frac"><div class="mesa-conf-item-name">${escapeHtml(labelFracionada(arr[0]?.classe))}</div><div class="mesa-conf-item-desc">${arr.length} sabor(es): ${escapeHtml(saboresPreview)}</div><div class="mesa-conf-item-row"><span class="mesa-conf-qty-pricing">${qtd} × ${money(unit)}</span><span class="mesa-conf-line-total">${money(totalG)}</span></div><div class="mesa-conf-frac-sabores">${saboresHtml}</div></article>`);
       }
     });
     body.innerHTML=blocks.join("");

@@ -45,6 +45,7 @@ from services.fechamento_periodo import (
     resumo_financeiro_fechamento,
     save_fechamento_print_blocos,
 )
+from helpers_app import calcular_distancia_cliente
 
 _PYWIN32_SYS = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv", "Lib", "site-packages", "pywin32_system32")
 if os.path.isdir(_PYWIN32_SYS):
@@ -2448,6 +2449,38 @@ def api_casa_listar_itens(nropedido):
         row_sc = cur.fetchone() or {}
         status_comanda = str((row_sc or {}).get("st") or "NORMAL").strip().upper() or "NORMAL"
 
+        if modo_is_recuperacao and cliente_data:
+            tel_enrich = telefone_req or "".join(
+                ch for ch in str(cliente_data.get("telefone") or "") if ch.isdigit()
+            )
+            if tel_enrich:
+                try:
+                    cur.execute(
+                        """
+                        SELECT distancia, taxaentrega, bairro, cidade, estado, referencia
+                        FROM clientes
+                        WHERE id_cliente = %s AND (
+                            telefone = %s OR telefone LIKE %s
+                        )
+                        LIMIT 1
+                        """,
+                        (id_cliente, tel_enrich, f"%{tel_enrich}"),
+                    )
+                    row_cli = cur.fetchone() or {}
+                    if row_cli:
+                        for key, src in (
+                            ("bairro", "bairro"),
+                            ("cidade", "cidade"),
+                            ("estado", "estado"),
+                            ("referencia", "referencia"),
+                            ("distancia", "distancia"),
+                            ("taxaentrega", "taxaentrega"),
+                        ):
+                            if not str(cliente_data.get(key) or "").strip() and row_cli.get(src) is not None:
+                                cliente_data[key] = row_cli[src]
+                except Exception as e:
+                    print("[CASA] Falha ao enriquecer cliente na recuperação:", e, flush=True)
+
         pedido_bloqueado_casa = False
         comanda_cancelada = False
         motivo_bloqueio = ""
@@ -4723,87 +4756,6 @@ def excluir_forma_pagamento(chave):
     finally:
         if 'cursor' in locals() and cursor: cursor.close()
         if 'conn' in locals() and conn: conn.close()
-
-def haversine_km(lat1, lon1, lat2, lon2):
-    R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return round(R * c, 2)
-
-def geocodificar(endereco):
-    if not endereco or len(endereco.strip()) < 5:
-        return None, None
-    url = "https://nominatim.openstreetmap.org/search"
-    params = {"q": endereco, "format": "json", "limit": 1}
-    headers = {"User-Agent": "novaloja-geocoder/1.0"}
-    try:
-        r = requests.get(url, params=params, headers=headers, timeout=8)
-        if r.status_code != 200:
-            return None, None
-        data = r.json()
-        if not data:
-            return None, None
-        return float(data[0]["lat"]), float(data[0]["lon"])
-    except Exception as e:
-        print("[GEOCODE ERRO]", e)
-        return None, None
-
-def distancia_osrm_km(lat_loja, lon_loja, lat_cli, lon_cli):
-    try:
-        base = "http://router.project-osrm.org/route/v1/driving"
-        # OSRM usa ordem lon,lat
-        url = f"{base}/{lon_loja},{lat_loja};{lon_cli},{lat_cli}?overview=false&alternatives=false&steps=false"
-        r = requests.get(url, timeout=8, headers={"User-Agent": "novaloja-osrm/1.0"})
-        if r.status_code != 200:
-            return None
-        data = r.json()
-        if not data or data.get("code") != "Ok":
-            return None
-        routes = data.get("routes") or []
-        if not routes:
-            return None
-        # distance vem em metros
-        dist_m = routes[0].get("distance")
-        if dist_m is None:
-            return None
-        return round(dist_m / 1000.0, 2)
-    except Exception as e:
-        print("[OSRM ERRO]", e)
-        return None
-
-def calcular_distancia_cliente(dados):
-    """Calcula distância entre a loja e o cliente usando dados cadastrados"""
-    # Obtém coordenadas da loja cadastradas
-    id_cliente = session.get("id_cliente")
-    loja = obter_dados_loja(id_cliente)
-    loja_lat = loja['latitude']
-    loja_lon = loja['longitude']
-    
-    partes = [
-        dados.get("endereco", ""),
-        dados.get("nrocasa", ""),
-        dados.get("bairro", ""),
-        dados.get("cidade", ""),
-        dados.get("estado", ""),
-        "Brasil"
-    ]
-    endereco_str = ", ".join([p for p in partes if p])
-    lat_cli, lon_cli = geocodificar(endereco_str)
-    if lat_cli is not None and lon_cli is not None:
-        # Primeiro tenta percurso via OSRM
-        dist_osrm = distancia_osrm_km(loja_lat, loja_lon, lat_cli, lon_cli)
-        if dist_osrm is not None:
-            return dist_osrm, lat_cli, lon_cli
-        # Fallback para Haversine (linha reta)
-        try:
-            dist_hav = haversine_km(loja_lat, loja_lon, lat_cli, lon_cli)
-            return dist_hav, lat_cli, lon_cli
-        except Exception as e:
-            print("[HAVERSINE ERRO]", e)
-            return 0, lat_cli, lon_cli
-    return 0, None, None
 
 def calcular_taxa_entrega(distancia, id_cliente):
     """Calcula taxa de entrega baseado na distância usando tabela txentrega.
@@ -8518,10 +8470,16 @@ def salvar_cliente():
         cadastro_balcao = origem_cadastro == "balcao"
 
         cursor.execute(
-            "SELECT chave, taxaentrega, distancia FROM clientes WHERE telefone = %s AND id_cliente = %s",
+            """SELECT chave, taxaentrega, distancia, cep, endereco, nrocasa, cidade, estado,
+                      lat_cliente, lon_cliente
+               FROM clientes WHERE telefone = %s AND id_cliente = %s""",
             (telefone, id_cliente),
         )
         cliente_existente = cursor.fetchone()
+
+        taxa_manual = dados.get("taxa_manual") is True or str(
+            dados.get("taxa_manual") or ""
+        ).strip().lower() in ("true", "1", "sim", "yes")
 
         # Verifica configuração para saber se deve calcular distância/taxa
         cursor.execute("SELECT calculodistancia FROM configuracao WHERE chave = 1 AND id_cliente = %s", (id_cliente,))
@@ -8534,6 +8492,8 @@ def salvar_cliente():
         
         lat_cli = None
         lon_cli = None
+        origem_calculo = None
+        aviso_precisao = None
         if cadastro_balcao:
             if cliente_existente:
                 distancia_final = float(cliente_existente.get("distancia") or 0)
@@ -8543,25 +8503,52 @@ def salvar_cliente():
                 taxa_entrega = 0
             print(f"[SALVAR CLIENTE] Modo BALCÃO - Taxa={taxa_entrega}, Dist={distancia_final}")
         elif calculo_habilitado:
-            # Distância: usa valor manual se enviado (>0), senão calcula automático
             distancia_bruta = dados.get("distancia", 0)
             try:
                 distancia_bruta = float(distancia_bruta)
             except Exception:
                 distancia_bruta = 0
-            distancia_calc, lat_cli, lon_cli = calcular_distancia_cliente(dados)
+            geo = calcular_distancia_cliente(
+                dados, id_cliente=id_cliente, cliente_existente=cliente_existente
+            )
+            distancia_calc = float(geo.get("distancia") or 0)
+            lat_cli = geo.get("lat_cli")
+            lon_cli = geo.get("lon_cli")
+            origem_calculo = geo.get("origem_calculo")
+            aviso_precisao = geo.get("aviso_precisao")
             distancia_final = distancia_bruta if distancia_bruta > 0 else distancia_calc
-            
-            # Calcula taxa de entrega baseado na distância
-            taxa_entrega = calcular_taxa_entrega(distancia_final, id_cliente)
-            print(f"[SALVAR CLIENTE] Modo CALCULADO - Taxa={taxa_entrega}, Dist={distancia_final}")
+
+            if taxa_manual:
+                try:
+                    taxa_entrega = float(dados.get("taxaentrega", 0) or 0)
+                except Exception:
+                    taxa_entrega = 0
+                print(
+                    f"[SALVAR CLIENTE] Modo CALCULADO + taxa manual - Taxa={taxa_entrega}, Dist={distancia_final}"
+                )
+            else:
+                taxa_entrega = calcular_taxa_entrega(distancia_final, id_cliente)
+                print(f"[SALVAR CLIENTE] Modo CALCULADO - Taxa={taxa_entrega}, Dist={distancia_final}")
         else:
-            # Usa valores que vieram do formulário
             distancia_final = float(dados.get("distancia", 0) or 0)
             taxa_entrega = float(dados.get("taxaentrega", 0) or 0)
             lat_cli = None
             lon_cli = None
             print(f"[SALVAR CLIENTE] Modo MANUAL - Taxa={taxa_entrega}, Dist={distancia_final}")
+
+        def _resposta_salvar_cliente(mensagem, chave):
+            payload = {
+                "sucesso": True,
+                "mensagem": mensagem,
+                "chave": chave,
+                "distancia_calculada": distancia_final,
+                "taxa_calculada": taxa_entrega,
+            }
+            if origem_calculo:
+                payload["origem_calculo"] = origem_calculo
+            if aviso_precisao:
+                payload["aviso_precisao"] = aviso_precisao
+            return jsonify(payload)
         
         # Verificar se as colunas lat_cliente e lon_cliente existem
         cursor.execute("SHOW COLUMNS FROM clientes LIKE 'lat_cliente'")
@@ -8668,7 +8655,7 @@ def salvar_cliente():
                     (cpf_val, telefone, id_cliente),
                 )
             conn.commit()
-            return jsonify({"sucesso": True, "mensagem": "Cliente atualizado com sucesso", "chave": cliente_existente["chave"], "distancia_calculada": distancia_final, "taxa_calculada": taxa_entrega})
+            return _resposta_salvar_cliente("Cliente atualizado com sucesso", cliente_existente["chave"])
         else:
             # Inserir novo cliente conforme colunas disponíveis
             if tem_lat_lon and tem_cep:
@@ -8761,7 +8748,7 @@ def salvar_cliente():
                     (cpf_val, telefone, id_cliente),
                 )
             conn.commit()
-            return jsonify({"sucesso": True, "mensagem": "Cliente cadastrado com sucesso", "chave": cursor.lastrowid, "distancia_calculada": distancia_final, "taxa_calculada": taxa_entrega})
+            return _resposta_salvar_cliente("Cliente cadastrado com sucesso", cursor.lastrowid)
     
     except mysql.connector.Error as db_err:
         print("[DB ERROR]", db_err)

@@ -444,7 +444,7 @@
   let impressoraCasaLabel="(carregando impressora…)";
   let impressoraCasaFeed=6;
   let impressoraCasaFormato="completa";
-  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], retailCategoriaId:null, retailSubcategoriaId:null, retailCategoriaNome:null, pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0,taxaEntregaZeradaCampanha:false,campanhaAplicadaId:null, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, clienteObrigatorioBalcao:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, distanciaManual:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
+  const state={ modo:{% if IS_RETAIL %}"balcao"{% else %}"delivery"{% endif %}, classificacao:null, produtos:[], retailCategoriaId:null, retailSubcategoriaId:null, retailCategoriaNome:null, pedidoId:0, pedidoPreview:0, pedidoReservado:false, trocandoModo:false, servicoPct:0, taxaEntrega:0,taxaEntregaZeradaCampanha:false,campanhaAplicadaId:null, formaPagamento:"", valorPagoTroco:null, formaPagamentoPendente:false, obsGeral:"", conferenciaConteudo:"", subtotal:0, ajusteValor:0, ajusteDescricao:"", localizandoCliente:false, ultimoTelefoneLocalizado:"", clienteLocalizado:false, clienteObrigatorioBalcao:false, dddPadrao:"", historicoCliente:[], historicoClienteTotal:0, ultimoTelefoneCompleto:"", clienteSnapshot:"", zoomEditorOriginal:[], classMeta:{}, itensCount:0, editandoCliente:false, distanciaManual:false, taxaManual:false, fracionadoDraftInline:null, statusComanda:"NORMAL", emRecuperacao:false, pedidosAguardeList:[], opcoesDraft:null, itemDadosMap:{}, grupoDadosMap:{}, preparoMetaById:{}, balcaoPagamentoMomento:"agora", baixaBalcao:null, pedidoBloqueadoCasa:false };
   function msgCasaPedidoBloqueado(){ return IS_RETAIL ? "Comanda cancelada ou venda em ROTA/RECEBIDA não pode ser alterada na tela /casa." : "Comanda cancelada ou pedido em ROTA/RECEBIDO não pode ser alterado na tela /casa."; }
   function aplicarBloqueioCasaUi(host){
     const bloq = !!state.pedidoBloqueadoCasa && (Number(state.pedidoId)||0) > 0;
@@ -885,6 +885,45 @@
 
   async function refreshTaxaServico(){ try{ const r=await fetch("/api/buscar-configuracao"); const d=await r.json(); state.servicoPct=(d.sucesso&&d.config&&d.config.servicomesa!=null)?(parseFloat(d.config.servicomesa)||0):0; }catch(_){ state.servicoPct=0; } }
   function escapeHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;"); }
+  const CLASSE_FALLBACK="Pizza";
+  const NOME_FALLBACK="-";
+  const TOKENS_ESPECIAIS=new Set(["AJUSTE_TECNICO","CAMPANHA"]);
+  function _classeExibicao(classe){
+    const raw=String(classe||"").trim();
+    if(!raw) return CLASSE_FALLBACK;
+    return raw.charAt(0).toUpperCase()+raw.slice(1).toLowerCase();
+  }
+  function _normTokenEspecial(valor){
+    return String(valor||"").trim().toUpperCase().replace(/\s+/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+  }
+  function _ehTokenEspecial(valor){
+    const tok=_normTokenEspecial(valor);
+    return tok!=="" && TOKENS_ESPECIAIS.has(tok);
+  }
+  function _normClasseToken(s){
+    return String(s||"").toLowerCase().replace(/\s/g,"");
+  }
+  function _nomeJaContemClasse(nome,cls){
+    const c=_normClasseToken(cls);
+    if(!c) return false;
+    const re=/\(([^)]+)\)/g;
+    let m;
+    while((m=re.exec(String(nome||"")))!==null){
+      if(_normClasseToken(m[1])===c) return true;
+    }
+    return false;
+  }
+  function nomeItemExibicao(produto,classe,codigoproduto){
+    let nome=String(produto||"").trim();
+    if(!nome) nome=NOME_FALLBACK;
+    if(_ehTokenEspecial(codigoproduto)||_ehTokenEspecial(classe)) return nome;
+    const cls=_classeExibicao(classe);
+    if(_nomeJaContemClasse(nome,cls)) return nome;
+    return `${nome} (${cls})`;
+  }
+  function labelFracionada(classe){
+    return `${_classeExibicao(classe)} fracionada`;
+  }
   function formatItemDesc(raw){
     return String(raw||"").replace(/\s+/g," ").trim();
   }
@@ -1307,8 +1346,18 @@
       if(el("cli-cidade")) el("cli-cidade").value=c.cidade||"";
       if(el("cli-uf")) el("cli-uf").value=(c.estado||"").toString().toUpperCase();
       if(el("cli-cep")) el("cli-cep").value=c.cep||"";
+      if(c.distancia != null && c.distancia !== ""){
+        if(el("cli-distancia")) el("cli-distancia").value=fmtKm(c.distancia);
+      }
+      if(c.taxaentrega != null && c.taxaentrega !== ""){
+        state.taxaEntrega=numOrZero(c.taxaentrega);
+        if(el("cli-taxa")) el("cli-taxa").value=money(state.taxaEntrega);
+      }
       state.clienteLocalizado=true;
       state.editandoCliente=false;
+      state.distanciaManual=false;
+      state.taxaManual=false;
+      captureClienteSnapshot();
       applyClienteFieldsLock();
       updatePrintState();
       updateSaveClienteState();
@@ -1351,21 +1400,21 @@
         grupos.delete(lanc);
       }
     });
-    simples.forEach((it)=>{ const id=pkItem(it); const qtd=Number(it.quantidade)||1; const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const desc=formatItemDesc(it.descricao_produto); const codItem=String(it.codigoproduto||"").toUpperCase(); const ehAjuste=codItem==="AJUSTE_TECNICO"||codItem==="CAMPANHA"||String(it.classe||"").toUpperCase()==="CAMPANHA"; const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":""); row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name" title="${escapeHtml(it.produto||it.nome||"-")}">${escapeHtml(it.produto||it.nome||"-")}</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del="${id}" aria-label="Remover item">×</button></div></div>${desc?`<div class="item-desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>`:""}</div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`; host.appendChild(row); });
+    simples.forEach((it)=>{ const id=pkItem(it); const qtd=Number(it.quantidade)||1; const obs=(it.obs_item||"").trim(); const dadosRaw=(it.dados_item||"").trim(); if(id!=null) state.itemDadosMap[String(id)]=dadosRaw; const desc=formatItemDesc(it.descricao_produto); const codItem=String(it.codigoproduto||"").toUpperCase(); const ehAjuste=codItem==="AJUSTE_TECNICO"||codItem==="CAMPANHA"||String(it.classe||"").toUpperCase()==="CAMPANHA"; const nomeEx=nomeItemExibicao(it.produto||it.nome,it.classe,it.codigoproduto); const row=document.createElement("div"); row.className="item"+(ehAjuste?" ajuste-tecnico":""); row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name" title="${escapeHtml(nomeEx)}">${escapeHtml(nomeEx)}</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info="${id}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del="${id}" aria-label="Remover item">×</button></div></div>${desc?`<div class="item-desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>`:""}</div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus="${id}">-</button><input class="qty-input" data-qtd-input="${id}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus="${id}">+</button></div><span class="unit-price">${money(Number(it.preco)||0)}</span></div><div class="item-obs"><input data-obs-item="${id}" placeholder="Obs. do item" value="${escapeHtml(obs)}"><button class="obs-save" data-save-obs="${id}">OK</button></div><div class="item-foot"><span></span><span class="item-v">${money(lineTot(it))}</span></div>`; host.appendChild(row); });
     grupos.forEach((itens,lanc)=>{
       const idRef=pkItem(itens[0]);
       const qtd=Number(itens[0]?.quantidade)||1;
       const totalGrupo=itens.reduce((s,x)=>s+lineTot(x),0);
       const dadosRaw=(itens[0]?.dados_item||"").trim();
       if(lanc!=null) state.grupoDadosMap[String(lanc)]=dadosRaw;
-      const nomesLista=itens.map((x)=>String(x.produto||x.nome||"-"));
+      const nomesLista=itens.map((x)=>nomeItemExibicao(x.produto||x.nome,x.classe,x.codigoproduto));
       const nomeSemPrefixo=(txt)=>String(txt||"").replace(/^\s*\d+\s*\/\s*\d+\s+/,"").trim();
-      const saboresLista=itens.map((x)=>nomeSemPrefixo(x.produto||x.nome||"-"));
+      const saboresLista=itens.map((x)=>nomeItemExibicao(nomeSemPrefixo(x.produto||x.nome),x.classe,x.codigoproduto));
       const saboresPreview=saboresLista.length<=2 ? saboresLista.join(" | ") : `${saboresLista.slice(0,2).join(" | ")} +${saboresLista.length-2}`;
-      const bodyObs=itens.map((x,idxItem)=>{ const idx=pkItem(x); const ob=(x.obs_item||"").trim(); const sepClass=idxItem===0?"":" sep"; const label=nomeSemPrefixo(x.produto||x.nome||"-"); return `<div class="item-obs${sepClass}"><span class="item-obs-label">${escapeHtml(label)}</span><input data-obs-item-group="${idx}" placeholder="Observação do sabor" value="${escapeHtml(ob)}"></div>`; }).join("");
+      const bodyObs=itens.map((x,idxItem)=>{ const idx=pkItem(x); const ob=(x.obs_item||"").trim(); const sepClass=idxItem===0?"":" sep"; const label=nomeItemExibicao(nomeSemPrefixo(x.produto||x.nome),x.classe,x.codigoproduto); return `<div class="item-obs${sepClass}"><span class="item-obs-label">${escapeHtml(label)}</span><input data-obs-item-group="${idx}" placeholder="Observação do sabor" value="${escapeHtml(ob)}"></div>`; }).join("");
       const row=document.createElement("div");
       row.className="item fracionado";
-      row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name" title="${escapeHtml(saboresLista.join(" | "))}">Pizza fracionada</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info-group="${lanc}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del-group="${idRef}" aria-label="Remover item">×</button></div></div><div class="item-desc">${itens.length} sabor(es): ${escapeHtml(saboresPreview)}</div></div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus-group="${lanc}">-</button><input class="qty-input" data-qtd-input-group="${lanc}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus-group="${lanc}">+</button></div><span class="unit-price">${money(totalGrupo/Math.max(1,qtd))}</span></div>${bodyObs}<div class="item-foot"><span></span><span class="item-v">${money(totalGrupo)}</span></div>`;
+      row.innerHTML=`<div class="item-top"><div class="item-header"><span class="item-name" title="${escapeHtml(saboresLista.join(" | "))}">${escapeHtml(labelFracionada(itens[0]?.classe))}</span><div class="item-actions">${dadosRaw?`<button class="obs-save" data-info-group="${lanc}" title="Detalhes do item">i</button>`:""}<button class="del btn-remove" type="button" data-del-group="${idRef}" aria-label="Remover item">×</button></div></div><div class="item-desc">${itens.length} sabor(es): ${escapeHtml(saboresPreview)}</div></div><div class="item-mid"><div class="item-qty"><button class="qty-btn" data-minus-group="${lanc}">-</button><input class="qty-input" data-qtd-input-group="${lanc}" type="number" min="1" step="1" value="${qtd}"><button class="qty-btn" data-plus-group="${lanc}">+</button></div><span class="unit-price">${money(totalGrupo/Math.max(1,qtd))}</span></div>${bodyObs}<div class="item-foot"><span></span><span class="item-v">${money(totalGrupo)}</span></div>`;
       host.appendChild(row);
     });
     host.querySelectorAll("[data-del]").forEach((b)=>{ b.onclick=async()=>{ const id=b.getAttribute("data-del"); if(!id)return; b.disabled=true; const r=await fetch(`/api/casa/${state.pedidoId}/item/${id}`,{method:"DELETE"}); if(!r.ok) alert("Não foi possível remover item."); await loadItens(modoCarga); }; });
@@ -1808,7 +1857,7 @@
       if(el("balcao-bairro")) el("balcao-bairro").value=d.bairro||"";
       if(el("balcao-cidade")) el("balcao-cidade").value=d.localidade||"";
       if(el("balcao-uf")) el("balcao-uf").value=(d.uf||"").toString().toUpperCase();
-      if(statusEl) statusEl.textContent="âœ“";
+      if(statusEl) statusEl.textContent="\u2713";
       const nr=el("balcao-nrocasa"); if(nr) nr.focus();
     }catch(e){
       console.error(e);
@@ -1829,7 +1878,7 @@
       if(d.bairro) el("cli-bairro").value=d.bairro;
       if(d.cidade) el("cli-cidade").value=d.cidade;
       if(d.estado) el("cli-uf").value=d.estado;
-      if(statusEl) statusEl.textContent="âœ“";
+      if(statusEl) statusEl.textContent="\u2713";
       updateSaveClienteState();
       const nr=el("cli-nrocasa"); if(nr) nr.focus();
     }catch(e){ console.error(e); if(statusEl) statusEl.textContent="Erro"; }
@@ -1922,6 +1971,7 @@
         state.clienteLocalizado = false;
         state.editandoCliente = false;
         state.distanciaManual = false;
+        state.taxaManual = false;
         state.historicoCliente = [];
         state.historicoClienteTotal = 0;
         renderHistoricoClienteResumo();
@@ -1936,6 +1986,7 @@
         state.clienteLocalizado = false;
         state.editandoCliente = false;
         state.distanciaManual = false;
+        state.taxaManual = false;
         state.historicoCliente = [];
         state.historicoClienteTotal = 0;
         renderHistoricoClienteResumo();
@@ -1963,6 +2014,7 @@
       state.emRecuperacao = false;
       state.editandoCliente = false;
       state.distanciaManual = false;
+      state.taxaManual = false;
       captureClienteSnapshot();
       applyClienteFieldsLock();
       updateSaveClienteState();
@@ -2009,6 +2061,8 @@
       estado: (el("cli-uf").value || "").trim().toUpperCase(),
       cep: (el("cli-cep").value || "").trim(),
       distancia: state.distanciaManual ? parseKm(el("cli-distancia").value || "") : 0,
+      taxaentrega: state.taxaManual ? parseMoneyInput(el("cli-taxa").value || "") : null,
+      taxa_manual: state.taxaManual,
     };
     const btn = el("btn-salvar-cliente");
     const prevLabel = btn ? btn.textContent : "";
@@ -2042,13 +2096,29 @@
       state.taxaEntrega = numOrZero(d.taxa_calculada);
       if (d.distancia_calculada != null) el("cli-distancia").value = fmtKm(d.distancia_calculada);
       el("cli-taxa").value = money(state.taxaEntrega);
-      if (numOrZero(d.distancia_calculada) === 0) {
-        alert("Não foi possível calcular a distância (0 km). Verifique o endereço completo e as coordenadas da loja.");
+      if (d.aviso_precisao) {
+        const aviso = String(d.aviso_precisao);
+        if (window.uiFeedback) window.uiFeedback.info(aviso);
+        else console.info(aviso);
+      }
+      const orig = String(d.origem_calculo || "");
+      const distZero = numOrZero(d.distancia_calculada) === 0;
+      if (orig === "falha_geocode" && distZero) {
+        alert("Não foi possível localizar o endereço. Confira rua, nº e coordenadas da loja.");
+      } else if (orig === "falha_osrm" && distZero) {
+        alert("Rota indisponível no momento. Distância não calculada — ajuste manualmente se necessário.");
+      } else if (orig === "osrm" && distZero) {
+        alert("Endereço muito próximo da loja — taxa mínima aplicada.");
+      } else if (orig === "haversine_correcao") {
+        const msg = "Distância ajustada (endereços distintos no mesmo ponto geográfico).";
+        if (window.uiFeedback) window.uiFeedback.info(msg);
+        else console.info(msg);
       }
       state.clienteLocalizado = true;
       state.emRecuperacao = false;
       state.editandoCliente = false;
       state.distanciaManual = false;
+      state.taxaManual = false;
       captureClienteSnapshot();
       applyClienteFieldsLock();
       updateSaveClienteState();
@@ -2983,6 +3053,16 @@
     out.push("");
     return `\n${out.join("\n")}\n`;
   }
+  function _withTimeout(promise, ms, msg){
+    const timeoutMs=Math.max(1000, Math.floor(Number(ms)||25000));
+    let timer=null;
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise((_,reject)=>{
+        timer=setTimeout(()=>reject(new Error(msg||"Tempo esgotado.")), timeoutMs);
+      })
+    ]).finally(()=>{ if(timer) clearTimeout(timer); });
+  }
   async function distribuirPreparoCasa(opts){
     opts = opts || {};
     const auto = !!opts.auto;
@@ -3090,10 +3170,19 @@
         if(!row || row.id==null){ return fail("Impressora inválida no cadastro para distribuição."); }
         const titulo=`PEDIDO #${Number(state.pedidoId)||0}`;
         const conteudo=_montarTextoPreparoCasa(titulo, grupos[p.key]||[], _feedFromImpRow(row), _formatoFromImpRow(row));
-        const imp=await (window.lojaImprimir?window.lojaImprimir({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0,skip_confirm:true}):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0})}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j}))));
-        if(!imp.ok){
-          const d=imp.data||{};
-          return fail("Falha ao imprimir preparo: "+(d.erro||d.mensagem||"impressão"));
+        const printBody={conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0,skip_confirm:true};
+        const printP=window.lojaImprimir
+          ? window.lojaImprimir(printBody)
+          : fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(printBody)}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j})));
+        let imp;
+        try{
+          imp=await _withTimeout(printP,25000,"Tempo esgotado ao imprimir preparo. Verifique o Print Bridge e tente Distribuir preparo de novo.");
+        }catch(ePrint){
+          return fail(String(ePrint&&ePrint.message?ePrint.message:ePrint));
+        }
+        if(!imp||!imp.ok){
+          const d=(imp&&imp.data)||{};
+          return fail("Falha ao imprimir preparo: "+(d.erro||d.mensagem||(imp&&imp.erro)||"impressão"));
         }
       }
       const idsUniq=Array.from(new Set(idsToMark)).map((x)=>Number(x)).filter((n)=>Number.isFinite(n)&&n>0);
@@ -3119,6 +3208,8 @@
       updateDistribuirPreparoUiCasa();
       if(!silent){ if(window.uiFeedback) window.uiFeedback.success("Distribuição enviada para preparo."); else alert("Distribuição enviada para preparo."); }
       return {ok:true,total,atualizados,ja,impresso_em:Number(plans.length)||0};
+    } catch(eDist){
+      return fail(String(eDist&&eDist.message?eDist.message:eDist));
     } finally {
       if(btn){ btn.disabled=false; btn.textContent=prevLabel||"Distribuir preparo"; }
       updateDistribuirPreparoUiCasa();
@@ -3499,7 +3590,7 @@
   document.addEventListener("click",(e)=>{ const tgt=e.target; const open=tgt.closest?tgt.closest("[data-open-modal]"):null; if(open){ e.preventDefault(); const id=open.getAttribute("data-open-modal"); if(id==="modal-pag") loadFormasPagamento(); openModal(id); return; } const close=tgt.closest?tgt.closest("[data-close-modal]"):null; if(close){ e.preventDefault(); _resolverOpcoesSeAberto(); _resolverFracionadoSeAberto(); closeModals(); return; } if(tgt.classList&&tgt.classList.contains("modal")){ _resolverOpcoesSeAberto(); _resolverFracionadoSeAberto(); closeModals(); } });
   document.querySelectorAll(".toggle [data-modo]").forEach((b)=>{ b.onclick=()=>setModo(b.dataset.modo); });
   el("btn-localizar").onclick=()=>localizarCliente(true);
-  el("cli-fone").addEventListener("input",()=>{ state.ultimoTelefoneLocalizado = ""; state.clienteLocalizado=false; state.editandoCliente=false; state.distanciaManual=false; applyClienteFieldsLock(); renderHistoricoClienteResumo(); updateClienteLocalizadoBadge(); updatePrintState(); updateSaveClienteState(); loadItens("normal"); });
+  el("cli-fone").addEventListener("input",()=>{ state.ultimoTelefoneLocalizado = ""; state.clienteLocalizado=false; state.editandoCliente=false; state.distanciaManual=false; state.taxaManual=false; applyClienteFieldsLock(); renderHistoricoClienteResumo(); updateClienteLocalizadoBadge(); updatePrintState(); updateSaveClienteState(); loadItens("normal"); });
   el("cli-fone").addEventListener("keydown",async(e)=>{ if(e.key==="Enter"){ e.preventDefault(); const localizado=await localizarCliente(); if(!localizado){ const c=el("cli-cep"); if(c) c.focus(); } } });
   el("cli-fone").addEventListener("blur",(e)=>{ if(e.relatedTarget && e.relatedTarget.id==="btn-localizar") return; if(state.modo==="delivery" && (el("cli-fone").value||"").trim()) localizarCliente(); });
   el("btn-salvar-cliente").onclick=salvarClienteEntrega;
@@ -3507,6 +3598,14 @@
   if(cliDistancia){
     cliDistancia.addEventListener("input",()=>{
       if(state.editandoCliente) state.distanciaManual=true;
+      updateSaveClienteState();
+    });
+  }
+  const cliTaxa=el("cli-taxa");
+  if(cliTaxa){
+    cliTaxa.addEventListener("input",()=>{
+      if(state.editandoCliente || !state.clienteLocalizado) state.taxaManual=true;
+      updateSaveClienteState();
     });
   }
   const btnBalcLoc=el("btn-balcao-localizar");
@@ -3655,9 +3754,19 @@
       if(focoCampo(ordem[i])) break;
     }
   }
+  let ultimoCepBuscado="";
   ["cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-ref","cli-bairro","cli-cidade","cli-uf","cli-cep"].forEach((id)=>{ const node=el(id); if(node) node.addEventListener("input",updateSaveClienteState); });
-  el("cli-cep").addEventListener("input",()=>{ const v=el("cli-cep").value||""; const fmt=formatarCep(v); if(fmt!==v) el("cli-cep").value=fmt; const s=el("cep-status"); if(s) s.textContent=""; updateSaveClienteState(); });
+  el("cli-cep").addEventListener("input",()=>{ ultimoCepBuscado=""; const v=el("cli-cep").value||""; const fmt=formatarCep(v); if(fmt!==v) el("cli-cep").value=fmt; const s=el("cep-status"); if(s) s.textContent=""; updateSaveClienteState(); });
   el("cli-cep").addEventListener("keydown",async(e)=>{ if(e.key==="Enter"){ e.preventDefault(); await buscarEnderecoPorCep(); } });
+  el("cli-cep").addEventListener("blur",async(e)=>{
+    if(e.relatedTarget && (e.relatedTarget.id==="btn-localizar" || e.relatedTarget.id==="btn-salvar-cliente")) return;
+    if(state.clienteLocalizado && !state.editandoCliente) return;
+    const raw=(el("cli-cep").value||"").replace(/\D/g,"");
+    if(raw.length!==8) return;
+    if(raw===ultimoCepBuscado) return;
+    ultimoCepBuscado=raw;
+    await buscarEnderecoPorCep();
+  });
   ["cli-nome","cli-end","cli-nrocasa","cli-complemento","cli-bairro","cli-cidade","cli-uf"].forEach((id)=>{
     const node=el(id);
     if(!node) return;
