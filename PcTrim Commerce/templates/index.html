@@ -404,7 +404,7 @@
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
 <script src="{{ url_for('static', filename='ui-feedback.js') }}?v=1"></script>
-<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=29"></script>
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=30"></script>
 {% include 'partials/print_context.html' %}
 <script src="{{ url_for('static', filename='print-format.js') }}?v=2"></script>
 <script src="{{ url_for('static', filename='print-header.js') }}?v=3"></script>
@@ -3235,6 +3235,10 @@
       if(atualizados <= 0 && ja < total){
         return fail("Não foi possível marcar os itens como distribuídos. Verifique login/sessão e tente novamente.");
       }
+      idsUniq.forEach((id)=>{
+        const k=String(id);
+        if(state.preparoMetaById[k]) state.preparoMetaById[k].imp_preparo="S";
+      });
       if(!fromSalvar) await loadItens(state.emRecuperacao?"recuperacao":"normal");
       updateDistribuirPreparoUiCasa();
       if(!silent){ if(window.uiFeedback) window.uiFeedback.success("Distribuição enviada para preparo."); else alert("Distribuição enviada para preparo."); }
@@ -3538,31 +3542,27 @@
       }
     }
     let preparoRes=null;
-    try{
-      preparoRes = await distribuirPreparoCasa({auto:true,fromSalvar:true});
-    }catch(e){
-      preparoRes = {ok:false,message:String(e && e.message ? e.message : e)};
-    }
-    const afterPreparo=!!(preparoRes&&preparoRes.ok===true&&!preparoRes.skipped);
     const imp=await _imprimirComRetry(body,{
-      maxTry:afterPreparo?3:2,
-      retryDelayMs:afterPreparo?1200:800,
-      delayBeforeMs:afterPreparo?1200:0,
+      maxTry:2,
+      retryDelayMs:800,
+      delayBeforeMs:0,
       timeoutMsg:"Tempo esgotado ao imprimir comanda. Verifique o Print Bridge."
     });
     const d=imp.data||{};
     const impressoNoPc = !!(imp.ok || d.bridge_ok === true);
     if(!impressoNoPc){
       const lista=Array.isArray(d.impressoras_disponiveis)&&d.impressoras_disponiveis.length?`\nDisponíveis: ${d.impressoras_disponiveis.join(" | ")}`:"";
-      const errBase="Falha na impressão da comanda: "+(d.erro||d.mensagem||imp.erro||("HTTP "+(imp.status||"?")))+lista;
-      const msgComanda=afterPreparo
-        ? errBase+"\n\nPreparo enviado. Comanda não imprimiu — clique Salvar e imprimir de novo (preparo não duplica) ou use F7 Recuperar."
-        : errBase;
-      if(window.uiFeedback){
-        if(afterPreparo) window.uiFeedback.warn(msgComanda);
-        else window.uiFeedback.error(msgComanda);
-      }else alert(msgComanda);
+      const errBase="Comanda não imprimiu. Preparo não foi enviado.";
+      const errDetalhe=(d.erro||d.mensagem||imp.erro||("HTTP "+(imp.status||"?")))+lista;
+      const msgComanda=errBase+(errDetalhe?"\n\n"+errDetalhe:"");
+      if(window.uiFeedback) window.uiFeedback.error(msgComanda);
+      else alert(msgComanda);
       return;
+    }
+    try{
+      preparoRes = await distribuirPreparoCasa({auto:true,fromSalvar:true});
+    }catch(e){
+      preparoRes = {ok:false,message:String(e && e.message ? e.message : e)};
     }
     const confirmWarn = (!imp.ok && d.bridge_ok)
       ? (d.erro||d.mensagem||"cupom impresso, mas falhou confirmar no servidor.")
@@ -3576,13 +3576,13 @@
       if(preparoOk) msgOk="Comanda e preparo enviados.";
       if(confirmWarn){
         const base=String(confirmWarn);
-        if(preparoFail) window.uiFeedback.warn(base+" Preparo NÃO foi para a cozinha: "+String(preparoRes.message||""));
+        if(preparoFail) window.uiFeedback.warn(base+" Preparo NÃO foi para a cozinha: "+String(preparoRes.message||"")+". Clique Distribuir preparo.");
         else if(preparoOk) window.uiFeedback.warn(base+" Preparo enviado.");
         else window.uiFeedback.warn(base);
         return;
       }
       if(preparoFail){
-        window.uiFeedback.warn("Comanda impressa. Preparo NÃO foi para a cozinha: "+String(preparoRes.message||""));
+        window.uiFeedback.warn("Comanda impressa. Preparo NÃO foi para a cozinha: "+String(preparoRes.message||"")+". Clique Distribuir preparo.");
         return;
       }
       if(recebido===true) window.uiFeedback.success(msgOk);

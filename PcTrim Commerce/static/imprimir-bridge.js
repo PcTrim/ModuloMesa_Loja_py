@@ -779,7 +779,28 @@
   window.lojaGetBridgeHealthOrPair = getBridgeHealthOrPair;
   window.lojaEnsurePrintAgent = ensureAgent;
   window.lojaWarmUpPrintAgent = warmUpAgent;
-  window.lojaImprimir = async function (body) {
+
+  var _printQueue = Promise.resolve();
+  var _printQueueHasJob = false;
+  var PRINT_GAP_MS = 2000;
+
+  function enqueuePrint(task) {
+    var run = _printQueue.catch(function () {});
+    if (_printQueueHasJob) {
+      run = run.then(function () {
+        return new Promise(function (r) {
+          setTimeout(r, PRINT_GAP_MS);
+        });
+      });
+    } else {
+      _printQueueHasJob = true;
+    }
+    run = run.then(task);
+    _printQueue = run.catch(function () {});
+    return run;
+  }
+
+  async function lojaImprimirImpl(body) {
     body = body || {};
     var origem = String(body.origem || "").trim().toLowerCase();
     if (origem === "preparo") {
@@ -899,5 +920,11 @@
         "Inicie o Print Bridge neste PC e tente de novo. (O servidor não imprime direto.)";
     }
     return { ok: false, status: srv.status || br.status, data: Object.assign({}, srv.data, { erro: err }) };
+  }
+
+  window.lojaImprimir = function (body) {
+    return enqueuePrint(function () {
+      return lojaImprimirImpl(body);
+    });
   };
 })();
