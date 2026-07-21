@@ -3063,11 +3063,34 @@
       })
     ]).finally(()=>{ if(timer) clearTimeout(timer); });
   }
+  async function _imprimirPreparoCasaBody(printBody, fromSalvar){
+    const doPrint=()=>{
+      const printP=window.lojaImprimir
+        ? window.lojaImprimir(printBody)
+        : fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(printBody)}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j})));
+      return _withTimeout(printP,25000,"Tempo esgotado ao imprimir preparo. Verifique o Print Bridge e tente Distribuir preparo de novo.");
+    };
+    const maxTry=fromSalvar?2:1;
+    let lastErr="impressão";
+    for(let attempt=0; attempt<maxTry; attempt++){
+      if(attempt>0) await new Promise((r)=>setTimeout(r,800));
+      try{
+        const imp=await doPrint();
+        if(imp&&imp.ok) return {ok:true,imp};
+        const d=(imp&&imp.data)||{};
+        lastErr=String(d.erro||d.mensagem||(imp&&imp.erro)||"impressão");
+      }catch(ePrint){
+        lastErr=String(ePrint&&ePrint.message?ePrint.message:ePrint);
+      }
+    }
+    return {ok:false,message:"Falha ao imprimir preparo: "+lastErr};
+  }
   async function distribuirPreparoCasa(opts){
     opts = opts || {};
     const auto = !!opts.auto;
-    const silent = (opts.silent!==undefined && opts.silent!==null) ? !!opts.silent : auto;
-    const btn=el("btn-distribuir-preparo");
+    const fromSalvar = !!opts.fromSalvar;
+    const silent = (opts.silent!==undefined && opts.silent!==null) ? !!opts.silent : (auto && !fromSalvar);
+    const btn=(!auto && !fromSalvar) ? el("btn-distribuir-preparo") : null;
     const prevLabel=btn?btn.textContent:"";
     const fail=(msg)=>{
       if(!silent){
@@ -3171,19 +3194,8 @@
         const titulo=`PEDIDO #${Number(state.pedidoId)||0}`;
         const conteudo=_montarTextoPreparoCasa(titulo, grupos[p.key]||[], _feedFromImpRow(row), _formatoFromImpRow(row));
         const printBody={conteudo,copias:1,origem:"preparo",impressora_id:Number(row.id)||0,skip_confirm:true};
-        const printP=window.lojaImprimir
-          ? window.lojaImprimir(printBody)
-          : fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(printBody)}).then(r=>r.json().then(j=>({ok:r.ok&&j.sucesso!==false,data:j})));
-        let imp;
-        try{
-          imp=await _withTimeout(printP,25000,"Tempo esgotado ao imprimir preparo. Verifique o Print Bridge e tente Distribuir preparo de novo.");
-        }catch(ePrint){
-          return fail(String(ePrint&&ePrint.message?ePrint.message:ePrint));
-        }
-        if(!imp||!imp.ok){
-          const d=(imp&&imp.data)||{};
-          return fail("Falha ao imprimir preparo: "+(d.erro||d.mensagem||(imp&&imp.erro)||"impressão"));
-        }
+        const printRes=await _imprimirPreparoCasaBody(printBody, fromSalvar);
+        if(!printRes.ok) return fail(printRes.message||"Falha ao imprimir preparo.");
       }
       const idsUniq=Array.from(new Set(idsToMark)).map((x)=>Number(x)).filter((n)=>Number.isFinite(n)&&n>0);
       const r=await fetch("/api/preparo/marcar",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({ids:idsUniq})});
@@ -3204,7 +3216,7 @@
       if(atualizados <= 0 && ja < total){
         return fail("Não foi possível marcar os itens como distribuídos. Verifique login/sessão e tente novamente.");
       }
-      await loadItens(state.emRecuperacao?"recuperacao":"normal");
+      if(!fromSalvar) await loadItens(state.emRecuperacao?"recuperacao":"normal");
       updateDistribuirPreparoUiCasa();
       if(!silent){ if(window.uiFeedback) window.uiFeedback.success("Distribuição enviada para preparo."); else alert("Distribuição enviada para preparo."); }
       return {ok:true,total,atualizados,ja,impresso_em:Number(plans.length)||0};
@@ -3506,28 +3518,47 @@
         if(bn){ body.nome=bn; body.cliente=bn; }
       }
     }
+    let preparoRes=null;
+    try{
+      preparoRes = await distribuirPreparoCasa({auto:true,fromSalvar:true});
+    }catch(e){
+      preparoRes = {ok:false,message:String(e && e.message ? e.message : e)};
+    }
     const imp=await (window.lojaImprimir?window.lojaImprimir(body):fetch(lojaUrl("/imprimir"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json().then(d=>({ok:r.ok&&d.sucesso!==false,data:d}))));
     const d=imp.data||{};
     const impressoNoPc = !!(imp.ok || d.bridge_ok === true);
     if(!impressoNoPc){
       const lista=Array.isArray(d.impressoras_disponiveis)&&d.impressoras_disponiveis.length?`\nDisponíveis: ${d.impressoras_disponiveis.join(" | ")}`:"";
-      if(window.uiFeedback) window.uiFeedback.error("Falha na impressão: "+(d.erro||d.mensagem||("HTTP "+(imp.status||"?")))+lista);
-      else alert("Falha na impressão: "+(d.erro||d.mensagem||("HTTP "+(imp.status||"?")))+lista);
+      const extraPreparo=(preparoRes&&preparoRes.ok===true&&!preparoRes.skipped)?"\n\nPreparo já foi enviado para a cozinha.":"";
+      if(window.uiFeedback) window.uiFeedback.error("Falha na impressão da comanda: "+(d.erro||d.mensagem||("HTTP "+(imp.status||"?")))+lista+extraPreparo);
+      else alert("Falha na impressão da comanda: "+(d.erro||d.mensagem||("HTTP "+(imp.status||"?")))+lista+extraPreparo);
       return;
     }
     const confirmWarn = (!imp.ok && d.bridge_ok)
-      ? `\n\nAtenção: ${d.erro||d.mensagem||"cupom impresso, mas falhou confirmar no servidor."}`
+      ? (d.erro||d.mensagem||"cupom impresso, mas falhou confirmar no servidor.")
       : "";
     const printerUsed = d.printer_windows || d.printer || impressoraCasaLabel;
-    let preparoRes=null;
-    try{
-      preparoRes = await distribuirPreparoCasa({auto:true});
-    }catch(e){
-      preparoRes = {ok:false,message:String(e && e.message ? e.message : e)};
+    const preparoOk = !!(preparoRes && preparoRes.ok===true && !preparoRes.skipped);
+    const preparoFail = !!(preparoRes && preparoRes.ok===false);
+    function feedbackSalvarImprimir(recebidoOpt){
+      const recebido = recebidoOpt;
+      let msgOk="Comanda impressa.";
+      if(preparoOk) msgOk="Comanda e preparo enviados.";
+      if(confirmWarn){
+        const base=String(confirmWarn);
+        if(preparoFail) window.uiFeedback.warn(base+" Preparo NÃO foi para a cozinha: "+String(preparoRes.message||""));
+        else if(preparoOk) window.uiFeedback.warn(base+" Preparo enviado.");
+        else window.uiFeedback.warn(base);
+        return;
+      }
+      if(preparoFail){
+        window.uiFeedback.warn("Comanda impressa. Preparo NÃO foi para a cozinha: "+String(preparoRes.message||""));
+        return;
+      }
+      if(recebido===true) window.uiFeedback.success(msgOk);
+      else if(recebido===false) window.uiFeedback.success(preparoOk ? "Comanda e preparo enviados. Baixa pendente." : "Comanda impressa. Baixa pendente.");
+      else window.uiFeedback.success(msgOk);
     }
-    const preparoMsg = (preparoRes && preparoRes.ok===false)
-      ? `\n\nAtenção: preparo NÃƒO foi distribuído.\n${String(preparoRes.message||"")}`
-      : ((preparoRes && preparoRes.ok===true && !preparoRes.skipped) ? `\n\nPreparo distribuído.` : "");
     function reforcarUiAposVenda(){
       try{
         closeModals();
@@ -3547,20 +3578,12 @@
       await resetPedidoRapido(false);
       reforcarUiAposVenda();
       const recebido = await openBaixaBalcaoModal(pedidoNro, printerUsed, totalSnap);
-      if(window.uiFeedback){
-        if(confirmWarn) window.uiFeedback.warn(String(d.erro||d.mensagem||"Cupom impresso, mas falhou confirmar no servidor.")+preparoMsg);
-        else if(preparoRes && preparoRes.ok===false) window.uiFeedback.warn((recebido ? "Impresso." : "Impresso. Baixa pendente.")+preparoMsg);
-        else window.uiFeedback.success(recebido ? "Impresso." : "Impresso. Baixa pendente.");
-      }
+      if(window.uiFeedback) feedbackSalvarImprimir(recebido);
       return;
     }
     await avancarParaProximoPedido();
     try{
-      if(window.uiFeedback){
-        if(confirmWarn) window.uiFeedback.warn(String(d.erro||d.mensagem||"Cupom impresso, mas falhou confirmar no servidor.")+preparoMsg);
-        else if(preparoRes && preparoRes.ok===false) window.uiFeedback.warn("Impresso."+preparoMsg);
-        else window.uiFeedback.success("Impresso.");
-      }
+      if(window.uiFeedback) feedbackSalvarImprimir(null);
     }finally{
       await resetPedidoRapido(false);
       reforcarUiAposVenda();
