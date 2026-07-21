@@ -16,6 +16,13 @@ CADA PC COM IMPRESSORA = bridge neste PC (nao no Hostinger)
 
 5) Navegador neste PC: http://127.0.0.1:9123/health  -> "ok": true
 
+5b) CHROME — permitir pop-ups para o site da loja:
+   Homologacao: http://85.31.231.84:2001
+   Producao: https://pedidofacil.online
+   (icone ao lado da barra de endereço -> Pop-ups -> Permitir)
+
+5c) CHROME — se aparecer "Acesso a dispositivos na rede local" (PNA), clique Permitir.
+
 6) Site Homologacao: http://85.31.231.84:2001/LojaOnline/  Ctrl+F5
    (producao: https://pedidofacil.online/LojaOnline/)
    Configuracoes - Impressoras - mapear terminal deste PC
@@ -48,6 +55,8 @@ troque para "simples".
 === CHECKLIST GO-LIVE POR ESTACAO ===
 
 [ ] Bridge ativo (/health ok)
+[ ] Chrome: pop-ups permitidos para o dominio da loja
+[ ] Chrome: acesso rede local (PNA) permitido se solicitado
 [ ] Terminal_id correto (hostname-usuario)
 [ ] Todas as logicas com caminho_local
 [ ] Teste comanda/conta OK

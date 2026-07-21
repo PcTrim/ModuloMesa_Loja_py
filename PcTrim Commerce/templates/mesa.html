@@ -202,6 +202,9 @@
     {% include 'partials/topbar_meta.html' %}
     <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro"><i data-lucide="sun" class="icon-light" width="18" height="18"></i><i data-lucide="moon" class="icon-dark" width="18" height="18"></i></button>
   </header>
+  <div id="banner-print-agent" class="status-line" style="display:none; margin:0 8px 0; padding:10px 12px; border-radius:8px; background:rgba(255,180,0,0.15); border:1px solid rgba(255,180,0,0.35); flex-shrink:0;">
+    <span id="banner-print-agent-text">Impressão: clique em qualquer botão do PDV para liberar o agente local (permita popup se o Chrome pedir).</span>
+  </div>
   <main class="shell">
     <aside class="left"><p class="title">Mesas</p><div id="mesas-grid" class="mesas"></div></aside>
     <section class="center">
@@ -262,7 +265,7 @@
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
 <script src="{{ url_for('static', filename='ui-feedback.js') }}?v=1"></script>
-<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=31"></script>
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=32"></script>
 {% include 'partials/print_context.html' %}
 <script src="{{ url_for('static', filename='print-format.js') }}?v=2"></script>
 <script src="{{ url_for('static', filename='print-header.js') }}?v=3"></script>
@@ -1082,6 +1085,7 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     ]).finally(()=>{ if(timer) clearTimeout(timer); });
   }
   async function distribuirPreparoMesa(){
+    if(window.lojaPreOpenPrintAgentSync) window.lojaPreOpenPrintAgentSync();
     const btn=el("btn-distribuir-preparo-mesa");
     const prevLabel=btn?btn.textContent:"";
     if(!state.mesa){ alert("Selecione uma mesa."); return; }
@@ -1484,6 +1488,7 @@ window.__PDV_BOOT=(function(){ try{ var el=document.getElementById("pdv-boot"); 
     return `\n${out.join("\n")}\n`;
   }
   async function imprimir(){
+    if(window.lojaPreOpenPrintAgentSync) window.lojaPreOpenPrintAgentSync();
     if(!state.mesa){ alert("Selecione uma mesa."); return; }
     await ensurePrintMetaMesa();
     const conteudo=textoImpressao();

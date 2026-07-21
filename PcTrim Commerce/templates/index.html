@@ -266,6 +266,10 @@
     <button type="button" class="theme-top-btn" id="theme-toggle" aria-label="Alternar tema claro ou escuro"><i data-lucide="sun" class="icon-light" width="18" height="18"></i><i data-lucide="moon" class="icon-dark" width="18" height="18"></i></button>
   </header>
 
+  <div id="banner-print-agent" class="status-line" style="display:none; margin:0 8px 0; padding:10px 12px; border-radius:8px; background:rgba(255,180,0,0.15); border:1px solid rgba(255,180,0,0.35); flex-shrink:0;">
+    <span id="banner-print-agent-text">Impressão: clique em qualquer botão do PDV para liberar o agente local (permita popup se o Chrome pedir).</span>
+  </div>
+
   <div id="banner-terminal-imp" class="status-line" style="display:none; margin:0 8px 0; padding:10px 12px; border-radius:8px; background:rgba(255,180,0,0.15); border:1px solid rgba(255,180,0,0.35); flex-shrink:0;">
     <span id="banner-terminal-imp-text">Este terminal ainda não está configurado para impressão.</span>
     <a href="{{ url_prefix }}/configuracoes-dados" style="margin-left:8px;">Configurar agora</a>
@@ -404,7 +408,7 @@
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
 <script src="{{ url_for('static', filename='ui-feedback.js') }}?v=1"></script>
-<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=31"></script>
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=32"></script>
 {% include 'partials/print_context.html' %}
 <script src="{{ url_for('static', filename='print-format.js') }}?v=2"></script>
 <script src="{{ url_for('static', filename='print-header.js') }}?v=3"></script>
@@ -3105,6 +3109,7 @@
     return {ok:false,message:"Falha ao imprimir preparo: "+err};
   }
   async function distribuirPreparoCasa(opts){
+    if(window.lojaPreOpenPrintAgentSync) window.lojaPreOpenPrintAgentSync();
     opts = opts || {};
     const auto = !!opts.auto;
     const fromSalvar = !!opts.fromSalvar;
@@ -3510,6 +3515,7 @@
     }
   }
   async function salvarEImprimir(){
+    if(window.lojaPreOpenPrintAgentSync) window.lojaPreOpenPrintAgentSync();
     const btn=el("btn-salvar-imprimir");
     const btnTxt=el("btn-salvar-txt");
     const prev=btn?btn.textContent:"";

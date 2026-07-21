@@ -26,21 +26,12 @@
   }
 
   function closeAgentPopupSoon() {
-    setTimeout(function () {
-      try {
-        if (agentPopup) {
-          try {
-            agentPopup.opener = null;
-          } catch (_o) {}
-          if (!agentPopup.closed) agentPopup.close();
-        }
-      } catch (e) {
-        console.warn("[PRINT DEBUG] Falha ao fechar Agent", e);
-      }
-      agentPopup = null;
-      agentReady = false;
-    }, 1500);
+    // Mantém o Agent aberto entre jobs (comanda + preparo na mesma sessão).
+    // A página /agent pede para deixar a janela aberta em segundo plano.
   }
+
+  var POPUP_BLOCKED_MSG =
+    "Popup de impressão bloqueado. No Chrome: ícone à direita da barra de endereço → Pop-ups → Permitir. Clique Salvar e imprimir de novo.";
 
   function restorePdvLayout() {
     try {
@@ -99,11 +90,35 @@
   }
 
   function markAgentActive() {
-    // no-op: não mostrar «Impressão local ativa»
+    hidePrintAgentBanner();
   }
 
   function agentIsAlive() {
-    return false;
+    return !!(agentReady && agentPopup && !agentPopup.closed);
+  }
+
+  function showPrintAgentBanner(message) {
+    var banner = document.getElementById("banner-print-agent");
+    var txt = document.getElementById("banner-print-agent-text");
+    if (!banner || !txt) return;
+    txt.textContent = String(
+      message ||
+        "Impressão: clique em qualquer botão do PDV para liberar o agente local (permita popup se o Chrome pedir)."
+    );
+    banner.style.display = "block";
+  }
+
+  function hidePrintAgentBanner() {
+    var banner = document.getElementById("banner-print-agent");
+    if (banner) banner.style.display = "none";
+  }
+
+  function initPrintAgentBanner() {
+    if (agentIsAlive()) {
+      hidePrintAgentBanner();
+      return;
+    }
+    showPrintAgentBanner();
   }
 
   function bridgeBase() {
@@ -247,6 +262,33 @@
     return await pairBridge();
   }
 
+  /** Abre o Agent de forma síncrona (durante gesto do usuário) — evita bloqueio de popup. */
+  function preOpenAgentSync() {
+    if (agentIsAlive()) return true;
+    try {
+      var url = bridgeBase() + "/agent";
+      var feats = agentWindowFeatures();
+      if (!agentPopup || agentPopup.closed) {
+        agentReady = false;
+        agentPopup = window.open(url, "print_agent", feats);
+      }
+      focusBackToPdv();
+      if (!agentPopup) {
+        lastBridgeError = POPUP_BLOCKED_MSG;
+        try {
+          console.warn("[PRINT DEBUG] Popup bloqueado no preOpenAgentSync");
+        } catch (_e) {}
+        showPrintAgentBanner(POPUP_BLOCKED_MSG);
+        return false;
+      }
+      return true;
+    } catch (_eOpen) {
+      lastBridgeError = POPUP_BLOCKED_MSG;
+      showPrintAgentBanner(POPUP_BLOCKED_MSG);
+      return false;
+    }
+  }
+
   function ensureAgent(timeoutMs) {
     timeoutMs = timeoutMs || 20000;
     if (agentIsAlive()) {
@@ -311,10 +353,7 @@
         return;
       }
       if (!agentPopup) {
-        finish(
-          false,
-          "Popup bloqueado. Permita popups para este site (Print Bridge Agent) e tente imprimir de novo."
-        );
+        finish(false, POPUP_BLOCKED_MSG);
         return;
       }
       timer = setTimeout(function () {
@@ -346,12 +385,12 @@
     var once = function () {
       document.removeEventListener("pointerdown", once, true);
       document.removeEventListener("keydown", once, true);
+      preOpenAgentSync();
       warmUpAgent().catch(function () {});
     };
     document.addEventListener("pointerdown", once, true);
     document.addEventListener("keydown", once, true);
   }
-  // Warm-up automático desligado: Agent não abre sozinho no PDV.
 
   function printViaAgent(payload, timeoutMs) {
     timeoutMs = timeoutMs || 60000;
@@ -636,7 +675,7 @@
             status: 0,
             data: {},
             printer: null,
-            erro: "Falha ao imprimir. Verifique o Print Bridge ou o Agent.",
+            erro: lastBridgeError || POPUP_BLOCKED_MSG,
           };
         }
         if (cachedTerminalId && !payload.terminal_id) {
@@ -779,6 +818,8 @@
   window.lojaGetBridgeHealthOrPair = getBridgeHealthOrPair;
   window.lojaEnsurePrintAgent = ensureAgent;
   window.lojaWarmUpPrintAgent = warmUpAgent;
+  window.lojaPreOpenPrintAgentSync = preOpenAgentSync;
+  window.lojaAgentIsAlive = agentIsAlive;
 
   var _printQueue = Promise.resolve();
   var _printQueueHasJob = false;
@@ -936,4 +977,11 @@
       return lojaImprimirImpl(body);
     });
   };
+
+  bindWarmUpOnGesture();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initPrintAgentBanner);
+  } else {
+    initPrintAgentBanner();
+  }
 })();

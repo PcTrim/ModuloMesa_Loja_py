@@ -52,6 +52,29 @@ class PrintQueueContractTests(unittest.TestCase):
             "comanda (_imprimirComRetry) deve vir antes de distribuirPreparoCasa",
         )
 
+    def test_preopen_agent_sync_exportado(self):
+        src = BRIDGE.read_text(encoding="utf-8")
+        self.assertIn("function preOpenAgentSync", src)
+        self.assertIn("window.lojaPreOpenPrintAgentSync = preOpenAgentSync", src)
+        self.assertIn("POPUP_BLOCKED_MSG", src)
+        self.assertIn("bindWarmUpOnGesture();", src)
+
+    def test_salvar_e_imprimir_preopen_antes_await(self):
+        src = INDEX.read_text(encoding="utf-8")
+        start = src.find("async function salvarEImprimir")
+        self.assertGreater(start, -1)
+        end = src.find("function isTypingContext", start)
+        body = src[start:end]
+        idx_preopen = body.find("lojaPreOpenPrintAgentSync")
+        idx_await = body.find("await ")
+        self.assertGreater(idx_preopen, -1, "salvarEImprimir deve chamar lojaPreOpenPrintAgentSync")
+        self.assertGreater(idx_await, -1, "salvarEImprimir deve ter await")
+        self.assertLess(
+            idx_preopen,
+            idx_await,
+            "preOpenAgentSync deve vir antes do primeiro await em salvarEImprimir",
+        )
+
     def test_preparo_meta_atualizada_apos_marcar(self):
         src = INDEX.read_text(encoding="utf-8")
         self.assertIn(
