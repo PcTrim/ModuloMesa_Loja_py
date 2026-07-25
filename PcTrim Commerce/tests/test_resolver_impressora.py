@@ -18,8 +18,15 @@ class ResolverSetorImpressoraTests(unittest.TestCase):
     def test_vazio_quando_ambos_null(self):
         self.assertIsNone(_resolver_setor_impressora(None, None))
 
-    def test_produto_zero_e_valido(self):
-        self.assertEqual(_resolver_setor_impressora(0, 5), "0")
+    def test_produto_zero_herda_classificacao_positiva(self):
+        self.assertEqual(_resolver_setor_impressora(0, 5), "5")
+
+    def test_produto_zero_estacao_valida_sem_classe_positiva(self):
+        self.assertEqual(_resolver_setor_impressora(0, 0), "0")
+        self.assertEqual(_resolver_setor_impressora(0, None), "0")
+
+    def test_produto_null_herda_classificacao_zero(self):
+        self.assertEqual(_resolver_setor_impressora(None, 0), "0")
 
 
 class ResolverImpressoraDbTests(unittest.TestCase):

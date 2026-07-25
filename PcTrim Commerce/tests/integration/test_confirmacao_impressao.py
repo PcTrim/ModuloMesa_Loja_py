@@ -30,7 +30,7 @@ class _Conn:
         self.committed = False
         self.rolled_back = False
 
-    def cursor(self):
+    def cursor(self, *args, **kwargs):
         return self.cursor_obj
 
     def commit(self):

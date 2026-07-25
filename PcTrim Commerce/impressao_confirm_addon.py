@@ -1,7 +1,7 @@
 """Confirma impressão feita no Print Bridge (PC local) — registrado em wsgi.py."""
 from flask import jsonify, request, session
 
-from database import conectar
+from app import _confirmar_pedido_casa_pos_impressao
 from decorators import login_required
 
 
@@ -19,33 +19,9 @@ def register_impressao_confirm(flask_app):
         printer = str(dados.get("printer", "") or "").strip() or "bridge-local"
 
         if origem == "casa" and nropedido > 0 and not origem_fc:
-            conn_status = None
-            cur_status = None
-            try:
-                conn_status = conectar()
-                cur_status = conn_status.cursor()
-                id_cliente = session.get("id_cliente")
-                cur_status.execute(
-                    """
-                    UPDATE pedido_diarios
-                    SET status_pedido = 'ABERTO'
-                    WHERE nropedido = %s
-                      AND id_cliente = %s
-                      AND origem IN ('DELIVERY','BALCAO')
-                      AND UPPER(COALESCE(status_pedido, '')) = 'AGUARDE'
-                    """,
-                    (nropedido, id_cliente),
-                )
-                conn_status.commit()
-            except Exception as e:
-                if conn_status:
-                    conn_status.rollback()
-                return jsonify({"sucesso": False, "erro": str(e)}), 500
-            finally:
-                if cur_status:
-                    cur_status.close()
-                if conn_status:
-                    conn_status.close()
+            err_resp = _confirmar_pedido_casa_pos_impressao(session.get("id_cliente"), nropedido, dados)
+            if err_resp is not None:
+                return err_resp
 
         return jsonify({
             "sucesso": True,

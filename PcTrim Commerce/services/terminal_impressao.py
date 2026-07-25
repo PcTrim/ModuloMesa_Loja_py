@@ -97,6 +97,64 @@ def _impressoras_ids_validas(cur, id_cliente, impressora_ids):
     return all(i in found for i in ids)
 
 
+def _flag_sim(v):
+    return str(v or "").upper().strip() in ("S", "SIM", "1", "Y", "YES", "T", "TRUE")
+
+
+def _impressoras_obrigatorias(cur, id_cliente, incluir_setores=False):
+    """Impressoras obrigatórias no save do terminal.
+
+    Por padrão exige só comanda/mesa (desbloqueia PDV). Setores (imprenro>0) são opcionais
+    no save — caminho é gravado se informado; preparo falha depois se setor faltar.
+    """
+    cur.execute("SHOW COLUMNS FROM impressoras LIKE 'id_cliente'")
+    has_id_cli = cur.fetchone() is not None
+    where_cli = ""
+    params = ()
+    if has_id_cli:
+        where_cli = " WHERE (id_cliente = %s OR id_cliente IS NULL)"
+        params = (int(id_cliente),)
+    cur.execute(
+        f"""
+        SELECT id, TRIM(COALESCE(nomedaimpressora, '')) AS nome,
+               UPPER(COALESCE(comanda_delivery, '')) AS comanda_delivery,
+               UPPER(COALESCE(conta_mesa, '')) AS conta_mesa,
+               COALESCE(imprenro, 0) AS imprenro
+        FROM impressoras{where_cli}
+        ORDER BY COALESCE(imprenro, 0) DESC, nomedaimpressora
+        """,
+        params,
+    )
+    out = []
+    for row in cur.fetchall() or []:
+        try:
+            iid = int(row[0] or 0)
+        except (TypeError, ValueError):
+            continue
+        if iid <= 0:
+            continue
+        if isinstance(row, dict):
+            comanda = _flag_sim(row.get("comanda_delivery"))
+            mesa = _flag_sim(row.get("conta_mesa"))
+            try:
+                imprenro = int(row.get("imprenro") or 0)
+            except (TypeError, ValueError):
+                imprenro = 0
+            nome = row.get("nome")
+        else:
+            comanda = _flag_sim(row[2])
+            mesa = _flag_sim(row[3])
+            try:
+                imprenro = int(row[4] or 0)
+            except (TypeError, ValueError):
+                imprenro = 0
+            nome = row[1]
+        if not (comanda or mesa or (incluir_setores and imprenro > 0)):
+            continue
+        out.append((iid, str(nome or "").strip() or ("#" + str(iid))))
+    return out
+
+
 def _list_logical_printers(cur, id_cliente):
     """Lista (id, nome) das impressoras lógicas da loja."""
     cur.execute("SHOW COLUMNS FROM impressoras LIKE 'id_cliente'")
@@ -127,7 +185,7 @@ def _list_logical_printers(cur, id_cliente):
 
 
 def save_terminal_config(id_cliente, terminal_id, itens):
-    """Salva caminhos do terminal; exige caminho_local para TODAS as impressoras lógicas."""
+    """Salva caminhos do terminal; exige caminho_local nas impressoras obrigatórias (comanda/setores)."""
     tid = normalize_terminal_id(terminal_id)
     if not tid:
         return False, "terminal_id inválido."
@@ -151,26 +209,33 @@ def save_terminal_config(id_cliente, terminal_id, itens):
     try:
         conn = conectar()
         cur = conn.cursor()
-        logical = _list_logical_printers(cur, id_cliente)
-        if not logical:
-            return False, "Cadastre ao menos uma impressora lógica antes de mapear o terminal."
+        obrigatorias = _impressoras_obrigatorias(cur, id_cliente, incluir_setores=False)
+        if not obrigatorias:
+            return False, "Cadastre ao menos uma impressora de comanda (comanda_delivery=S) antes de mapear o terminal."
 
         faltando = []
-        for iid, nome in logical:
+        for iid, nome in obrigatorias:
             cam = merged.get(iid, "")
             if not cam:
                 faltando.append(nome)
         if faltando:
             return False, (
-                "Informe o caminho Windows para todas as impressoras neste terminal. Faltando: "
+                "Informe o caminho Windows da impressora de comanda neste terminal. Faltando: "
                 + ", ".join(faltando)
             )
 
-        if not _impressoras_ids_validas(cur, id_cliente, [iid for iid, _n in logical]):
+        ids_salvar = {iid for iid, _n in obrigatorias}
+        for iid, caminho in merged.items():
+            if iid not in ids_salvar and caminho:
+                ids_salvar.add(iid)
+
+        if not _impressoras_ids_validas(cur, id_cliente, list(ids_salvar)):
             return False, "Impressora inválida para esta loja."
 
-        for iid, _nome in logical:
-            caminho = merged[iid]
+        for iid in sorted(ids_salvar):
+            caminho = merged.get(iid, "")
+            if not caminho:
+                continue
             cur.execute(
                 """
                 INSERT INTO terminal_impressora

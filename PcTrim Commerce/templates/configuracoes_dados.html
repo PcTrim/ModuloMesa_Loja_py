@@ -245,7 +245,7 @@
     </div>
     </div>
 
-    <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=14"></script>
+    <script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=33"></script>
     <script>
         const IS_RETAIL = {{ 'true' if is_retail else 'false' }};
         let sistemaCampos = [];
@@ -388,11 +388,16 @@
             if (hint) hint.style.display = 'none';
             try {
                 let fromBridge = [];
+                let health = null;
                 if (typeof window.lojaGetBridgeHealth === 'function') {
-                    const health = await window.lojaGetBridgeHealth(true);
-                    if (health && Array.isArray(health.impressoras_windows)) {
-                        fromBridge = health.impressoras_windows.map(n => String(n || '').trim()).filter(Boolean);
-                    }
+                    health = await window.lojaGetBridgeHealth(true);
+                }
+                if (!health && typeof window.lojaGetBridgeHealthOrPair === 'function') {
+                    health = await window.lojaGetBridgeHealthOrPair(false);
+                }
+                if (health && Array.isArray(health.impressoras_windows)) {
+                    fromBridge = health.impressoras_windows.map(n => String(n || '').trim()).filter(Boolean);
+                    if (health.terminal_id) persistTerminalId(health.terminal_id);
                 }
                 if (fromBridge.length) {
                     printersDisponiveis = fromBridge;
@@ -504,6 +509,60 @@
 
         let terminalImpRows = [];
         let terminalImpId = '';
+        const LOJA_TERMINAL_ID_KEY = 'loja_terminal_id';
+
+        function normalizeTerminalIdLocal(tid) {
+            return String(tid || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 120);
+        }
+
+        function readStoredTerminalId() {
+            try {
+                const raw = sessionStorage.getItem(LOJA_TERMINAL_ID_KEY) || localStorage.getItem(LOJA_TERMINAL_ID_KEY);
+                return normalizeTerminalIdLocal(raw);
+            } catch (_e) {
+                return '';
+            }
+        }
+
+        function persistTerminalId(tid) {
+            const n = normalizeTerminalIdLocal(tid);
+            if (!n) return;
+            try {
+                localStorage.setItem(LOJA_TERMINAL_ID_KEY, n);
+                sessionStorage.setItem(LOJA_TERMINAL_ID_KEY, n);
+            } catch (_e) {}
+            if (typeof window.lojaPersistTerminalId === 'function') window.lojaPersistTerminalId(n);
+        }
+
+        function applyBridgePrintersList(health) {
+            if (!health || !Array.isArray(health.impressoras_windows) || !health.impressoras_windows.length) return;
+            printersDisponiveis = health.impressoras_windows.map(n => String(n || '').trim()).filter(Boolean);
+            const dl = document.getElementById('printersDatalist');
+            if (dl) {
+                dl.innerHTML = printersDisponiveis.map(n => `<option value="${String(n).replace(/"/g, '&quot;')}"></option>`).join('');
+            }
+        }
+
+        async function resolveBridgeHealth(forceRefresh) {
+            if (typeof window.lojaGetBridgeHealthOrPair === 'function') {
+                return await window.lojaGetBridgeHealthOrPair(!!forceRefresh);
+            }
+            if (typeof window.lojaGetBridgeHealth === 'function') {
+                return await window.lojaGetBridgeHealth(!!forceRefresh);
+            }
+            return null;
+        }
+
+        async function carregarTerminalImpressorasApi(tid) {
+            const data = await fetchJsonSafe('/api/terminal-impressoras?terminal_id=' + encodeURIComponent(tid));
+            if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao carregar terminal.');
+            terminalImpId = tid;
+            terminalImpRows = Array.isArray(data.impressoras) ? data.impressoras : [];
+            const idEl = document.getElementById('termImpId');
+            if (idEl) idEl.textContent = 'Terminal: ' + tid;
+            renderTerminalImpressorasTabela();
+            return data;
+        }
 
         function renderTerminalImpressorasTabela() {
             const tbody = document.getElementById('tbodyTerminalImpressoras');
@@ -579,15 +638,52 @@
             const tbody = document.getElementById('tbodyTerminalImpressoras');
             if (!tbody || !statusEl || !idEl) return;
             try {
-                let tid = null;
+                let tid = readStoredTerminalId();
                 let health = null;
-                if (typeof window.lojaGetBridgeHealth === 'function') {
-                    health = await window.lojaGetBridgeHealth(false);
-                    if (!health) health = await window.lojaGetBridgeHealth(true);
-                    tid = health && health.terminal_id ? String(health.terminal_id).trim() : null;
-                } else if (typeof window.lojaGetBridgeTerminalId === 'function') {
-                    tid = await window.lojaGetBridgeTerminalId(true);
+                let apiData = null;
+                let bridgeOnline = false;
+
+                health = await resolveBridgeHealth(false);
+                if (health && health.terminal_id) {
+                    tid = normalizeTerminalIdLocal(health.terminal_id);
+                    persistTerminalId(tid);
+                    bridgeOnline = true;
+                    applyBridgePrintersList(health);
                 }
+
+                if (tid) {
+                    try {
+                        apiData = await carregarTerminalImpressorasApi(tid);
+                    } catch (apiErr) {
+                        console.error(apiErr);
+                        if (!bridgeOnline) throw apiErr;
+                    }
+                }
+
+                if (!bridgeOnline) {
+                    health = await resolveBridgeHealth(true);
+                    if (health && health.terminal_id) {
+                        tid = normalizeTerminalIdLocal(health.terminal_id);
+                        persistTerminalId(tid);
+                        bridgeOnline = true;
+                        applyBridgePrintersList(health);
+                        if (!apiData) {
+                            apiData = await carregarTerminalImpressorasApi(tid);
+                        }
+                    }
+                }
+
+                if (apiData) {
+                    if (bridgeOnline) {
+                        statusEl.textContent = apiData.configurado
+                            ? 'Terminal configurado. Mantenha TODOS os caminhos preenchidos (comanda + setores).'
+                            : 'Preencha o caminho Windows de TODAS as impressoras e salve.';
+                    } else {
+                        statusEl.textContent = 'Caminhos carregados do servidor. Detecte o Print Bridge para testar impressão ou atualizar a lista Windows.';
+                    }
+                    return;
+                }
+
                 if (!tid) {
                     const detail = (typeof window.lojaGetLastBridgeError === 'function' && window.lojaGetLastBridgeError())
                         || 'Abra iniciar-print-bridge.bat e clique em Detectar Print Bridge.';
@@ -597,22 +693,9 @@
                     tbody.innerHTML = '<tr><td colspan="4" class="empty">Clique em Detectar Print Bridge (permite o popup).</td></tr>';
                     return;
                 }
-                terminalImpId = tid;
-                idEl.textContent = 'Terminal: ' + tid;
-                if (health && Array.isArray(health.impressoras_windows) && health.impressoras_windows.length) {
-                    printersDisponiveis = health.impressoras_windows.map(n => String(n || '').trim()).filter(Boolean);
-                    const dl = document.getElementById('printersDatalist');
-                    if (dl) {
-                        dl.innerHTML = printersDisponiveis.map(n => `<option value="${String(n).replace(/"/g, '&quot;')}"></option>`).join('');
-                    }
-                }
-                const data = await fetchJsonSafe('/api/terminal-impressoras?terminal_id=' + encodeURIComponent(tid));
-                if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao carregar terminal.');
-                terminalImpRows = Array.isArray(data.impressoras) ? data.impressoras : [];
-                statusEl.textContent = data.configurado
-                    ? 'Terminal configurado. Mantenha TODOS os caminhos preenchidos (comanda + setores).'
-                    : 'Preencha o caminho Windows de TODAS as impressoras e salve.';
-                renderTerminalImpressorasTabela();
+
+                statusEl.textContent = 'Terminal identificado, mas não foi possível carregar impressoras lógicas.';
+                tbody.innerHTML = '<tr><td colspan="4" class="empty">Erro ao carregar impressoras lógicas.</td></tr>';
             } catch (e) {
                 console.error(e);
                 statusEl.textContent = e.message || 'Erro ao carregar configuração do terminal.';
@@ -620,11 +703,23 @@
             }
         }
 
+        function terminalImpObrigatoria(row) {
+            if (!row) return false;
+            const cd = String(row.comanda_delivery || '').toUpperCase();
+            const cm = String(row.conta_mesa || '').toUpperCase();
+            const sim = ['S', 'SIM', '1', 'Y', 'YES', 'T', 'TRUE'];
+            return sim.includes(cd) || sim.includes(cm);
+        }
+
         async function salvarTerminalImpressao() {
             const btn = document.getElementById('btnSalvarTerminalImp');
             if (!btn) return;
             if (!terminalImpId) {
-                showMsg('Print Bridge não detectado neste PC.', 'erro');
+                const stored = readStoredTerminalId();
+                if (stored) terminalImpId = stored;
+            }
+            if (!terminalImpId) {
+                showMsg('Detecte o Print Bridge ou informe o terminal antes de salvar.', 'erro');
                 return;
             }
             btn.disabled = true;
@@ -638,11 +733,11 @@
                     const cam = String(inp.value || '').trim();
                     const row = (terminalImpRows || []).find(x => Number(x.impressora_id) === iid);
                     const nome = row ? String(row.nomedaimpressora || ('#' + iid)) : ('#' + iid);
-                    if (!cam) faltandoUi.push(nome);
+                    if (!cam && terminalImpObrigatoria(row)) faltandoUi.push(nome);
                     itens.push({ impressora_id: iid, caminho_local: cam });
                 });
                 if (faltandoUi.length) {
-                    throw new Error('Informe o caminho Windows para todas as impressoras. Faltando: ' + faltandoUi.join(', '));
+                    throw new Error('Informe o caminho Windows da impressora de comanda. Faltando: ' + faltandoUi.join(', '));
                 }
                 const data = await fetchJsonSafe('/api/terminal-impressoras', {
                     method: 'POST',
@@ -650,6 +745,7 @@
                     body: JSON.stringify({ terminal_id: terminalImpId, itens })
                 });
                 if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao salvar.');
+                persistTerminalId(terminalImpId);
                 showMsg(data?.mensagem || 'Configuração do terminal salva.', 'sucesso');
                 await carregarTerminalImpressao();
             } catch (e) {
@@ -974,12 +1070,15 @@
                     btnDetectTerm.disabled = true;
                     const statusEl = document.getElementById('termImpStatus');
                     try {
+                        if (typeof window.lojaPreOpenPrintAgentSync === 'function') {
+                            window.lojaPreOpenPrintAgentSync();
+                        }
                         if (statusEl) statusEl.textContent = 'Abrindo Print Bridge local (popup)…';
                         let health = null;
-                        if (typeof window.lojaPairBridge === 'function') {
-                            health = await window.lojaPairBridge();
-                        } else if (typeof window.lojaGetBridgeHealthOrPair === 'function') {
+                        if (typeof window.lojaGetBridgeHealthOrPair === 'function') {
                             health = await window.lojaGetBridgeHealthOrPair(true);
+                        } else if (typeof window.lojaPairBridge === 'function') {
+                            health = await window.lojaPairBridge();
                         }
                         if (!health || !health.terminal_id) {
                             const detail = (typeof window.lojaGetLastBridgeError === 'function' && window.lojaGetLastBridgeError())
@@ -988,6 +1087,7 @@
                             showMsg(detail, 'erro');
                             return;
                         }
+                        persistTerminalId(health.terminal_id);
                         await carregarTerminalImpressao();
                         showMsg('Terminal detectado: ' + health.terminal_id, 'sucesso');
                     } finally {

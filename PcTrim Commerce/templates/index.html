@@ -408,7 +408,7 @@
 
 <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4"></script>
 <script src="{{ url_for('static', filename='ui-feedback.js') }}?v=1"></script>
-<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=32"></script>
+<script src="{{ url_for('static', filename='imprimir-bridge.js') }}?v=33"></script>
 {% include 'partials/print_context.html' %}
 <script src="{{ url_for('static', filename='print-format.js') }}?v=2"></script>
 <script src="{{ url_for('static', filename='print-header.js') }}?v=3"></script>
@@ -891,7 +891,7 @@
   function escapeHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;"); }
   const CLASSE_FALLBACK="Pizza";
   const NOME_FALLBACK="-";
-  const TOKENS_ESPECIAIS=new Set(["AJUSTE_TECNICO","CAMPANHA"]);
+  const TOKENS_ESPECIAIS=new Set(["AJUSTE_TECNICO","CAMPANHA","TXENTREGA"]);
   function _classeExibicao(classe){
     const raw=String(classe||"").trim();
     if(!raw) return CLASSE_FALLBACK;
@@ -2973,7 +2973,7 @@
           const id=String(p.id||"").trim();
           if(!id) return;
           const meta=state.preparoMetaById[id];
-          if(meta && ["AJUSTE_TECNICO","CAMPANHA"].includes(String(meta.codigoproduto||"").toUpperCase())) return;
+          if(meta && _ehTokenEspecial(meta.codigoproduto)) return;
           if(meta && !_flagSimImp(meta.imp_preparo)) ids.push(id);
         });
         return;
@@ -2981,7 +2981,7 @@
       const id=String(it.id||"").trim();
       if(!id) return;
       const meta=state.preparoMetaById[id];
-      if(meta && ["AJUSTE_TECNICO","CAMPANHA"].includes(String(meta.codigoproduto||"").toUpperCase())) return;
+      if(meta && _ehTokenEspecial(meta.codigoproduto)) return;
       if(meta && !_flagSimImp(meta.imp_preparo)) ids.push(id);
     });
     return Array.from(new Set(ids));
@@ -3167,7 +3167,7 @@
           partes.forEach((p)=>{
             const meta=metaById[p.id]||{};
             const cod=String(meta.codigoproduto||"").toUpperCase();
-            if(cod==="AJUSTE_TECNICO"||cod==="CAMPANHA") return;
+            if(_ehTokenEspecial(cod)) return;
             const ns=_parseImprenros(meta.impressoras);
             if(!ns.length){
               missingSetor.push({nome:`(grupo) ${p.nome}`, codigoproduto:String(meta.codigoproduto||"")});
@@ -3188,7 +3188,7 @@
         const id=String(it.id||"");
         if(!id || !pendSet.has(id)) return;
         const meta=metaById[id]||{};
-        if(["AJUSTE_TECNICO","CAMPANHA"].includes(String(meta.codigoproduto||"").toUpperCase())) return;
+        if(_ehTokenEspecial(meta.codigoproduto)) return;
         const nros=_parseImprenros(meta.impressoras);
         if(!nros.length){
           missingSetor.push({nome:String(it.nome||"-"), codigoproduto:String(meta.codigoproduto||"")});
@@ -3551,7 +3551,8 @@
     const formaToUse = state.modo==="delivery" ? String(state.formaPagamento||"").trim() : (String(state.formaPagamento||"").trim() || "PENDENTE");
     const ok=await salvarPedidoTxtInterno(false, formaToUse);
     if(!ok) return;
-    const body={conteudo:ok.conteudo,copias:1,origem:"casa",forma_pagamento:formaToUse,nropedido:Number(state.pedidoId)};
+    const body={conteudo:ok.conteudo,copias:1,origem:"casa",forma_pagamento:formaToUse,nropedido:Number(state.pedidoId),
+      taxa_entrega: state.modo==="delivery" ? (state.taxaEntregaZeradaCampanha ? 0 : numOrZero(state.taxaEntrega)) : 0};
     if(state.modo==="balcao"){
       const balcaoPayload=clienteCasaPayload();
       if(balcaoPayload.telefone && String(balcaoPayload.telefone).toUpperCase()!=="BALCAO"){
@@ -3573,7 +3574,7 @@
       const errDetalhe=(d.erro||d.mensagem||imp.erro||("HTTP "+(imp.status||"?")))+lista;
       try{ console.warn("[PDV] Comanda falhou:", errDetalhe); }catch(_e){}
       const msgComanda="Comanda não imprimiu. Preparo não foi enviado.";
-      if(window.uiFeedback) window.uiFeedback.error(msgComanda);
+      if(window.uiFeedback) window.uiFeedback.error(msgComanda+(errDetalhe?" "+errDetalhe:""));
       else alert(msgComanda+"\n\n"+errDetalhe);
       return;
     }

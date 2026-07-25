@@ -143,6 +143,7 @@
       if (d && d.ok === true && d.terminal_id) {
         cachedTerminalId = String(d.terminal_id).trim();
         cachedHealth = d;
+        persistTerminalIdToStorage(cachedTerminalId);
         return d;
       }
       cachedTerminalId = null;
@@ -179,6 +180,19 @@
     return !!(await getBridgeTerminalId(false));
   }
 
+  function persistTerminalIdToStorage(tid) {
+    var n = String(tid || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]/g, "")
+      .slice(0, 120);
+    if (!n) return;
+    try {
+      localStorage.setItem("loja_terminal_id", n);
+      sessionStorage.setItem("loja_terminal_id", n);
+    } catch (_eStore) {}
+  }
+
   function applyPairedHealth(d) {
     if (!d || !d.terminal_id) return null;
     var health = {
@@ -191,6 +205,7 @@
     cachedTerminalId = health.terminal_id;
     cachedHealth = health;
     lastBridgeError = null;
+    persistTerminalIdToStorage(health.terminal_id);
     return health;
   }
 
@@ -820,6 +835,7 @@
   window.lojaWarmUpPrintAgent = warmUpAgent;
   window.lojaPreOpenPrintAgentSync = preOpenAgentSync;
   window.lojaAgentIsAlive = agentIsAlive;
+  window.lojaPersistTerminalId = persistTerminalIdToStorage;
 
   var _printQueue = Promise.resolve();
   var _printQueueHasJob = false;

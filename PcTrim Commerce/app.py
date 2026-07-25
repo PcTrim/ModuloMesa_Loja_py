@@ -776,6 +776,239 @@ def _assert_casa_editavel(cur, id_cliente, nropedido, origem=None):
     return None
 
 
+TXENTREGA_COD = "TXENTREGA"
+
+
+def _parse_taxa_entrega_payload(dados):
+    if not isinstance(dados, dict):
+        return None
+    if "taxa_entrega" not in dados and "taxaEntrega" not in dados:
+        return None
+    raw = dados.get("taxa_entrega")
+    if raw is None:
+        raw = dados.get("taxaEntrega")
+    try:
+        return max(0.0, round(float(str(raw or 0).replace(",", ".")), 2))
+    except Exception:
+        return 0.0
+
+
+def _resolver_cod_usuario_logado(cur, id_cliente):
+    id_usuario_sessao = session.get("id_usuario")
+    if id_usuario_sessao is not None:
+        try:
+            return int(id_usuario_sessao)
+        except Exception:
+            pass
+    usuario_logado = str(session.get("usuario_logado") or "").strip()
+    if not usuario_logado:
+        return None
+    cur.execute(
+        """
+        SELECT chave
+        FROM usuarios
+        WHERE usuario = %s AND id_cliente = %s
+        LIMIT 1
+        """,
+        (usuario_logado, int(id_cliente)),
+    )
+    row_usr = cur.fetchone() or {}
+    if isinstance(row_usr, dict):
+        ch = row_usr.get("chave")
+    else:
+        ch = row_usr[0] if row_usr else None
+    try:
+        return int(ch) if ch is not None else None
+    except Exception:
+        return None
+
+
+def _resolver_taxa_entrega_cliente(cur, id_cliente, telefone):
+    tel = "".join(ch for ch in str(telefone or "") if ch.isdigit())
+    if len(tel) < 8:
+        return 0.0
+    suffix = tel[-11:] if len(tel) >= 11 else tel
+    try:
+        cur.execute(
+            """
+            SELECT COALESCE(taxaentrega, 0) AS taxa
+            FROM clientes
+            WHERE id_cliente = %s
+              AND REPLACE(REPLACE(REPLACE(REPLACE(telefone,' ',''),'-',''),'(',''),')','') LIKE %s
+            ORDER BY chave DESC
+            LIMIT 1
+            """,
+            (int(id_cliente), f"%{suffix}"),
+        )
+        row = cur.fetchone() or {}
+        if isinstance(row, dict):
+            val = row.get("taxa")
+        else:
+            val = row[0] if row else 0
+        return max(0.0, round(float(val or 0), 2))
+    except Exception:
+        return 0.0
+
+
+def _resolver_taxa_entrega_confirmacao(cur, id_cliente, nropedido, dados):
+    parsed = _parse_taxa_entrega_payload(dados)
+    if parsed is not None:
+        return parsed
+    cur.execute(
+        """
+        SELECT telefone
+        FROM pedido_diarios
+        WHERE nropedido = %s AND id_cliente = %s AND origem = 'DELIVERY'
+          AND UPPER(COALESCE(status_pedido, '')) <> 'ITEM_REMOVIDO'
+        ORDER BY chave DESC
+        LIMIT 1
+        """,
+        (int(nropedido), int(id_cliente)),
+    )
+    row = cur.fetchone() or {}
+    telefone = row.get("telefone") if isinstance(row, dict) else (row[0] if row else "")
+    return _resolver_taxa_entrega_cliente(cur, id_cliente, telefone)
+
+
+def _sync_taxa_entrega_linha(cur, id_cliente, nropedido, taxa_valor):
+    id_cliente = int(id_cliente)
+    nropedido = int(nropedido)
+    try:
+        taxa_valor = max(0.0, round(float(taxa_valor or 0), 2))
+    except Exception:
+        taxa_valor = 0.0
+
+    cur.execute(
+        """
+        SELECT telefone, cep, nome, endereco, nrocasa, complemento, cliente, formapagamento,
+               entregador, origem, UPPER(COALESCE(status_pedido,'')) AS status_pedido
+        FROM pedido_diarios
+        WHERE nropedido = %s AND id_cliente = %s AND origem = 'DELIVERY'
+          AND UPPER(COALESCE(status_pedido, '')) <> 'ITEM_REMOVIDO'
+        ORDER BY chave DESC
+        LIMIT 1
+        """,
+        (nropedido, id_cliente),
+    )
+    base = cur.fetchone()
+    if not base:
+        return False
+
+    origem_pd = "DELIVERY"
+    cur.execute(
+        """
+        DELETE FROM pedido_diarios
+        WHERE nropedido = %s AND id_cliente = %s AND origem = %s
+          AND UPPER(TRIM(COALESCE(codigoproduto, ''))) = %s
+        """,
+        (nropedido, id_cliente, origem_pd, TXENTREGA_COD),
+    )
+    if taxa_valor <= 0:
+        return True
+
+    cod_usuario = _resolver_cod_usuario_logado(cur, id_cliente)
+    status_insert = "ABERTO"
+    cur.execute(
+        """
+        SELECT COALESCE(MAX(lancamento), 0) AS max_lancamento
+        FROM pedido_diarios
+        WHERE id_cliente = %s AND nropedido = %s AND origem = %s
+        """,
+        (id_cliente, nropedido, origem_pd),
+    )
+    row_max = cur.fetchone() or {}
+    lancamento = int((row_max.get("max_lancamento") if isinstance(row_max, dict) else row_max[0]) or 0) + 1
+    if lancamento > 2147483647:
+        lancamento = 1
+
+    _insert_pedido_diarios_from_casa(
+        cur,
+        origem=origem_pd,
+        nropedido=nropedido,
+        id_cliente=id_cliente,
+        telefone=str(base.get("telefone") or ""),
+        cep=str(base.get("cep") or ""),
+        nome=str(base.get("nome") or ""),
+        endereco=str(base.get("endereco") or ""),
+        nrocasa=str(base.get("nrocasa") or ""),
+        complemento=str(base.get("complemento") or ""),
+        codigoproduto=TXENTREGA_COD,
+        produto="TAXA ENTREGA",
+        preco=taxa_valor,
+        quantidade=1,
+        classe=TXENTREGA_COD,
+        obs_item="",
+        dados_item="",
+        obs_geral="",
+        cliente=str(base.get("cliente") or base.get("nome") or ""),
+        cod_classe=None,
+        cod_usuario=cod_usuario,
+        status_pedido=status_insert,
+        status_comanda="NORMAL",
+        lancamento=lancamento,
+        nrolancamento=None,
+        formapagamento=str(base.get("formapagamento") or ""),
+        entregador=str(base.get("entregador") or ""),
+    )
+    return True
+
+
+def _confirmar_pedido_casa_pos_impressao(id_cliente, nropedido, dados):
+    """Grava linha TXENTREGA (delivery) e AGUARDE→ABERTO. Retorna resposta Flask em erro."""
+    if not id_cliente or nropedido <= 0:
+        return None
+    conn_status = None
+    cur_status = None
+    try:
+        conn_status = conectar()
+        cur_status = conn_status.cursor(dictionary=True)
+        blocked = _assert_casa_editavel(cur_status, id_cliente, nropedido)
+        if blocked:
+            return blocked
+        cur_status.execute(
+            "SELECT UPPER(COALESCE(MAX(origem), '')) AS origem FROM pedido_diarios WHERE nropedido = %s AND id_cliente = %s",
+            (nropedido, id_cliente),
+        )
+        row_orig = cur_status.fetchone() or {}
+        origem_ped = str(row_orig.get("origem") or "").upper()
+        tel_payload = (dados or {}).get("telefone")
+        if origem_ped == "BALCAO" and tel_payload is not None:
+            _propagar_telefone_balcao_pedido(
+                cur_status,
+                id_cliente,
+                nropedido,
+                tel_payload,
+                nome=((dados or {}).get("nome") or (dados or {}).get("cliente") or "").strip(),
+                cliente=((dados or {}).get("cliente") or (dados or {}).get("nome") or "").strip(),
+            )
+        if origem_ped == "DELIVERY":
+            taxa_val = _resolver_taxa_entrega_confirmacao(cur_status, id_cliente, nropedido, dados or {})
+            _sync_taxa_entrega_linha(cur_status, id_cliente, nropedido, taxa_val)
+        cur_status.execute(
+            f"""
+            UPDATE pedido_diarios
+            SET status_pedido = 'ABERTO'
+            WHERE nropedido = %s
+              AND id_cliente = %s
+              AND origem IN ('DELIVERY','BALCAO')
+              AND UPPER(COALESCE(status_pedido, '')) = 'AGUARDE'
+              AND NOT ({_sql_comanda_cancelada('pedido_diarios')})
+            """,
+            (nropedido, id_cliente),
+        )
+        conn_status.commit()
+        return None
+    except Exception as e:
+        if conn_status:
+            conn_status.rollback()
+        return jsonify({"sucesso": False, "erro": str(e)}), 500
+    finally:
+        if cur_status:
+            cur_status.close()
+        if conn_status:
+            conn_status.close()
+
+
 def _ensure_contadorpedido_row(id_cliente):
     """Garante linha do contador (commit imediato, fora da transação do pedido)."""
     conn = None
@@ -1230,9 +1463,28 @@ def _produto_setor_col_names(cur):
     return setor_col, col_set, match_cols
 
 
+def _imp_prod_para_resolver(imp_prod, imp_classe):
+    """NULL/vazio = herdar; imprenro 0 legado herda classificação se setor da classe > 0."""
+    if imp_prod is None:
+        return None
+    s = str(imp_prod).strip()
+    if not s:
+        return None
+    if s.isdigit() and int(s) == 0:
+        try:
+            if imp_classe is not None and str(imp_classe).strip() != "":
+                cs = str(imp_classe).strip()
+                if cs.isdigit() and int(cs) > 0:
+                    return None
+        except (TypeError, ValueError):
+            pass
+    return imp_prod
+
+
 def _resolver_setor_impressora(imp_prod, imp_classe):
-    if imp_prod is not None and str(imp_prod).strip() != "":
-        return str(int(imp_prod)) if str(imp_prod).strip().isdigit() else str(imp_prod).strip()
+    imp_eff = _imp_prod_para_resolver(imp_prod, imp_classe)
+    if imp_eff is not None and str(imp_eff).strip() != "":
+        return str(int(imp_eff)) if str(imp_eff).strip().isdigit() else str(imp_eff).strip()
     if imp_classe is not None and str(imp_classe).strip() != "":
         return str(int(imp_classe)) if str(imp_classe).strip().isdigit() else str(imp_classe).strip()
     return None
@@ -1284,17 +1536,6 @@ def _preencher_impressoras_produto(cur, id_cliente, rows, src_cod_field="codigop
         return
     def _code_variants(v):
         return _code_variants_produto(v)
-    precisa = False
-    for r in rows:
-        try:
-            v = (r.get(dest_field) if isinstance(r, dict) else None) or ""
-        except Exception:
-            v = ""
-        if not str(v).strip():
-            precisa = True
-            break
-    if not precisa:
-        return
     codes = []
     for r in rows:
         try:
@@ -1352,9 +1593,6 @@ def _preencher_impressoras_produto(cur, id_cliente, rows, src_cod_field="codigop
         return
     for r in rows:
         if not isinstance(r, dict):
-            continue
-        cur_setor = str(r.get(dest_field) or "").strip()
-        if cur_setor:
             continue
         key_raw = r.get(src_cod_field)
         for key in _code_variants(key_raw):
@@ -2488,7 +2726,7 @@ def api_casa_listar_itens(nropedido):
                 status_clause = " AND UPPER(COALESCE(d.status_pedido, '')) = %s "
                 params.append(status_final)
 
-        imp_sel = f"COALESCE(p.{prod_imp_col},'') AS impressoras_produto" if prod_imp_col else "'' AS impressoras_produto"
+        imp_sel = f"p.{prod_imp_col} AS impressoras_produto" if prod_imp_col else "NULL AS impressoras_produto"
         join_on = ""
         if prod_imp_col:
             if prod_cod_col:
@@ -3937,53 +4175,9 @@ def api_casa_confirmar_impressao():
         nropedido = 0
     printer = str(dados.get("printer", "") or "").strip() or "bridge-local"
     if origem == "casa" and nropedido > 0 and not origem_fc:
-        conn_status = None
-        cur_status = None
-        try:
-            conn_status = conectar()
-            cur_status = conn_status.cursor()
-            id_cliente = session.get("id_cliente")
-            blocked = _assert_casa_editavel(cur_status, id_cliente, nropedido)
-            if blocked:
-                return blocked
-            cur_status.execute(
-                "SELECT UPPER(COALESCE(MAX(origem), '')) AS origem FROM pedido_diarios WHERE nropedido = %s AND id_cliente = %s",
-                (nropedido, id_cliente),
-            )
-            row_orig = cur_status.fetchone() or {}
-            origem_ped = str(row_orig[0] if isinstance(row_orig, (tuple, list)) else row_orig.get("origem") or "").upper()
-            tel_payload = dados.get("telefone")
-            if origem_ped == "BALCAO" and tel_payload is not None:
-                _propagar_telefone_balcao_pedido(
-                    cur_status,
-                    id_cliente,
-                    nropedido,
-                    tel_payload,
-                    nome=(dados.get("nome") or dados.get("cliente") or "").strip(),
-                    cliente=(dados.get("cliente") or dados.get("nome") or "").strip(),
-                )
-            cur_status.execute(
-                f"""
-                UPDATE pedido_diarios
-                SET status_pedido = 'ABERTO'
-                WHERE nropedido = %s
-                  AND id_cliente = %s
-                  AND origem IN ('DELIVERY','BALCAO')
-                  AND UPPER(COALESCE(status_pedido, '')) = 'AGUARDE'
-                  AND NOT ({_sql_comanda_cancelada('pedido_diarios')})
-                """,
-                (nropedido, id_cliente),
-            )
-            conn_status.commit()
-        except Exception as e:
-            if conn_status:
-                conn_status.rollback()
-            return jsonify({"sucesso": False, "erro": str(e)}), 500
-        finally:
-            if cur_status:
-                cur_status.close()
-            if conn_status:
-                conn_status.close()
+        err_resp = _confirmar_pedido_casa_pos_impressao(session.get("id_cliente"), nropedido, dados)
+        if err_resp is not None:
+            return err_resp
     return jsonify({
         "sucesso": True,
         "printer": printer,
@@ -7229,34 +7423,9 @@ def imprimir():
     else:
         # Fluxo /casa: após impressão bem-sucedida, muda status_pedido AGUARDE -> ABERTO.
         if origem == "casa" and nropedido > 0 and not origem_fc:
-            conn_status = None
-            cur_status = None
-            try:
-                conn_status = conectar()
-                cur_status = conn_status.cursor()
-                id_cliente = session.get("id_cliente")
-                cur_status.execute(
-                    """
-                    UPDATE pedido_diarios
-                    SET status_pedido = 'ABERTO'
-                    WHERE nropedido = %s
-                      AND id_cliente = %s
-                      AND origem IN ('DELIVERY','BALCAO')
-                      AND UPPER(COALESCE(status_pedido, '')) = 'AGUARDE'
-                    """,
-                    (nropedido, id_cliente),
-                )
-                conn_status.commit()
-            except Exception as e:
-                if conn_status:
-                    conn_status.rollback()
-                print(f"[IMPRESSAO STATUS_PEDIDO ERRO] {e}", flush=True)
-                traceback.print_exc()
-            finally:
-                if cur_status:
-                    cur_status.close()
-                if conn_status:
-                    conn_status.close()
+            err_resp = _confirmar_pedido_casa_pos_impressao(session.get("id_cliente"), nropedido, dados)
+            if err_resp is not None:
+                return err_resp
 
         # Se for requisição AJAX/fetch, retorna JSON normalmente
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
@@ -7387,7 +7556,8 @@ def api_terminal_impressoras_get():
                 f"""
                 SELECT id, nomedaimpressora,
                        UPPER(COALESCE(conta_mesa,'')) AS conta_mesa,
-                       UPPER(COALESCE(comanda_delivery,'')) AS comanda_delivery
+                       UPPER(COALESCE(comanda_delivery,'')) AS comanda_delivery,
+                       COALESCE(imprenro, 0) AS imprenro
                 FROM impressoras{where_cli}
                 ORDER BY COALESCE(imprenro,0) DESC, nomedaimpressora
                 """,
@@ -7406,6 +7576,7 @@ def api_terminal_impressoras_get():
                 "nomedaimpressora": str(r.get("nomedaimpressora") or "").strip(),
                 "conta_mesa": str(r.get("conta_mesa") or "").strip(),
                 "comanda_delivery": str(r.get("comanda_delivery") or "").strip(),
+                "imprenro": int(r.get("imprenro") or 0),
                 "caminho_local": cfg_map.get(iid, ""),
             })
         return jsonify({
@@ -9675,7 +9846,7 @@ def buscar_mesa(mesanro):
         except Exception as e:
             print("[MESA] Falha ao garantir coluna pessoas_mesa:", e, flush=True)
         params_pd = [mesanro, id_cliente]
-        imp_sel = f"COALESCE(p.{prod_imp_col},'') AS impressoras_produto" if prod_imp_col else "'' AS impressoras_produto"
+        imp_sel = f"p.{prod_imp_col} AS impressoras_produto" if prod_imp_col else "NULL AS impressoras_produto"
         join_on = ""
         if prod_imp_col:
             if prod_cod_col:
