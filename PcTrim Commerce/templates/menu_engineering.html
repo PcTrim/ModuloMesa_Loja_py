@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custos &amp; Margens | {{ nome_fantasia or 'Loja' }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='menu-engineering/menu-engineering.css') }}?v=5">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4" defer></script>
+</head>
+<body class="me-body">
+  <div id="root">
+    <div class="me-loading"><div class="me-spinner"></div><p>Carregando Custos &amp; Margens...</p></div>
+  </div>
+  <script>
+    window.ME_API_BASE = {{ url_prefix|tojson }};
+    window.ME_HOME = {{ url_for('index')|tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='vendor/react.production.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='vendor/prop-types.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='vendor/react-dom.production.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='vendor/Recharts.js') }}"></script>
+  <script src="{{ url_for('static', filename='menu-engineering/menu-engineering.bundle.js') }}?v=5"></script>
+</body>
+</html>

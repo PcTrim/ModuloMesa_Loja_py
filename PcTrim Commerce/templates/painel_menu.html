@@ -263,6 +263,41 @@
     a.tile.primary .ico {
       background: color-mix(in srgb, var(--purple) 22%, transparent);
     }
+    .tile-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .tile-title-row h2 { margin: 0; }
+    .tile-badges {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tile-badge {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 999px;
+      line-height: 1.4;
+    }
+    .tile-badge--new {
+      color: #6ee7b7;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .tile-badge--beta {
+      color: var(--badge-fg);
+      background: color-mix(in srgb, var(--purple) 18%, transparent);
+      border: 1px solid color-mix(in srgb, var(--purple) 40%, var(--line));
+    }
+    a.tile.tile--feature .ico {
+      background: color-mix(in srgb, var(--purple) 20%, transparent);
+    }
     .foot {
       margin-top: 0;
       display: flex;
@@ -855,6 +890,21 @@
             <p class="desc">Veja o saldo dos produtos e registre entrada ou ajuste.</p>
           </div>
         </a>
+        {% if not IS_RETAIL %}
+        <a class="tile tile--feature" href="{{ url_prefix }}/menu-engineering">
+          <span class="ico"><i data-lucide="chef-hat" width="24" height="24"></i></span>
+          <div class="tile-copy">
+            <div class="tile-title-row">
+              <h2>Custos &amp; Margens</h2>
+              <span class="tile-badges" aria-label="Novidade e Beta">
+                <span class="tile-badge tile-badge--new">Novidade</span>
+                <span class="tile-badge tile-badge--beta">Beta</span>
+              </span>
+            </div>
+            <p class="desc">Receitas, custos e rentabilidade do cardápio — importe NF-e e acompanhe margens.</p>
+          </div>
+        </a>
+        {% endif %}
         <a class="tile" href="{{ url_prefix }}/configuracoes">
           <span class="ico"><i data-lucide="settings" width="24" height="24"></i></span>
           <div class="tile-copy">

@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var k='lojaonline_theme',v=localStorage.getItem(k),t=(v==='light'||v==='dark')?v:'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menu Engineering | {{ nome_fantasia or 'Loja' }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app_padrao.css') }}?v=2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='menu-engineering/menu-engineering.css') }}?v=1">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
+  <script src="{{ url_for('static', filename='theme-toggle.js') }}?v=4" defer></script>
+</head>
+<body class="me-body">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+    const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } = Recharts;
+
+    // ==================== DESIGN SYSTEM ====================
+    const COLORS = {
+      purple: '#7c3aed',
+      purpleLight: '#a78bfa',
+      green: '#10b981',
+      red: '#f87171',
+      yellow: '#fbbf24',
+      orange: '#f97316',
+      blue: '#3b82f6',
+      pink: '#ec4899',
+      cyan: '#06b6d4',
+    };
+
+    const THEME = {
+      dark: {
+        bg: '#0f0f14',
+        surface: '#1a1a28',
+        surfaceHover: '#252538',
+        border: '#2a2a40',
+        text: '#e8e8f0',
+        textMuted: '#888fa0',
+        inputBg: '#10101a',
+      },
+      light: {
+        bg: '#f1f5f9',
+        surface: '#ffffff',
+        surfaceHover: '#f8fafc',
+        border: '#c8d0e0',
+        text: '#0f172a',
+        textMuted: '#64748b',
+        inputBg: '#f8fafc',
+      }
+    };
+
+    // ==================== UTILITIES ====================
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(value);
+    };
+
+    const formatPercent = (value) => {
+      return `${(value * 100).toFixed(1)}%`;
+    };
+
+    const getMarginColor = (margin) => {
+      if (margin > 0.4) return COLORS.green;
+      if (margin > 0.2) return COLORS.yellow;
+      return COLORS.red;
+    };
+
+    const getMarginLabel = (margin) => {
+      if (margin > 0.4) return 'Excelente';
+      if (margin > 0.2) return 'Boa';
+      if (margin > 0) return 'Baixa';
+      return 'Negativa';
+    };
+
+    // ==================== COMPONENTS ====================
+    
+    // KPI Card Component
+    const KPICard = ({ title, value, trend, icon, color }) => {
+      const isPositive = trend >= 0;
+      return (
+        <div className="me-kpi-card" style={{ borderColor: color }}>
+          <div className="me-kpi-header">
+            <span className="me-kpi-icon" style={{ color }}>{icon}</span>
+            <span className="me-kpi-title">{title}</span>
+          </div>
+          <div className="me-kpi-value">{value}</div>
+          {trend !== null && (
+            <div className={`me-kpi-trend ${isPositive ? 'positive' : 'negative'}`}>
+              {isPositive ? '↑' : '↓'} {Math.abs(trend).toFixed(1)}%
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // Upload Zone Component
+    const UploadZone = ({ onUpload, uploadedItems }) => {
+      const [isDragging, setIsDragging] = useState(false);
+      const [isUploading, setIsUploading] = useState(false);
+
+      const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      };
+
+      const handleDragLeave = () => {
+        setIsDragging(false);
+      };
+
+      const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          handleFileUpload(files[0]);
+        }
+      };
+
+      const handleFileSelect = (e) => {
+        const files = e.target.files;
+        if (files.length > 0) {
+          handleFileUpload(files[0]);
+        }
+      };
+
+      const handleFileUpload = async (file) => {
+        setIsUploading(true);
+        
+        // Read file content
+        const text = await file.text();
+        
+        try {
+          const response = await fetch('/menu-engineering/import-xml', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ xml: text }),
+          });
+          
+          const data = await response.json();
+          
+          if (data.sucesso) {
+            onUpload(data);
+          } else {
+            alert('Erro ao importar XML: ' + data.erro);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          alert('Erro ao fazer upload do arquivo');
+        } finally {
+          setIsUploading(false);
+        }
+      };
+
+      return (
+        <div className="me-upload-section">
+          <div 
+            className={`me-upload-zone ${isDragging ? 'dragging' : ''} ${isUploading ? 'uploading' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="me-upload-content">
+              <i data-lucide="upload-cloud" className="me-upload-icon"></i>
+              <p className="me-upload-text">Arraste o XML da NF-e ou clique para selecionar</p>
+              <p className="me-upload-subtext">Suporta arquivos .xml</p>
+              <input 
+                type="file" 
+                accept=".xml" 
+                onChange={handleFileSelect}
+                className="me-upload-input"
+                disabled={isUploading}
+              />
+              {!isUploading && (
+                <button className="me-upload-btn">
+                  Selecionar Arquivo
+                </button>
+              )}
+              {isUploading && (
+                <div className="me-upload-progress">
+                  <div className="me-progress-bar"></div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {uploadedItems.length > 0 && (
+            <div className="me-upload-preview">
+              <h4 className="me-preview-title">Itens Importados</h4>
+              {uploadedItems.map((item, index) => (
+                <div key={index} className="me-preview-item">
+                  <span className="me-preview-name">{item.name}</span>
+                  <span className="me-preview-cost">{formatCurrency(item.cost_per_unit)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // Alert Panel Component
+    const AlertPanel = ({ alerts }) => {
+      if (!alerts || alerts.length === 0) return null;
+
+      return (
+        <div className="me-alert-panel">
+          <div className="me-alert-header">
+            <i data-lucide="alert-triangle" className="me-alert-icon"></i>
+            <h3 className="me-alert-title">Alertas de Preço</h3>
+          </div>
+          {alerts.map((alert, index) => (
+            <div key={index} className="me-alert-item">
+              <span className="me-alert-text">{alert.message}</span>
+              <span className={`me-alert-badge ${alert.type}`}>
+                {alert.type === 'increase' ? '↑' : '↓'} {Math.abs(alert.value).toFixed(1)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    // Category Chart Component
+    const CategoryChart = ({ data }) => {
+      const getCategoryColor = (category) => {
+        const colors = {
+          'protein': COLORS.purple,
+          'dairy': COLORS.blue,
+          'bakery': COLORS.orange,
+          'vegetables': COLORS.green,
+          'other': COLORS.cyan,
+        };
+        return colors[category.toLowerCase()] || COLORS.purple;
+      };
+
+      const chartData = data.map(item => ({
+        ...item,
+        fill: getCategoryColor(item.category)
+      }));
+
+      return (
+        <div className="me-chart-section">
+          <h3 className="me-section-title">Variação por Categoria</h3>
+          <div className="me-chart-container">
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={chartData}>
+                <XAxis 
+                  dataKey="category" 
+                  stroke="#888fa0"
+                  style={{ fontSize: '12px' }}
+                />
+                <YAxis 
+                  stroke="#888fa0"
+                  style={{ fontSize: '12px' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: THEME.dark.surface,
+                    border: `1px solid ${THEME.dark.border}`,
+                    borderRadius: '8px',
+                  }}
+                  itemStyle={{ color: THEME.dark.text }}
+                  formatter={(value) => [`${value.toFixed(1)}%`, 'Variação']}
+                />
+                <Bar dataKey="percentage_change" radius={[4, 4, 0, 0]}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      );
+    };
+
+    // Recipe Table Component
+    const RecipeTable = ({ recipes, onSelectRecipe }) => {
+      const [sortField, setSortField] = useState('name');
+      const [sortDirection, setSortDirection] = useState('asc');
+      const [searchTerm, setSearchTerm] = useState('');
+
+      const handleSort = (field) => {
+        if (sortField === field) {
+          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+          setSortField(field);
+          setSortDirection('asc');
+        }
+      };
+
+      const filteredRecipes = recipes
+        .filter(recipe => 
+          recipe.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+          const aValue = a[sortField];
+          const bValue = b[sortField];
+          
+          if (typeof aValue === 'string') {
+            return sortDirection === 'asc' 
+              ? aValue.localeCompare(bValue)
+              : bValue.localeCompare(aValue);
+          }
+          
+          return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        });
+
+      return (
+        <div className="me-recipes-section">
+          <div className="me-section-header">
+            <h3 className="me-section-title">Receitas</h3>
+            <div className="me-search-box">
+              <i data-lucide="search" className="me-search-icon"></i>
+              <input
+                type="text"
+                placeholder="Buscar receitas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="me-search-input"
+              />
+            </div>
+          </div>
+
+          <div className="me-table-container">
+            <table className="me-table">
+              <thead>
+                <tr>
+                  <th onClick={() => handleSort('name')}>
+                    Nome {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th onClick={() => handleSort('cost')}>
+                    Custo {sortField === 'cost' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th onClick={() => handleSort('price')}>
+                    Preço {sortField === 'price' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th onClick={() => handleSort('margin')}>
+                    Margem {sortField === 'margin' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRecipes.map(recipe => (
+                  <tr key={recipe.id} className="me-table-row">
+                    <td className="me-table-name">{recipe.name}</td>
+                    <td className="me-table-cost">{formatCurrency(recipe.cost)}</td>
+                    <td className="me-table-price">{formatCurrency(recipe.price)}</td>
+                    <td className="me-table-margin">
+                      <span 
+                        className="me-margin-badge"
+                        style={{ backgroundColor: getMarginColor(recipe.margin) + '20', color: getMarginColor(recipe.margin) }}
+                      >
+                        {formatPercent(recipe.margin)}
+                      </span>
+                    </td>
+                    <td className="me-table-actions">
+                      <button 
+                        className="me-btn-icon"
+                        onClick={() => onSelectRecipe(recipe)}
+                        title="Ver detalhes"
+                      >
+                        <i data-lucide="eye" size={16}></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    };
+
+    // Recipe Detail Modal Component
+    const RecipeDetailModal = ({ recipe, onClose }) => {
+      if (!recipe) return null;
+
+      return (
+        <div className="me-modal-overlay" onClick={onClose}>
+          <div className="me-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="me-modal-header">
+              <h3 className="me-modal-title">{recipe.name}</h3>
+              <button className="me-modal-close" onClick={onClose}>
+                <i data-lucide="x" size={20}></i>
+              </button>
+            </div>
+            
+            <div className="me-modal-content">
+              <div className="me-modal-summary">
+                <div className="me-summary-item">
+                  <span className="me-summary-label">Custo Total</span>
+                  <span className="me-summary-value">{formatCurrency(recipe.cost)}</span>
+                </div>
+                <div className="me-summary-item">
+                  <span className="me-summary-label">Preço de Venda</span>
+                  <span className="me-summary-value">{formatCurrency(recipe.price)}</span>
+                </div>
+                <div className="me-summary-item">
+                  <span className="me-summary-label">Margem</span>
+                  <span 
+                    className="me-summary-value me-margin-value"
+                    style={{ color: getMarginColor(recipe.margin) }}
+                  >
+                    {formatPercent(recipe.margin)}
+                  </span>
+                </div>
+              </div>
+
+              <h4 className="me-modal-subtitle">Ingredientes</h4>
+              <div className="me-ingredients-list">
+                {recipe.ingredients && recipe.ingredients.map((ing, index) => (
+                  <div key={index} className="me-ingredient-item">
+                    <span className="me-ingredient-name">{ing.name}</span>
+                    <span className="me-ingredient-qty">{ing.qty}</span>
+                    <span className="me-ingredient-cost">{formatCurrency(ing.cost)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="me-modal-footer">
+              <button className="me-btn me-btn-secondary" onClick={onClose}>
+                Fechar
+              </button>
+              <button className="me-btn me-btn-primary">
+                <i data-lucide="printer" size={16} style={{ marginRight: '8px' }}></i>
+                Imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== MAIN COMPONENT ====================
+    const MenuEngineering = () => {
+      const [ingredients, setIngredients] = useState([]);
+      const [recipes, setRecipes] = useState([]);
+      const [variations, setVariations] = useState([]);
+      const [selectedRecipe, setSelectedRecipe] = useState(null);
+      const [uploadedItems, setUploadedItems] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [alerts, setAlerts] = useState([]);
+
+      // Fetch data on mount
+      useEffect(() => {
+        fetchData();
+      }, []);
+
+      const fetchData = async () => {
+        try {
+          setLoading(true);
+          
+          const [ingredientsRes, recipesRes, variationsRes] = await Promise.all([
+            fetch('/menu-engineering/ingredients'),
+            fetch('/menu-engineering/recipes'),
+            fetch('/menu-engineering/category-variation')
+          ]);
+
+          const ingredientsData = await ingredientsRes.json();
+          const recipesData = await recipesRes.json();
+          const variationsData = await variationsRes.json();
+
+          setIngredients(ingredientsData.ingredients || []);
+          setRecipes(recipesData.recipes || []);
+          setVariations(variationsData.variations || []);
+
+          // Generate alerts from variations
+          const newAlerts = (variationsData.variations || [])
+            .filter(v => Math.abs(v.percentage_change) > 5)
+            .map(v => ({
+              message: `${v.category} variou ${v.percentage_change > 0 ? '+' : ''}${v.percentage_change.toFixed(1)}%`,
+              value: v.percentage_change,
+              type: v.percentage_change > 0 ? 'increase' : 'decrease'
+            }));
+          setAlerts(newAlerts);
+
+        } catch (error) {
+          console.error('Error fetching data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      // Calculate KPIs
+      const avgMargin = recipes.length > 0
+        ? recipes.reduce((sum, r) => sum + r.margin, 0) / recipes.length
+        : 0;
+
+      // Initialize Lucide icons
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      });
+
+      if (loading) {
+        return (
+          <div className="me-loading">
+            <div className="me-spinner"></div>
+            <p>Carregando...</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="me-container">
+          {/* Header */}
+          <header className="me-header">
+            <div className="me-header-left">
+              <a href="/" className="me-home-btn">
+                <i data-lucide="home" size={18}></i>
+              </a>
+              <div className="me-brand">
+                <i data-lucide="chef-hat" size={24} style={{ color: COLORS.purple }}></i>
+                <h1>Menu Engineering</h1>
+              </div>
+            </div>
+            <div className="me-header-right">
+              <button className="me-theme-toggle" id="theme-toggle">
+                <i data-lucide="sun" className="icon-light" size={18}></i>
+                <i data-lucide="moon" className="icon-dark" size={18}></i>
+              </button>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="me-main">
+            {/* KPI Cards */}
+            <div className="me-kpi-grid">
+              <KPICard 
+                title="Ingredientes"
+                value={ingredients.length}
+                trend={null}
+                icon={<i data-lucide="package" size={24}></i>}
+                color={COLORS.purple}
+              />
+              <KPICard 
+                title="Receitas"
+                value={recipes.length}
+                trend={null}
+                icon={<i data-lucide="book-open" size={24}></i>}
+                color={COLORS.blue}
+              />
+              <KPICard 
+                title="Margem Média"
+                value={formatPercent(avgMargin)}
+                trend={avgMargin * 100}
+                icon={<i data-lucide="trending-up" size={24}></i>}
+                color={avgMargin > 0.2 ? COLORS.green : COLORS.red}
+              />
+            </div>
+
+            {/* Upload and Alerts */}
+            <div className="me-top-grid">
+              <UploadZone onUpload={(data) => {
+                setUploadedItems(data.imported_items || []);
+                fetchData();
+              }} uploadedItems={uploadedItems} />
+              <AlertPanel alerts={alerts} />
+            </div>
+
+            {/* Charts */}
+            <div className="me-charts-grid">
+              <CategoryChart data={variations} />
+            </div>
+
+            {/* Recipes Table */}
+            <RecipeTable recipes={recipes} onSelectRecipe={setSelectedRecipe} />
+          </main>
+
+          {/* Recipe Detail Modal */}
+          {selectedRecipe && (
+            <RecipeDetailModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />
+          )}
+        </div>
+      );
+    };
+
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<MenuEngineering />);
+  </script>
+</body>
+</html>
