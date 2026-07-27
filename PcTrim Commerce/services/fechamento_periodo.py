@@ -41,7 +41,7 @@ def _colunas_pedido_diarios_sem_chave(cursor) -> List[str]:
 
 def _where_fechamento(id_cliente: int, d0: datetime, d1: datetime) -> Tuple[str, Tuple[Any, ...]]:
     """
-    Linhas elegíveis ao fechamento: ITEM_REMOVIDO (qualquer origem) ou recebidas.
+    Linhas elegíveis ao resumo financeiro: ITEM_REMOVIDO (qualquer origem) ou recebidas.
     Recebido: origem MESA usa status_mesa=RECEBIDO; demais origens usam status_pedido=RECEBIDO.
     """
     sql = f"""
@@ -60,6 +60,86 @@ def _where_fechamento(id_cliente: int, d0: datetime, d1: datetime) -> Tuple[str,
     """
     params = (int(id_cliente), d0, d1)
     return sql.strip(), params
+
+
+def _where_fechamento_arquivamento(id_cliente: int, d0: datetime, d1: datetime) -> Tuple[str, Tuple[Any, ...]]:
+    """
+    Linhas elegíveis ao arquivamento: regras financeiras + comandas canceladas (status_comanda).
+    """
+    sql = f"""
+        id_cliente = %s
+        AND data_criacao >= %s
+        AND data_criacao < %s
+        AND (
+            UPPER(TRIM(COALESCE(status_pedido, ''))) = 'ITEM_REMOVIDO'
+            OR (
+                (UPPER(TRIM(COALESCE(origem, ''))) = 'MESA'
+                 AND UPPER(TRIM(COALESCE(status_mesa, ''))) = 'RECEBIDO')
+                OR (UPPER(TRIM(COALESCE(origem, ''))) <> 'MESA'
+                    AND UPPER(TRIM(COALESCE(status_pedido, ''))) = 'RECEBIDO')
+            )
+            OR UPPER(TRIM(COALESCE(status_comanda, ''))) = 'CANCELADA'
+        )
+    """
+    params = (int(id_cliente), d0, d1)
+    return sql.strip(), params
+
+
+def _sql_grupo_status_arquivamento() -> str:
+    """Bucket de status para preview do arquivamento."""
+    return """
+        CASE
+            WHEN UPPER(TRIM(COALESCE(status_comanda, ''))) = 'CANCELADA' THEN 'CANCELADA'
+            WHEN UPPER(TRIM(COALESCE(status_pedido, ''))) = 'ITEM_REMOVIDO' THEN 'ITEM_REMOVIDO'
+            WHEN UPPER(TRIM(COALESCE(origem, ''))) = 'MESA'
+                 AND UPPER(TRIM(COALESCE(status_mesa, ''))) = 'RECEBIDO' THEN 'RECEBIDO'
+            ELSE UPPER(TRIM(COALESCE(status_pedido, '')))
+        END
+    """
+
+
+def _tentar_reset_contador_pedido(cur, id_cliente: int) -> dict:
+    """
+    Zera contadorpedido.contador se não restar linha DELIVERY/BALCAO em pedido_diarios.
+    Executar dentro da mesma transação do arquivamento (antes do commit).
+    """
+    cur.execute(
+        """
+        SELECT COUNT(*) AS n
+        FROM pedido_diarios
+        WHERE id_cliente = %s
+          AND UPPER(TRIM(COALESCE(origem, ''))) IN ('DELIVERY', 'BALCAO')
+        """,
+        (int(id_cliente),),
+    )
+    row = cur.fetchone()
+    if isinstance(row, dict):
+        restantes = int(row.get("n") or 0)
+    else:
+        restantes = int((row or [0])[0] or 0)
+    if restantes > 0:
+        return {
+            "contador_resetado": False,
+            "contador_reset_motivo": (
+                f"Ainda ha {restantes} linha(s) DELIVERY/BALCAO no diario; contador mantido."
+            ),
+            "pedidos_restantes_diario": restantes,
+        }
+    cur.execute(
+        "INSERT IGNORE INTO contadorpedido (contador, id_cliente) VALUES (0, %s)",
+        (int(id_cliente),),
+    )
+    cur.execute(
+        "UPDATE contadorpedido SET contador = 0 WHERE id_cliente = %s",
+        (int(id_cliente),),
+    )
+    cur.execute("SELECT contador FROM contadorpedido WHERE id_cliente = %s", (int(id_cliente),))
+    row_c = cur.fetchone()
+    if isinstance(row_c, dict):
+        contador_atual = int(row_c.get("contador") or 0)
+    else:
+        contador_atual = int((row_c or [0])[0] or 0)
+    return {"contador_resetado": True, "contador_atual": contador_atual}
 
 
 def _where_periodo_diario(id_cliente: int, d0: datetime, d1: datetime) -> Tuple[str, Tuple[Any, ...]]:
@@ -522,27 +602,17 @@ def preview_fechamento(id_cliente: int, data_inicio: str, data_fim: str) -> dict
     try:
         conn = conectar()
         cur = conn.cursor(dictionary=True)
-        w, p = _where_fechamento(id_cliente, d0, d1)
+        w, p = _where_fechamento_arquivamento(id_cliente, d0, d1)
+        grp = _sql_grupo_status_arquivamento()
         cur.execute(f"SELECT COUNT(*) AS n FROM pedido_diarios WHERE {w}", p)
         n_linhas = int((cur.fetchone() or {}).get("n") or 0)
         cur.execute(
             f"""
             SELECT
-                CASE
-                    WHEN UPPER(TRIM(COALESCE(status_pedido, ''))) = 'ITEM_REMOVIDO' THEN 'ITEM_REMOVIDO'
-                    WHEN UPPER(TRIM(COALESCE(origem, ''))) = 'MESA'
-                         AND UPPER(TRIM(COALESCE(status_mesa, ''))) = 'RECEBIDO' THEN 'RECEBIDO'
-                    ELSE UPPER(TRIM(COALESCE(status_pedido, '')))
-                END AS st,
+                {grp} AS st,
                 COUNT(*) AS c
             FROM pedido_diarios WHERE {w}
-            GROUP BY
-                CASE
-                    WHEN UPPER(TRIM(COALESCE(status_pedido, ''))) = 'ITEM_REMOVIDO' THEN 'ITEM_REMOVIDO'
-                    WHEN UPPER(TRIM(COALESCE(origem, ''))) = 'MESA'
-                         AND UPPER(TRIM(COALESCE(status_mesa, ''))) = 'RECEBIDO' THEN 'RECEBIDO'
-                    ELSE UPPER(TRIM(COALESCE(status_pedido, '')))
-                END
+            GROUP BY {grp}
             """,
             p,
         )
@@ -1094,8 +1164,9 @@ def _gravar_relatorio_txt(id_cliente: int, lote: str, conteudo: str) -> Tuple[st
 
 def executar_fechamento(id_cliente: int, data_inicio: str, data_fim: str) -> dict:
     """
-    Transação: copia linhas elegíveis para pedido_periodos e remove de pedido_diarios.
-    Em seguida grava .txt com o lote (dados lidos de pedido_periodos).
+    Transação: copia linhas elegíveis (recebidas, ITEM_REMOVIDO, comanda CANCELADA) para
+    pedido_periodos, remove de pedido_diarios e, se o diário DELIVERY/BALCAO ficar vazio,
+    zera contadorpedido.contador. Em seguida grava .txt com o lote.
     """
     d0, d1 = intervalo_datetimes(data_inicio, data_fim)
     lote = uuid.uuid4().hex
@@ -1110,11 +1181,15 @@ def executar_fechamento(id_cliente: int, data_inicio: str, data_fim: str) -> dic
         except Exception:
             pass
 
-        cur.execute("SELECT chave FROM pedido_diarios WHERE " + _where_fechamento(id_cliente, d0, d1)[0] + " FOR UPDATE", _where_fechamento(id_cliente, d0, d1)[1])
+        w_arq, p_arq = _where_fechamento_arquivamento(id_cliente, d0, d1)
+        cur.execute("SELECT chave FROM pedido_diarios WHERE " + w_arq + " FOR UPDATE", p_arq)
         chaves = [int(r[0]) for r in cur.fetchall() if r and r[0] is not None]
         if not chaves:
             conn.rollback()
-            return {"sucesso": False, "erro": "Nenhuma linha elegível no período (recebido conforme origem / ITEM_REMOVIDO)."}
+            return {
+                "sucesso": False,
+                "erro": "Nenhuma linha elegível no período (recebido / ITEM_REMOVIDO / comanda cancelada).",
+            }
 
         cols = _colunas_pedido_diarios_sem_chave(cur)
         if not cols:
@@ -1142,6 +1217,8 @@ def executar_fechamento(id_cliente: int, data_inicio: str, data_fim: str) -> dic
         sql_del = f"DELETE FROM pedido_diarios WHERE chave IN ({','.join(['%s'] * len(chaves))})"
         cur.execute(sql_del, tuple(chaves))
 
+        reset_info = _tentar_reset_contador_pedido(cur, int(id_cliente))
+
         conn.commit()
 
         cur2 = conn.cursor(dictionary=True)
@@ -1167,6 +1244,7 @@ def executar_fechamento(id_cliente: int, data_inicio: str, data_fim: str) -> dic
             "linhas_arquivadas": len(chaves),
             "arquivo": nome,
             "caminho": caminho,
+            **reset_info,
         }
         if gerencial.get("sucesso") and str(gerencial.get("texto_impressao") or "").strip():
             try:

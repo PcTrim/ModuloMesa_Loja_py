@@ -866,7 +866,7 @@
           <span class="ico"><i data-lucide="clipboard-check" width="24" height="24"></i></span>
           <div class="tile-copy">
             <h2>Fechamento de caixa</h2>
-            <p class="desc">Arquiva itens recebidos no período (MESA: status_mesa RECEBIDO; outras: status_pedido RECEBIDO) e ITEM_REMOVIDO; AGUARDE permanece no diário. O contador de pedidos não é alterado.</p>
+            <p class="desc">Arquiva recebidos, ITEM_REMOVIDO e comandas canceladas no período. AGUARDE/ABERTO permanecem até baixa ou cancelamento. Se o diário DELIVERY/BALCÃO ficar vazio, o contador zera.</p>
           </div>
         </a>
         <a class="tile warn" href="#" id="cancelar-comanda-open" onclick="return false;">
@@ -1052,8 +1052,9 @@
           <span class="fech-step" id="fechamento-tab-3">3 · Arquivar</span>
         </div>
         <p class="ui-dash-muted" style="margin:0 0 10px;font-size:13px;line-height:1.45;">
-          Somente linhas <strong>recebidas</strong> no intervalo (mesa: <code>status_mesa</code> = RECEBIDO; delivery/balcão: <code>status_pedido</code> = RECEBIDO) ou <strong>ITEM_REMOVIDO</strong>.
-          <strong>AGUARDE</strong> e demais status permanecem no diário ativo.
+          Somente linhas <strong>recebidas</strong>, <strong>ITEM_REMOVIDO</strong> ou <strong>comanda cancelada</strong> no intervalo entram no arquivamento.
+          <strong>AGUARDE</strong> e demais status ativos permanecem no diário até baixa ou cancelamento.
+          Se não restar pedido DELIVERY/BALCÃO no diário, o <strong>contador zera</strong>.
         </p>
         <div id="fechamento-pane-1" class="fech-step-pane on">
           <div class="fechamento-fields">
@@ -1874,10 +1875,10 @@
         a +
         ' a ' +
         b +
-        ': serão arquivadas linhas com ITEM_REMOVIDO e linhas recebidas (origem MESA: status_mesa = RECEBIDO; demais origens: status_pedido = RECEBIDO).\n' +
+        ': serão arquivadas linhas recebidas, ITEM_REMOVIDO e comandas canceladas (origem MESA: status_mesa = RECEBIDO; demais: status_pedido = RECEBIDO).\n' +
         '¢ Esses dados passam para o HISTÃ“RICO (tabela pedido_periodos) e um arquivo .txt na pasta de relatórios (ex.: C:\\Geral\\Relatorios\\...).\n' +
-        '¢ Pedidos em AGUARDE ou outros status NÃƒO são eliminados e continuam no diário.\n' +
-        '¢ O contador de pedidos NÃƒO é alterado por este fechamento.\n\n' +
+        '¢ Pedidos em AGUARDE ou ABERTO (nao cancelados) NAO sao arquivados e continuam no diario.\n' +
+        '¢ Se o diario DELIVERY/BALCAO ficar vazio apos o arquivamento, o contador de pedidos volta a zero.\n\n' +
         'Deseja continuar?';
       if (!window.confirm(msg)) return;
       fetch('/api/fechamento/executar', {
@@ -1909,6 +1910,11 @@
           }
           if (d.relatorio_gerencial_erro) {
             msgOk += '\nAviso (gerencial): ' + String(d.relatorio_gerencial_erro);
+          }
+          if (d.contador_resetado) {
+            msgOk += '\nContador de pedidos resetado (valor: ' + String(d.contador_atual != null ? d.contador_atual : 0) + ').';
+          } else if (d.contador_reset_motivo) {
+            msgOk += '\nContador mantido: ' + String(d.contador_reset_motivo);
           }
           if (window.uiFeedback) window.uiFeedback.success(msgOk);
           else alert(msgOk);
@@ -2214,7 +2220,7 @@
             if (p.comanda_cancelada || stComanda === "CANCELADA") {
               el("dash-pedido-pill-status").textContent = "CANCELADA";
               el("dash-pedido-pill-status").className = "ui-pill bad";
-            } else if (stPed === "ROTA") {
+            } else if (stPed === "ROTA" || stPed === "AGUARDE") {
               el("dash-pedido-pill-status").textContent = stPed;
               el("dash-pedido-pill-status").className = "ui-pill warn";
             } else if (stPed === "RECEBIDO") {
@@ -2404,9 +2410,10 @@
           ].filter(function (c) { return !IS_RETAIL || c.k !== "delivery"; });
           var chipsStatus = [
             { k: "aberto", t: "Aberto ou rota" },
+            { k: "aguarde", t: "Aguardando" },
             { k: "recebido", t: "Recebidos" },
             { k: "cancelado", t: "Cancelados" },
-            { k: "todos", t: "Abertos + rota + recebidos" },
+            { k: "todos", t: "Todos (exc. cancelados)" },
           ];
           host.innerHTML =
             '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
@@ -2574,7 +2581,9 @@
                 ? '<span class="ui-pill ok">RECEBIDO</span>'
                 : stp === "ROTA"
                   ? '<span class="ui-pill warn">ROTA</span>'
-                  : '<span class="ui-pill neutral">' + esc(stp || "-") + "</span>";
+                  : stp === "AGUARDE"
+                    ? '<span class="ui-pill warn">AGUARDE</span>'
+                    : '<span class="ui-pill neutral">' + esc(stp || "-") + "</span>";
             var btnVerLabel = stp === "ROTA" ? "Ver completo" : "Ver";
             var btnVer = '<button type="button" class="ui-mini-btn ui-focus" data-ver-pedido="1" data-origem="' + esc(orig) + '" data-nropedido="' + esc(r.nropedido) + '">' + esc(btnVerLabel) + "</button>";
             var btnCancel = r.pode_cancelar_comanda

@@ -4479,7 +4479,7 @@ def api_dashboard_delivery_balcao():
     try:
         id_cliente = session.get("id_cliente")
         status = str(request.args.get("status") or "").strip().lower()
-        if status not in ("", "aberto", "recebido", "todos", "cancelado"):
+        if status not in ("", "aberto", "recebido", "todos", "cancelado", "aguarde"):
             status = ""
         conn = conectar()
         cur = conn.cursor(dictionary=True)
@@ -4487,6 +4487,11 @@ def api_dashboard_delivery_balcao():
         cancelada_sql = _sql_comanda_cancelada("pd")
         if status == "cancelado":
             status_filter_sql = f"AND {cancelada_sql}"
+        elif status == "aguarde":
+            status_filter_sql = (
+                "AND UPPER(TRIM(COALESCE(pd.status_pedido, ''))) = 'AGUARDE' "
+                f"AND NOT ({cancelada_sql})"
+            )
         elif status == "" or status == "aberto":
             status_filter_sql = (
                 "AND UPPER(TRIM(COALESCE(pd.status_pedido, ''))) IN ('ABERTO','ABERTA','ROTA') "
@@ -4498,7 +4503,11 @@ def api_dashboard_delivery_balcao():
                 f"AND NOT ({cancelada_sql})"
             )
         else:
-            status_filter_sql = "AND UPPER(TRIM(COALESCE(pd.status_pedido, ''))) IN ('ABERTO','ABERTA','RECEBIDO','ROTA')"
+            status_filter_sql = (
+                "AND UPPER(TRIM(COALESCE(pd.status_pedido, ''))) "
+                "IN ('ABERTO','ABERTA','RECEBIDO','ROTA','AGUARDE') "
+                f"AND NOT ({cancelada_sql})"
+            )
         origem_filter_sql = "AND pd.origem = 'BALCAO'" if is_retail() else "AND pd.origem IN ('DELIVERY','BALCAO')"
         cur.execute(
             f"""
@@ -9561,7 +9570,8 @@ def api_fechamento_print_blocos_post():
 @app.route("/api/fechamento/executar", methods=["POST"])
 @login_required
 def api_fechamento_executar():
-    """Arquiva em pedido_periodos, remove do diário e grava relatório .txt."""
+    """Arquiva em pedido_periodos (recebido, ITEM_REMOVIDO, comanda cancelada), remove do diário,
+    zera contadorpedido se diário DELIVERY/BALCAO ficar vazio, e grava relatório .txt."""
     try:
         id_cliente = session.get("id_cliente")
         if not id_cliente:
