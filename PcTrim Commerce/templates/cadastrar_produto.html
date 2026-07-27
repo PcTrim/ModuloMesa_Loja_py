@@ -397,6 +397,11 @@
             };
         }
 
+        function parseImprenro(raw) {
+            const n = parseInt(String(raw ?? '').trim(), 10);
+            return Number.isFinite(n) && n >= 0 ? n : null;
+        }
+
         function toggleImpressoraProduto() {
             const especifica = document.getElementById('modoImpressoraEspecifica')?.checked;
             const select = document.getElementById('impressoraEspecifica');
@@ -676,47 +681,65 @@
             }
         });
 
-        async function carregarImpressorasParaProduto() {
+        function ensureImprenroOption(select, nro) {
+            if (nro == null || nro === '') return;
+            const want = String(nro);
+            if (!Array.from(select.options).some(o => o.value === want)) {
+                const opt = document.createElement('option');
+                opt.value = want;
+                opt.textContent = `Impressora #${want}`;
+                select.appendChild(opt);
+            }
+            select.value = want;
+        }
+
+        async function carregarImpressorasParaProduto(wantImprenro) {
             const select = document.getElementById('impressoraEspecifica');
             if (!select) return;
-            const currentValue = String(select.value || '1');
+            const wantRaw = wantImprenro != null && wantImprenro !== '' ? String(wantImprenro) : '';
+            const currentValue = wantRaw || String(select.value || '');
             try {
-                const resp = await fetch('/api/impressoras-cadastro');
+                const resp = await fetch('/api/impressoras-cadastro', { credentials: 'same-origin' });
                 const data = await resp.json();
                 if (!resp.ok || !data?.sucesso) throw new Error(data?.erro || 'Falha ao carregar impressoras');
                 const rows = Array.isArray(data.impressoras) ? data.impressoras : [];
                 const items = [];
                 const seen = new Set();
                 rows.forEach(r => {
-                    const nome = String(r.nomedaimpressora || '').trim() || String(r.caminho || '').trim();
                     const nro = Number(r.imprenro);
-                    if (!nome) return;
                     if (!Number.isFinite(nro) || nro < 0) return;
                     const key = String(nro);
                     if (seen.has(key)) return;
                     seen.add(key);
-                    items.push({ value: key, label: nome });
+                    const nome = String(r.nomedaimpressora || '').trim() || String(r.caminho || '').trim();
+                    items.push({ value: key, label: nome || `Impressora #${key}` });
                 });
 
-                let html = '<option value="1">Impressora (padrão)</option>';
-                items.forEach(it => {
-                    html += `<option value="${it.value}">${it.label}</option>`;
-                });
+                let html = '';
+                if (!items.length) {
+                    html = '<option value="">Selecione...</option>';
+                } else {
+                    items.forEach(it => {
+                        html += `<option value="${it.value}">${it.label}</option>`;
+                    });
+                }
                 select.innerHTML = html;
 
-                const want = currentValue;
-                const exists = Array.from(select.options).some(o => o.value === String(want));
-                if (!exists && want) {
-                    const opt = document.createElement('option');
-                    opt.value = String(want);
-                    opt.textContent = `Impressora ${want}`;
-                    select.appendChild(opt);
+                if (currentValue) {
+                    ensureImprenroOption(select, currentValue);
+                } else if (select.options.length && !select.value) {
+                    select.selectedIndex = 0;
                 }
-                select.value = String(want || '1');
             } catch (e) {
                 console.error('Erro ao carregar impressoras:', e);
-                select.innerHTML = '<option value="1">Impressora (padrão)</option>';
-                select.value = '1';
+                mostrarMensagem(
+                    'Não foi possível carregar impressoras cadastradas. Verifique Configurações > Impressoras.',
+                    'erro'
+                );
+                select.innerHTML = '<option value="">Selecione...</option>';
+                if (wantRaw || currentValue) {
+                    ensureImprenroOption(select, wantRaw || currentValue);
+                }
             }
         }
 
@@ -837,23 +860,20 @@
                             }
                             sincronizarClasseDoSelect();
                         }
+                        const imp = p.impressora;
+                        const herdar = imp == null || imp === '' || Number(imp) === 0;
+                        const want = herdar ? null : imp;
+                        await carregarImpressorasParaProduto(want);
+                        setModoImpressoraProduto(herdar ? 'herdar' : 'especifica', want);
+                        const ctrl = document.getElementById('controla_estoque');
+                        if (ctrl) ctrl.checked = !!Number(p.controla_estoque);
                     }
                     document.getElementById('porkilo').value = normSimNao(p.porkilo, 'Nao');
                     document.getElementById('vendaliberada').value = normSimNao(p.vendaliberada, 'Sim');
-                    if (p.impressora == null || p.impressora === '') {
-                        setModoImpressoraProduto('herdar');
-                    } else {
-                        setModoImpressoraProduto('especifica', p.impressora);
-                    }
                     document.getElementById('display').value = p.display;
                     document.getElementById('cfop').value = p.cfop;
                     document.getElementById('ncm').value = p.ncm || '';
                     document.getElementById('descricao').value = p.descricao || '';
-
-                    if (!IS_RETAIL) {
-                        const ctrl = document.getElementById('controla_estoque');
-                        if (ctrl) ctrl.checked = !!Number(p.controla_estoque);
-                    }
 
                     if (IS_RETAIL) {
                         await carregarCategoriasRetail();
@@ -946,7 +966,12 @@
                 if (ctrl) dados.controla_estoque = ctrl.checked ? 1 : 0;
                 const modoEspecifica = document.getElementById('modoImpressoraEspecifica')?.checked;
                 if (modoEspecifica) {
-                    dados.impressora = parseInt(document.getElementById('impressoraEspecifica').value, 10) || null;
+                    dados.impressora = parseImprenro(document.getElementById('impressoraEspecifica')?.value);
+                    if (dados.impressora === null) {
+                        mostrarMensagem('Selecione uma impressora de preparo válida.', 'erro');
+                        document.getElementById('impressoraEspecifica')?.focus();
+                        return;
+                    }
                 } else {
                     dados.impressora = null;
                     dados.impressora_herdar = true;
@@ -988,7 +1013,15 @@
                 const result = await response.json();
                 
                 if (result.sucesso) {
-                    mostrarMensagem(result.mensagem || 'Salvo.', 'sucesso');
+                    let msg = result.mensagem || 'Salvo.';
+                    if (!IS_RETAIL && Object.prototype.hasOwnProperty.call(result, 'impressora')) {
+                        if (result.impressora == null || result.impressora === '') {
+                            msg += ' Impressora: herda da classificação.';
+                        } else {
+                            msg += ` Impressora: imprenro ${result.impressora}.`;
+                        }
+                    }
+                    mostrarMensagem(msg, 'sucesso');
                     closeProdutoModal();
                     resetProdutoForm();
                     carregarProdutos();

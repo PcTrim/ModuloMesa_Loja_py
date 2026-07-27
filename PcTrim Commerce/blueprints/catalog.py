@@ -504,7 +504,11 @@ def editar_produto(chave):
         conn.commit()
 
         print(f"[PRODUTO ATUALIZADO] {produto} (código: {chave})")
-        return jsonify({"sucesso": True, "mensagem": f"Produto '{produto}' atualizado com sucesso!"})
+        return jsonify({
+            "sucesso": True,
+            "mensagem": f"Produto '{produto}' atualizado com sucesso!",
+            "impressora": impressora,
+        })
 
     except RetailCatalogError as err:
         if conn:
